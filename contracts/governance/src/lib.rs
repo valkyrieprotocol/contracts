@@ -1,6 +1,6 @@
 pub mod entrypoints;
 
-mod querier;
+mod cw20;
 
 
 mod common;

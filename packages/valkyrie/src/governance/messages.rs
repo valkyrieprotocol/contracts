@@ -26,4 +26,11 @@ pub enum ExecuteMsg {
         admin: Option<Addr>,
         boost_contract: Option<Addr>,
     },
+    UnstakeVotingToken { amount: Option<Uint128> },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Cw20HookMsg {
+    StakeVotingToken {},
 }

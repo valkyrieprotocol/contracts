@@ -1,4 +1,4 @@
-use cosmwasm_std::{CanonicalAddr, Storage};
+use cosmwasm_std::{CanonicalAddr, Storage, StdResult};
 use cosmwasm_storage::{Singleton, ReadonlySingleton, singleton_read, singleton};
 
 static KEY_CONTRACT_CONFIG: &[u8] = b"contract-config";
@@ -19,8 +19,8 @@ impl ContractConfig {
         singleton_read(storage, KEY_CONTRACT_CONFIG)
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractConfig {
-        ContractConfig::singleton_read(storage).load()?
+    pub fn load(storage: &dyn Storage) -> StdResult<ContractConfig> {
+        ContractConfig::singleton_read(storage).load()
     }
 
     pub fn is_admin(&self, address: CanonicalAddr) -> bool {

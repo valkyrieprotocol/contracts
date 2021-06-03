@@ -79,6 +79,10 @@ impl Poll {
         bucket_read(storage, PREFIX_POLL)
     }
 
+    pub fn load(storage: &dyn Storage, poll_id: &u64) -> StdResult<Poll> {
+        Poll::bucket_read(storage).load(&poll_id.to_be_bytes())
+    }
+
     pub fn indexer_bucket<'a>(
         storage: &'a mut dyn Storage,
         status: &PollStatus,
@@ -89,11 +93,15 @@ impl Poll {
         )
     }
 
-    pub fn voter_bucket(storage: &mut dyn Storage, poll_id: u64) -> Bucket<VoterInfo> {
+    pub fn voter_bucket(storage: &mut dyn Storage, poll_id: &u64) -> Bucket<VoterInfo> {
         Bucket::multilevel(
             storage,
             &[PREFIX_POLL_VOTER, &poll_id.to_be_bytes()],
         )
+    }
+
+    pub fn remove_voter(storage: &mut dyn Storage, poll_id: &u64, voter: &CanonicalAddr) {
+        Poll::voter_bucket(storage, poll_id).remove(voter.as_slice())
     }
 
     pub fn voter_bucket_read(

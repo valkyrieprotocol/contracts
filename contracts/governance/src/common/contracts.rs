@@ -11,9 +11,9 @@ use crate::staking::state::StakingConfig;
 use super::state::ContractConfig;
 
 pub fn instantiate(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
+    deps: &DepsMut,
+    _env: &Env,
+    info: &MessageInfo,
     msg: ContractConfigInitMsg,
 ) -> ContractResult<Response> {
     let config = ContractConfig {
