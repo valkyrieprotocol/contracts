@@ -29,8 +29,8 @@ overflow-checks = true
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.1" }
 cw20 = { version = "0.6.1" }
-cosmwasm-storage = { version = "0.14.0" }
-cosmwasm-std = { version = "0.14.0" }
+cosmwasm-std = { version = "0.14.0", features = ["iterator"] }
+cosmwasm-storage = { version = "0.14.0", features = ["iterator"] }
 terra-cosmwasm = { version = "2.0.0"}
 
 [dev-dependencies]

@@ -33,5 +33,6 @@ secring.*
 # Rust
 debug/
 target/
+artifacts/
 **/*.rs.bk
 *.pdb
