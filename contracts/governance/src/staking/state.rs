@@ -6,7 +6,6 @@ static KEY_STAKING_CONFIG: &[u8] = b"staking-config";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingConfig {
-    pub token_contract: CanonicalAddr,
 }
 
 impl StakingConfig {

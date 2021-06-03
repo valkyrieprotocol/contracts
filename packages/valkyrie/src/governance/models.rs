@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -14,3 +14,10 @@ pub struct VoterInfo {
 
 
 // Responses
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct ConfigResponse {
+    pub admin: Addr,
+    pub token_contract: Addr,
+    pub boost_contract: Option<Addr>,
+}

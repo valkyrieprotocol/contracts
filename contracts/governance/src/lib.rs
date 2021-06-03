@@ -1,4 +1,5 @@
-mod errors;
+pub mod entrypoints;
+
 mod querier;
 
 
