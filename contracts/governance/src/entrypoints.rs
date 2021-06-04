@@ -1,11 +1,11 @@
-use cosmwasm_std::{Addr, DepsMut, Env, from_binary, MessageInfo, Response};
+use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Response, to_binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use crate::common::state::ContractConfig;
 
@@ -18,10 +18,10 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     let mut deps_mut = deps;
 
-    crate::common::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
-    crate::staking::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
-    crate::poll::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
-    crate::valkyrie::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::common::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
+    crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::poll::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
+    crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
 
     Ok(Response::default())
 }
@@ -37,7 +37,7 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateContractConfig {
             admin,
-        } => crate::common::contracts::update_config(
+        } => crate::common::executions::update_config(
             deps,
             env,
             info,
@@ -45,7 +45,7 @@ pub fn execute(
         ),
         ExecuteMsg::UnstakeVotingToken {
             amount,
-        } => crate::staking::contracts::unstake_voting_token(
+        } => crate::staking::executions::unstake_voting_token(
             deps,
             env,
             info,
@@ -59,7 +59,7 @@ pub fn execute(
             expiration_period,
             proposal_deposit,
             snapshot_period,
-        } => crate::poll::contracts::update_poll_config(
+        } => crate::poll::executions::update_poll_config(
             deps,
             env,
             info,
@@ -75,7 +75,7 @@ pub fn execute(
             poll_id,
             vote,
             amount,
-        } => crate::poll::contracts::cast_vote(
+        } => crate::poll::executions::cast_vote(
             deps,
             env,
             info,
@@ -85,7 +85,7 @@ pub fn execute(
         ),
         ExecuteMsg::EndPoll {
             poll_id,
-        } => crate::poll::contracts::end_poll(
+        } => crate::poll::executions::end_poll(
             deps,
             env,
             info,
@@ -93,7 +93,7 @@ pub fn execute(
         ),
         ExecuteMsg::ExecutePoll {
             poll_id,
-        } => crate::poll::contracts::execute_poll(
+        } => crate::poll::executions::execute_poll(
             deps,
             env,
             info,
@@ -101,7 +101,7 @@ pub fn execute(
         ),
         ExecuteMsg::ExpirePoll {
             poll_id,
-        } => crate::poll::contracts::expire_poll(
+        } => crate::poll::executions::expire_poll(
             deps,
             env,
             info,
@@ -109,7 +109,7 @@ pub fn execute(
         ),
         ExecuteMsg::SnapshotPoll {
             poll_id,
-        } => crate::poll::contracts::snapshot_poll(
+        } => crate::poll::executions::snapshot_poll(
             deps,
             env,
             info,
@@ -117,7 +117,7 @@ pub fn execute(
         ),
         ExecuteMsg::UpdateValkyrieConfig {
             boost_contract,
-        } => crate::valkyrie::contracts::update_config(
+        } => crate::valkyrie::executions::update_config(
             deps,
             env,
             info,
@@ -128,7 +128,7 @@ pub fn execute(
             source_code_url,
             description,
             maintainer,
-        } => crate::valkyrie::contracts::add_campaign_code_whitelist(
+        } => crate::valkyrie::executions::add_campaign_code_whitelist(
             deps,
             env,
             info,
@@ -139,7 +139,7 @@ pub fn execute(
         ),
         ExecuteMsg::RemoveCampaignCodeWhitelist {
             code_id,
-        } => crate::valkyrie::contracts::remove_campaign_code_whitelist(
+        } => crate::valkyrie::executions::remove_campaign_code_whitelist(
             deps,
             env,
             info,
@@ -161,7 +161,7 @@ pub fn receive_cw20(
     }
 
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::StakeVotingToken {}) => crate::staking::contracts::stake_voting_token(
+        Ok(Cw20HookMsg::StakeVotingToken {}) => crate::staking::executions::stake_voting_token(
             deps,
             env,
             info,
@@ -173,7 +173,7 @@ pub fn receive_cw20(
                description,
                link,
                execution,
-           }) => crate::poll::contracts::create_poll(
+           }) => crate::poll::executions::create_poll(
             deps,
             env,
             info,
@@ -192,3 +192,75 @@ pub fn receive_cw20(
 // pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 //
 // }
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(
+    deps: Deps,
+    env: Env,
+    msg: QueryMsg,
+) -> ContractResult<Binary> {
+    let result = match msg {
+        QueryMsg::ContractConfig {} => to_binary(
+            &crate::common::queries::get_contract_config(deps, env)?
+        ),
+        QueryMsg::PollConfig {} => to_binary(
+            &crate::poll::queries::get_poll_config(deps, env)?
+        ),
+        QueryMsg::PollState {} => to_binary(
+            &crate::poll::queries::get_poll_state(deps, env)?
+        ),
+        QueryMsg::Poll {
+            poll_id,
+        } => to_binary(
+            &crate::poll::queries::get_poll(deps, env, poll_id)?
+        ),
+        QueryMsg::Polls {
+            filter,
+            start_after,
+            limit,
+            order_by,
+        } => to_binary(
+            &crate::poll::queries::query_polls(
+                deps,
+                env,
+                filter,
+                start_after,
+                limit,
+                order_by,
+            )?
+        ),
+        QueryMsg::Voters {
+            poll_id,
+            start_after,
+            limit,
+            order_by,
+        } => to_binary(
+            &crate::poll::queries::query_voters(
+                deps,
+                env,
+                poll_id,
+                start_after,
+                limit,
+                order_by,
+            )?
+        ),
+        QueryMsg::StakingState {} => to_binary(
+            &crate::staking::queries::get_staking_state(deps, env)?
+        ),
+        QueryMsg::StakerState {
+            address,
+        } => to_binary(
+            &crate::staking::queries::get_staker_state(deps, env, address)?
+        ),
+        QueryMsg::ValkyrieConfig {} => to_binary(
+            &crate::valkyrie::querier::get_valkyrie_config(deps, env)?
+        ),
+        QueryMsg::CampaignCodeInfo {
+            code_id,
+        } => to_binary(
+            &crate::valkyrie::querier::get_campaign_code_info(deps, env, code_id)?
+        ),
+    }?;
+
+    Ok(result)
+}

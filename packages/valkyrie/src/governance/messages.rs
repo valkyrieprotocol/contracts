@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::enumerations::VoteOption;
 use super::models::ExecutionMsg;
+use crate::governance::enumerations::PollStatus;
+use crate::common::OrderBy;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -78,4 +80,29 @@ pub enum Cw20HookMsg {
         link: Option<String>,
         execution: Option<Vec<ExecutionMsg>>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    ContractConfig {},
+    PollConfig {},
+    PollState {},
+    Poll { poll_id: u64 },
+    Polls {
+        filter: Option<PollStatus>,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order_by: Option<OrderBy>,
+    },
+    Voters {
+        poll_id: u64,
+        start_after: Option<Addr>,
+        limit: Option<u32>,
+        order_by: Option<OrderBy>,
+    },
+    StakingState {},
+    StakerState { address: Addr },
+    ValkyrieConfig {},
+    CampaignCodeInfo { code_id: u64 },
 }

@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Binary, CanonicalAddr, Decimal, StdResult, Storage, Uint128};
+use cosmwasm_std::{Binary, CanonicalAddr, Decimal, StdResult, Storage, Uint128, Api};
 use cosmwasm_storage::{Bucket, bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton, singleton_read};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie::common::OrderBy;
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::models::VoterInfo;
+use valkyrie::governance::models::{VoterInfo, PollResponse, ExecutionMsg};
 
 static KEY_POLL_CONFIG: &[u8] = b"poll-config";
 static KEY_POLL_STATE: &[u8] = b"poll-state";
@@ -119,6 +119,10 @@ impl Poll {
         Poll::bucket_read(storage).load(&poll_id.to_be_bytes())
     }
 
+    pub fn may_load(storage: &dyn Storage, poll_id: &u64) -> StdResult<Option<Poll>> {
+        Poll::bucket_read(storage).may_load(&poll_id.to_be_bytes())
+    }
+
     pub fn indexer_bucket<'a>(
         storage: &'a mut dyn Storage,
         status: &PollStatus,
@@ -140,17 +144,17 @@ impl Poll {
         Poll::voter_bucket(storage, poll_id).remove(voter.as_slice())
     }
 
-    pub fn voter_bucket_read(
-        storage: &dyn Storage,
-        poll_id: u64,
-    ) -> ReadonlyBucket<VoterInfo> {
+    pub fn voter_bucket_read<'a>(
+        storage: &'a dyn Storage,
+        poll_id: &'a u64,
+    ) -> ReadonlyBucket<'a, VoterInfo> {
         ReadonlyBucket::multilevel(
             storage,
             &[PREFIX_POLL_VOTER, &poll_id.to_be_bytes()],
         )
     }
 
-    pub fn read<'a>(
+    pub fn query<'a>(
         storage: &'a dyn Storage,
         filter: Option<PollStatus>,
         start_after: Option<u64>,
@@ -195,7 +199,7 @@ impl Poll {
 
     pub fn read_voters<'a>(
         storage: &'a dyn Storage,
-        poll_id: u64,
+        poll_id: &u64,
         start_after: Option<CanonicalAddr>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,
@@ -226,7 +230,38 @@ impl Poll {
     }
 
     pub fn load_voter(&self, storage: &dyn Storage, address: &CanonicalAddr) -> StdResult<VoterInfo> {
-        Poll::voter_bucket_read(storage, self.id).load(address.as_slice())
+        Poll::voter_bucket_read(storage, &self.id).load(address.as_slice())
+    }
+
+    pub fn to_response(&self, api: &dyn Api) -> StdResult<PollResponse> {
+        let mut executions: Option<Vec<ExecutionMsg>> = None;
+        if let Some(all_executions) = self.executions.clone() {
+            executions = Some(
+                all_executions.iter().map(|v| ExecutionMsg {
+                    order: v.order,
+                    contract: api.addr_humanize(&v.contract).unwrap(),
+                    msg: v.msg.clone(),
+                }).collect()
+            )
+        }
+
+        Ok(
+            PollResponse {
+                id: self.id,
+                title: self.title.to_string(),
+                description: self.description.to_string(),
+                link: self.link.clone(),
+                executions,
+                creator: api.addr_humanize(&self.creator)?,
+                deposit_amount: self.deposit_amount,
+                yes_votes: self.yes_votes,
+                no_votes: self.no_votes,
+                end_height: self.end_height,
+                status: self.status.clone(),
+                staked_amount: self.staked_amount,
+                total_balance_at_end_poll: self.total_balance_at_end_poll,
+            }
+        )
     }
 }
 

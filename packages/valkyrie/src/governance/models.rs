@@ -27,17 +27,15 @@ pub struct ExecutionMsg {
 pub struct ContractConfigResponse {
     pub admin: Addr,
     pub token_contract: Addr,
-    pub boost_contract: Option<Addr>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct StakingStateResponse {
     pub total_share: Uint128,
-    pub total_deposit: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakerResponse {
+pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
     pub locked_balance: Vec<(u64, VoterInfo)>,
@@ -48,7 +46,7 @@ pub struct PollConfigResponse {
     pub quorum: Decimal,
     pub threshold: Decimal,
     pub voting_period: u64,
-    pub timelock_period: u64,
+    pub execution_delay_period: u64,
     pub expiration_period: u64,
     pub proposal_deposit: Uint128,
     pub snapshot_period: u64,
@@ -57,6 +55,7 @@ pub struct PollConfigResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct PollStateResponse {
     pub poll_count: u64,
+    pub total_deposit: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -96,4 +95,18 @@ pub struct VotersResponseItem {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotersResponse {
     pub voters: Vec<VotersResponseItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ValkyrieConfigResponse {
+    pub campaign_code_whitelist: Vec<u64>,
+    pub boost_contract: Option<Addr>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct CampaignCodeInfoResponse {
+    pub code_id: u64,
+    pub source_code_url: String,
+    pub description: String,
+    pub maintainer: Option<String>,
 }
