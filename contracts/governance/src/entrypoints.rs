@@ -21,6 +21,7 @@ pub fn instantiate(
     crate::common::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
     crate::staking::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
     crate::poll::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
+    crate::valkyrie::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
 
     Ok(Response::default())
 }
@@ -36,13 +37,11 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateContractConfig {
             admin,
-            boost_contract,
         } => crate::common::contracts::update_config(
             deps,
             env,
             info,
             admin,
-            boost_contract,
         ),
         ExecuteMsg::UnstakeVotingToken {
             amount,
@@ -116,6 +115,36 @@ pub fn execute(
             info,
             poll_id,
         ),
+        ExecuteMsg::UpdateValkyrieConfig {
+            boost_contract,
+        } => crate::valkyrie::contracts::update_config(
+            deps,
+            env,
+            info,
+            boost_contract,
+        ),
+        ExecuteMsg::AddCampaignCodeWhitelist {
+            code_id,
+            source_code_url,
+            description,
+            maintainer,
+        } => crate::valkyrie::contracts::add_campaign_code_whitelist(
+            deps,
+            env,
+            info,
+            code_id,
+            source_code_url,
+            description,
+            maintainer,
+        ),
+        ExecuteMsg::RemoveCampaignCodeWhitelist {
+            code_id,
+        } => crate::valkyrie::contracts::remove_campaign_code_whitelist(
+            deps,
+            env,
+            info,
+            code_id,
+        )
     }
 }
 

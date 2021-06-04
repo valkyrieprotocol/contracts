@@ -34,7 +34,6 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     UpdateContractConfig {
         admin: Option<Addr>,
-        boost_contract: Option<Addr>,
     },
     UnstakeVotingToken { amount: Option<Uint128> },
     UpdatePollConfig {
@@ -55,6 +54,18 @@ pub enum ExecuteMsg {
     ExecutePoll { poll_id: u64 },
     ExpirePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
+    UpdateValkyrieConfig {
+        boost_contract: Option<Addr>,
+    },
+    AddCampaignCodeWhitelist {
+        code_id: u64,
+        source_code_url: String,
+        description: String,
+        maintainer: Option<String>,
+    },
+    RemoveCampaignCodeWhitelist {
+        code_id: u64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

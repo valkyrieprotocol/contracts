@@ -9,7 +9,6 @@ static KEY_CONTRACT_CONFIG: &[u8] = b"contract-config";
 pub struct ContractConfig {
     pub admin: CanonicalAddr,
     pub token_contract: CanonicalAddr,
-    pub boost_contract: Option<CanonicalAddr>,
 }
 
 impl ContractConfig {

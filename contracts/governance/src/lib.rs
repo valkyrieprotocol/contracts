@@ -5,3 +5,4 @@ mod cw20;
 mod common;
 mod staking;
 mod poll;
+mod valkyrie;
