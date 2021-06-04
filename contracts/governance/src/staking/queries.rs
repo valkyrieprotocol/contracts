@@ -1,11 +1,11 @@
 use cosmwasm_std::{Addr, Deps, Env, Uint128};
 
 use valkyrie::common::ContractResult;
+use valkyrie::cw20::query_cw20_balance;
 use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::governance::models::{StakerStateResponse, StakingStateResponse};
 
 use crate::common::state::ContractConfig;
-use crate::cw20::load_cw20_balance;
 use crate::poll::state::{Poll, PollState};
 
 use super::state::{StakerState, StakingState};
@@ -42,10 +42,11 @@ pub fn get_staker_state(
         poll.status == PollStatus::InProgress
     });
 
-    let contract_balance = load_cw20_balance(
+    let contract_balance = query_cw20_balance(
         &deps.querier,
-        &deps.api.addr_humanize(&contract_config.token_contract)?,
-        &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+        deps.api,
+        &contract_config.token_contract,
+        &env.contract.address,
     )?;
     let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
     let balance = if !staking_state.total_share.is_zero() {

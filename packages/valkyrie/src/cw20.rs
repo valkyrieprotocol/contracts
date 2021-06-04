@@ -1,27 +1,25 @@
-use cosmwasm_std::{Addr, attr, Attribute, Binary, CanonicalAddr, CosmosMsg, from_binary, QuerierWrapper, Response, StdResult, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, CanonicalAddr, CosmosMsg, QuerierWrapper, QueryRequest, Response, StdResult, to_binary, Uint128, WasmMsg, WasmQuery};
 use cosmwasm_storage::to_length_prefixed;
 use cw20::Cw20ExecuteMsg;
 
-pub fn load_cw20_balance(
+pub fn query_cw20_balance(
     querier: &QuerierWrapper,
-    contract_addr: &Addr,
-    account_addr: &CanonicalAddr,
+    api: &dyn Api,
+    contract_addr: &CanonicalAddr,
+    account_addr: &Addr,
 ) -> StdResult<Uint128> {
     // load balance form the token contract
-    let res: Binary = querier
-        .query_wasm_raw(
-            contract_addr,
-            Binary::from(
-                concat(
+    Ok(
+        querier.query(
+            &QueryRequest::Wasm(WasmQuery::Raw {
+                contract_addr: api.addr_humanize(contract_addr)?.to_string(),
+                key: Binary::from(concat(
                     &to_length_prefixed(b"balance").to_vec(),
-                    account_addr.as_slice(),
-                )
-            ),
-        )
-        .map_or_else(|_| to_binary(&Uint128::zero()).unwrap(), |d| Binary(d.unwrap()));
-
-
-    from_binary(&res)
+                    (api.addr_canonicalize(account_addr.as_str())?).as_slice(),
+                )),
+            })
+        ).unwrap_or_else(|_| Uint128::zero())
+    )
 }
 
 pub fn create_send_msg_response(

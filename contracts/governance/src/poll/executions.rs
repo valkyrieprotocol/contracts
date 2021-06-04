@@ -2,13 +2,13 @@ use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Re
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::ContractResult;
+use valkyrie::cw20::query_cw20_balance;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use valkyrie::governance::messages::PollConfigInitMsg;
 use valkyrie::governance::models::{ExecutionMsg, VoterInfo};
 
 use crate::common::state::ContractConfig;
-use crate::cw20::load_cw20_balance;
 use crate::staking::state::{StakerState, StakingState};
 
 use super::state::{Execution, get_poll_id, Poll, PollConfig, PollState};
@@ -209,10 +209,11 @@ pub fn cast_vote(
 
     // convert share to amount
     let total_share = staking_state.total_share;
-    let contract_balance = load_cw20_balance(
+    let contract_balance = query_cw20_balance(
         &deps.querier,
-        &deps.api.addr_humanize(&contract_config.token_contract)?,
-        &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+        deps.api,
+        &contract_config.token_contract,
+        &env.contract.address,
     )?;
     let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
 
@@ -296,10 +297,11 @@ pub fn end_poll(
     } else if let Some(staked_amount) = poll.staked_amount {
         (Decimal::from_ratio(tallied_weight, staked_amount), staked_amount)
     } else {
-        let contract_balance = load_cw20_balance(
+        let contract_balance = query_cw20_balance(
             &deps.querier,
-            &deps.api.addr_humanize(&contract_config.token_contract)?,
-            &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+            deps.api,
+            &contract_config.token_contract,
+            &env.contract.address,
         )?;
         let staked_weight = contract_balance.checked_sub(poll_state.total_deposit)?;
 
@@ -486,10 +488,11 @@ pub fn snapshot_poll(
     // store the current staked amount for quorum calculation
     let contract_config = ContractConfig::load(deps.storage)?;
     let poll_state = PollState::load(deps.storage)?;
-    let contract_balance = load_cw20_balance(
+    let contract_balance = query_cw20_balance(
         &deps.querier,
-        &deps.api.addr_humanize(&contract_config.token_contract)?,
-        &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+        deps.api,
+        &contract_config.token_contract,
+        &env.contract.address,
     )?;
     let staked_amount = contract_balance.checked_sub(poll_state.total_deposit)?;
 

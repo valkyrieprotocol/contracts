@@ -1,11 +1,11 @@
 use cosmwasm_std::{Addr, attr, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
 
 use valkyrie::common::ContractResult;
+use valkyrie::cw20::{create_send_msg_response, query_cw20_balance};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::PollStatus;
 
 use crate::common::state::ContractConfig;
-use crate::cw20::{create_send_msg_response, load_cw20_balance};
 use crate::poll::state::{Poll, PollState};
 
 use super::state::{StakerState, StakingState};
@@ -43,10 +43,11 @@ pub fn stake_voting_token(
     let mut staker_state = StakerState::may_load(deps.storage, &sender_address)?
         .unwrap_or(StakerState::default(&sender_address));
 
-    let contract_balance = load_cw20_balance(
+    let contract_balance = query_cw20_balance(
         &deps.querier,
-        &deps.api.addr_humanize(&contract_config.token_contract)?,
-        &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+        deps.api,
+        &contract_config.token_contract,
+        &env.contract.address,
     )?;
     let total_balance = contract_balance.checked_sub(poll_state.total_deposit + amount)?;
 
@@ -94,10 +95,11 @@ pub fn unstake_voting_token(
 
         // Load total share & total balance except proposal deposit amount
         let total_share = staking_state.total_share.u128();
-        let contract_balance = load_cw20_balance(
+        let contract_balance = query_cw20_balance(
             &deps.querier,
-            &deps.api.addr_humanize(&contract_config.token_contract)?,
-            &deps.api.addr_canonicalize(env.contract.address.as_str())?,
+            deps.api,
+            &contract_config.token_contract,
+            &env.contract.address,
         )?;
         let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?.u128();
 
