@@ -1,22 +1,29 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, attr, CosmosMsg, WasmMsg, to_binary};
-use valkyrie::governance::messages::{InstantiateMsg, PollConfigInitMsg};
-
-use super::super::errors::ContractError;
-use super::super::state::{Config, State};
-use crate::common::state::ContractConfig;
-use crate::staking::state::{StakingConfig, StakerState, StakingState};
-use crate::poll::state::{PollConfig, PollState, Poll, get_poll_id, Execution};
-use valkyrie::common::ContractResult;
-use valkyrie::errors::ContractError;
-use valkyrie::governance::enumerations::{VoteOption, PollStatus};
-use crate::cw20::load_cw20_balance;
-use valkyrie::governance::models::{VoterInfo, ExecutionMsg};
+use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
+use valkyrie::common::ContractResult;
+use valkyrie::errors::ContractError;
+use valkyrie::governance::enumerations::{PollStatus, VoteOption};
+use valkyrie::governance::messages::PollConfigInitMsg;
+use valkyrie::governance::models::{ExecutionMsg, VoterInfo};
+
+use crate::common::state::ContractConfig;
+use crate::cw20::load_cw20_balance;
+use crate::staking::state::{StakerState, StakingState};
+
+use super::state::{Execution, get_poll_id, Poll, PollConfig, PollState};
+
+const MIN_TITLE_LENGTH: usize = 4;
+const MAX_TITLE_LENGTH: usize = 64;
+const MIN_DESC_LENGTH: usize = 4;
+const MAX_DESC_LENGTH: usize = 1024;
+const MIN_LINK_LENGTH: usize = 12;
+const MAX_LINK_LENGTH: usize = 128;
+
 pub fn instantiate(
-    deps: &DepsMut,
-    _env: &Env,
-    _info: &MessageInfo,
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     msg: PollConfigInitMsg,
 ) -> ContractResult<Response> {
     validate_quorum(msg.quorum)?;
@@ -34,6 +41,7 @@ pub fn instantiate(
 
     let poll_state = PollState {
         poll_count: 0,
+        total_deposit: Uint128::zero(),
     };
 
     poll_config.save(deps.storage)?;
@@ -58,40 +66,40 @@ pub fn update_poll_config(
     let sender_address = deps.api.addr_canonicalize(info.sender.as_str())?;
 
     if !ContractConfig::load(deps.storage)?.is_admin(sender_address) {
-        return Err(ContractError::Unauthorized {})
+        return Err(ContractError::Unauthorized {});
     }
 
-    PollConfig::singleton(deps.storage).update(|mut config| {
-        if let Some(quorum) = quorum {
-            config.quorum = quorum;
-        }
+    let mut poll_config = PollConfig::load(deps.storage)?;
 
-        if let Some(threshold) = threshold {
-            config.threshold = threshold;
-        }
+    if let Some(quorum) = quorum {
+        poll_config.quorum = quorum;
+    }
 
-        if let Some(voting_period) = voting_period {
-            config.voting_period = voting_period;
-        }
+    if let Some(threshold) = threshold {
+        poll_config.threshold = threshold;
+    }
 
-        if let Some(execution_delay_period) = execution_delay_period {
-            config.execution_delay_period = execution_delay_period;
-        }
+    if let Some(voting_period) = voting_period {
+        poll_config.voting_period = voting_period;
+    }
 
-        if let Some(expiration_period) = expiration_period {
-            config.expiration_period = expiration_period;
-        }
+    if let Some(execution_delay_period) = execution_delay_period {
+        poll_config.execution_delay_period = execution_delay_period;
+    }
 
-        if let Some(proposal_deposit) = proposal_deposit {
-            config.proposal_deposit = proposal_deposit;
-        }
+    if let Some(expiration_period) = expiration_period {
+        poll_config.expiration_period = expiration_period;
+    }
 
-        if let Some(period) = snapshot_period {
-            config.snapshot_period = period;
-        }
+    if let Some(proposal_deposit) = proposal_deposit {
+        poll_config.proposal_deposit = proposal_deposit;
+    }
 
-        Ok(config)
-    })?;
+    if let Some(period) = snapshot_period {
+        poll_config.snapshot_period = period;
+    }
+
+    poll_config.save(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -255,7 +263,7 @@ pub fn cast_vote(
 pub fn end_poll(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     poll_id: u64,
 ) -> ContractResult<Response> {
     let mut poll = Poll::load(deps.storage, &poll_id)?;
@@ -315,7 +323,7 @@ pub fn end_poll(
         // Refunds deposit only when quorum is reached
         if !poll.deposit_amount.is_zero() {
             messages.push(
-                CosmosMsg.Wasm(WasmMsg::Execute {
+                CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: deps.api.addr_humanize(&contract_config.token_contract)?.to_string(),
                     send: vec![],
                     msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -358,7 +366,7 @@ pub fn end_poll(
 pub fn execute_poll(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     poll_id: u64,
 ) -> ContractResult<Response> {
     let poll_config = PollConfig::load(deps.storage)?;
@@ -373,7 +381,7 @@ pub fn execute_poll(
     }
 
 
-    Poll::indexer_bucket(deps.storage, &PollStatus::Passed).remove(&poll_id.to_be_bytes())?;
+    Poll::indexer_bucket(deps.storage, &PollStatus::Passed).remove(&poll_id.to_be_bytes());
     Poll::indexer_bucket(deps.storage, &PollStatus::Executed)
         .save(&poll_id.to_be_bytes(), &true)?;
 
@@ -413,7 +421,7 @@ pub fn execute_poll(
 pub fn expire_poll(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     poll_id: u64,
 ) -> ContractResult<Response> {
     let poll_config = PollConfig::load(deps.storage)?;
@@ -433,7 +441,7 @@ pub fn expire_poll(
         return Err(ContractError::Std(StdError::generic_err("Expire height has not been reached")));
     }
 
-    Poll::indexer_bucket(deps.storage, &PollStatus::Passed).remove(&poll_id.to_be_bytes())?;
+    Poll::indexer_bucket(deps.storage, &PollStatus::Passed).remove(&poll_id.to_be_bytes());
     Poll::indexer_bucket(deps.storage, &PollStatus::Expired)
         .save(&poll_id.to_be_bytes(), &true)?;
 
@@ -456,7 +464,7 @@ pub fn expire_poll(
 pub fn snapshot_poll(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     poll_id: u64,
 ) -> ContractResult<Response> {
     let poll_config = PollConfig::load(deps.storage)?;

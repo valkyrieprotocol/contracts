@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut, Env, from_binary, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Addr, DepsMut, Env, from_binary, MessageInfo, Response};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cw20::Cw20ReceiveMsg;
@@ -9,9 +9,6 @@ use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
 
 use crate::common::state::ContractConfig;
 
-use super::errors::ContractError;
-use super::state::Config;
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -19,9 +16,11 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    crate::common::contracts::instantiate(&deps, &env, &info, msg.contract_config)?;
-    crate::staking::contracts::instantiate(&deps, &env, &info)?;
-    crate::poll::contracts::instantiate(&deps, &env, &info, msg.poll_config)?;
+    let mut deps_mut = deps;
+
+    crate::common::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
+    crate::staking::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::poll::contracts::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
 
     Ok(Response::default())
 }

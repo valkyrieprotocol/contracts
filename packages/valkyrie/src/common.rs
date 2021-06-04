@@ -1,7 +1,7 @@
+use cosmwasm_std::Order;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Order;
 use super::errors::ContractError;
 
 pub type ContractResult<T> = core::result::Result<T, ContractError>;

@@ -1,5 +1,7 @@
 use cosmwasm_std::{CanonicalAddr, StdResult, Storage};
 use cosmwasm_storage::{ReadonlySingleton, Singleton, singleton, singleton_read};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 static KEY_CONTRACT_CONFIG: &[u8] = b"contract-config";
 

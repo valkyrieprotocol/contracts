@@ -1,12 +1,13 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Binary, CanonicalAddr, Decimal, StdResult, Storage, Uint128};
-use cosmwasm_storage::{Bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton_read};
+use cosmwasm_storage::{Bucket, bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton, singleton_read};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use valkyrie::common::OrderBy;
 use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::governance::models::VoterInfo;
-use crate::staking::state::StakingState;
 
 static KEY_POLL_CONFIG: &[u8] = b"poll-config";
 static KEY_POLL_STATE: &[u8] = b"poll-state";
@@ -30,11 +31,11 @@ pub struct PollConfig {
 
 impl PollConfig {
     pub fn singleton(storage: &mut dyn Storage) -> Singleton<PollConfig> {
-        singleton(storage, KEY_CONFIG)
+        singleton(storage, KEY_POLL_CONFIG)
     }
 
     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<PollConfig> {
-        singleton_read(storage, KEY_CONFIG)
+        singleton_read(storage, KEY_POLL_CONFIG)
     }
 
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -128,7 +129,7 @@ impl Poll {
         )
     }
 
-    pub fn voter_bucket(storage: &mut dyn Storage, poll_id: &u64) -> Bucket<VoterInfo> {
+    pub fn voter_bucket<'a>(storage: &'a mut dyn Storage, poll_id: &'a u64) -> Bucket<'a, VoterInfo> {
         Bucket::multilevel(
             storage,
             &[PREFIX_POLL_VOTER, &poll_id.to_be_bytes()],
@@ -221,7 +222,7 @@ impl Poll {
     }
 
     pub fn in_progress(&self, block_height: u64) -> bool {
-        poll.status == PollStatus::InProgress && block_height <= poll.end_height
+        self.status == PollStatus::InProgress && block_height <= self.end_height
     }
 
     pub fn load_voter(&self, storage: &dyn Storage, address: &CanonicalAddr) -> StdResult<VoterInfo> {

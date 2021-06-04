@@ -2,8 +2,7 @@ use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::enumerations::PollStatus;
-use super::enumerations::VoteOption;
+use super::enumerations::{PollStatus, VoteOption};
 
 // Models
 

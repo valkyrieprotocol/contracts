@@ -3,9 +3,7 @@ use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::common::OrderBy;
-
-use super::enumerations::{PollStatus, VoteOption};
+use super::enumerations::VoteOption;
 use super::models::ExecutionMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -562,6 +562,7 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
+ "thiserror",
 ]
 
 [[package]]
@@ -577,7 +578,6 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
- "thiserror",
  "valkyrie",
 ]
 

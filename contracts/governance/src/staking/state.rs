@@ -1,24 +1,26 @@
 use cosmwasm_std::{CanonicalAddr, StdResult, Storage, Uint128};
-use cosmwasm_storage::{Bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton, singleton_read};
+use cosmwasm_storage::{Bucket, bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton, singleton_read};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use valkyrie::governance::models::VoterInfo;
 
-static KEY_STAKING_CONFIG: &[u8] = b"staking-config";
+// static KEY_STAKING_CONFIG: &[u8] = b"staking-config";
 static KEY_STAKING_STATE: &[u8] = b"staking-state";
 static PREFIX_STAKER_STATE: &[u8] = b"staker-state";
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingConfig {}
-
-impl StakingConfig {
-    pub fn singleton(storage: &mut dyn Storage) -> Singleton<StakingConfig> {
-        singleton(storage, KEY_CONFIG)
-    }
-
-    pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<StakingConfig> {
-        singleton_read(storage, KEY_CONFIG)
-    }
-}
+// #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+// pub struct StakingConfig {}
+//
+// impl StakingConfig {
+//     pub fn singleton(storage: &mut dyn Storage) -> Singleton<StakingConfig> {
+//         singleton(storage, KEY_STAKING_CONFIG)
+//     }
+//
+//     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<StakingConfig> {
+//         singleton_read(storage, KEY_STAKING_CONFIG)
+//     }
+// }
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -56,7 +58,7 @@ pub struct StakerState {
 impl StakerState {
     pub fn default(address: &CanonicalAddr) -> StakerState {
         StakerState {
-            address: CanonicalAddr::from(address),
+            address: address.clone(),
             share: Uint128::zero(),
             locked_balance: vec![],
         }
@@ -79,6 +81,6 @@ impl StakerState {
     }
 
     pub fn may_load(storage: &dyn Storage, address: &CanonicalAddr) -> StdResult<Option<StakerState>> {
-        StakerState::bucket_read(storage).may_load(StakerState::key_of(address))
+        StakerState::bucket_read(storage).may_load(address.as_slice())
     }
 }

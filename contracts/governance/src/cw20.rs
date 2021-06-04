@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, CanonicalAddr, DepsMut, from_binary, StdResult, to_binary, Uint128, QuerierWrapper, Pair, Response, Attribute, CosmosMsg, WasmMsg, attr};
+use cosmwasm_std::{Addr, attr, Attribute, Binary, CanonicalAddr, CosmosMsg, from_binary, QuerierWrapper, Response, StdResult, to_binary, Uint128, WasmMsg};
 use cosmwasm_storage::to_length_prefixed;
 use cw20::Cw20ExecuteMsg;
 
@@ -30,7 +30,7 @@ pub fn create_send_msg_response(
     amount: u128,
     action: &str,
 ) -> Response {
-    Response{
+    Response {
         submessages: vec![],
         messages: create_send_msg(token, recipient, amount),
         attributes: create_send_attr(recipient, amount, action),
@@ -51,7 +51,7 @@ pub fn create_send_msg(
                     recipient: recipient.to_string(),
                     amount: Uint128::from(amount),
                 }
-            )?,
+            ).unwrap(),
             send: vec![],
         })
     ]

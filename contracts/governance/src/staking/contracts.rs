@@ -1,18 +1,19 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, CanonicalAddr, Storage, attr};
+use cosmwasm_std::{Addr, attr, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
 
-use super::state::{StakingConfig, StakingState};
 use valkyrie::common::ContractResult;
-use crate::staking::state::StakerState;
 use valkyrie::errors::ContractError;
-use crate::common::state::ContractConfig;
-use crate::cw20::{load_cw20_balance, create_send_msg, create_send_attr, create_send_msg_response};
-use crate::poll::state::{Poll, PollState};
 use valkyrie::governance::enumerations::PollStatus;
 
+use crate::common::state::ContractConfig;
+use crate::cw20::{create_send_msg_response, load_cw20_balance};
+use crate::poll::state::{Poll, PollState};
+
+use super::state::{StakerState, StakingState};
+
 pub fn instantiate(
-    deps: &DepsMut,
-    _env: &Env,
-    _info: &MessageInfo,
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
 ) -> ContractResult<Response> {
     let state = StakingState {
         total_share: Uint128::zero(),
