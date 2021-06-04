@@ -33,12 +33,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
-name = "bytes"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -355,15 +349,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "2.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45604fc7a88158e7d514d8e22e14ac746081e7a70d7690074dd0029ee37458d6"
-dependencies = [
- "bytes",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -520,6 +505,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "terraswap"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c4f32f6d9a9452940891a31d193cce07eb975dd8e9593c01434ea9c7a68eec5"
+dependencies = [
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -557,44 +556,24 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw20",
  "schemars",
  "serde",
- "terra-cosmwasm",
 ]
 
 [[package]]
-name = "valkyrie-campaign-base"
-version = "0.1.0"
+name = "valkyrie-staking"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
- "protobuf",
  "schemars",
  "serde",
  "terra-cosmwasm",
- "thiserror",
- "valkyrie",
-]
-
-[[package]]
-name = "valkyrie-governance"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-storage-plus",
- "cw20",
- "protobuf",
- "schemars",
- "serde",
- "terra-cosmwasm",
- "thiserror",
+ "terraswap",
  "valkyrie",
 ]
 
