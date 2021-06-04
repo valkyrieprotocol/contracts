@@ -3,13 +3,14 @@ use cosmwasm_std::{Addr, DepsMut, Env, from_binary, MessageInfo, Response, StdRe
 use cosmwasm_std::entry_point;
 use cw20::Cw20ReceiveMsg;
 
+use valkyrie::common::ContractResult;
+use valkyrie::errors::ContractError;
 use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+
+use crate::common::state::ContractConfig;
 
 use super::errors::ContractError;
 use super::state::Config;
-use valkyrie::common::ContractResult;
-use valkyrie::errors::ContractError;
-use crate::common::state::ContractConfig;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -20,6 +21,7 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     crate::common::contracts::instantiate(&deps, &env, &info, msg.contract_config)?;
     crate::staking::contracts::instantiate(&deps, &env, &info)?;
+    crate::poll::contracts::instantiate(&deps, &env, &info, msg.poll_config)?;
 
     Ok(Response::default())
 }
@@ -50,7 +52,71 @@ pub fn execute(
             env,
             info,
             amount,
-        )
+        ),
+        ExecuteMsg::UpdatePollConfig {
+            quorum,
+            threshold,
+            voting_period,
+            execution_delay_period,
+            expiration_period,
+            proposal_deposit,
+            snapshot_period,
+        } => crate::poll::contracts::update_poll_config(
+            deps,
+            env,
+            info,
+            quorum,
+            threshold,
+            voting_period,
+            execution_delay_period,
+            expiration_period,
+            proposal_deposit,
+            snapshot_period,
+        ),
+        ExecuteMsg::CastVote {
+            poll_id,
+            vote,
+            amount,
+        } => crate::poll::contracts::cast_vote(
+            deps,
+            env,
+            info,
+            poll_id,
+            vote,
+            amount,
+        ),
+        ExecuteMsg::EndPoll {
+            poll_id,
+        } => crate::poll::contracts::end_poll(
+            deps,
+            env,
+            info,
+            poll_id,
+        ),
+        ExecuteMsg::ExecutePoll {
+            poll_id,
+        } => crate::poll::contracts::execute_poll(
+            deps,
+            env,
+            info,
+            poll_id,
+        ),
+        ExecuteMsg::ExpirePoll {
+            poll_id,
+        } => crate::poll::contracts::expire_poll(
+            deps,
+            env,
+            info,
+            poll_id,
+        ),
+        ExecuteMsg::SnapshotPoll {
+            poll_id,
+        } => crate::poll::contracts::snapshot_poll(
+            deps,
+            env,
+            info,
+            poll_id,
+        ),
     }
 }
 
@@ -74,6 +140,27 @@ pub fn receive_cw20(
             Addr::unchecked(cw20_msg.sender),
             cw20_msg.amount,
         ),
-        Err(err) => Err(ContractError::Std(err))
+        Ok(Cw20HookMsg::CreatePoll {
+               title,
+               description,
+               link,
+               execution,
+           }) => crate::poll::contracts::create_poll(
+            deps,
+            env,
+            info,
+            Addr::unchecked(cw20_msg.sender),
+            cw20_msg.amount,
+            title,
+            description,
+            link,
+            execution,
+        ),
+        Err(err) => Err(ContractError::Std(err)),
     }
 }
+
+// #[cfg_attr(not(feature = "library"), entry_point)]
+// pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+//
+// }

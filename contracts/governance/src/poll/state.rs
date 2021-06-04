@@ -1,9 +1,12 @@
-use cosmwasm_std::{Decimal, Storage, Uint128, CanonicalAddr, StdResult, Binary};
-use cosmwasm_storage::{ReadonlySingleton, Singleton, singleton_read, Bucket, ReadonlyBucket, bucket_read};
+use std::cmp::Ordering;
+
+use cosmwasm_std::{Binary, CanonicalAddr, Decimal, StdResult, Storage, Uint128};
+use cosmwasm_storage::{Bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton_read};
+
+use valkyrie::common::OrderBy;
 use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::governance::models::VoterInfo;
-use valkyrie::common::OrderBy;
-use std::cmp::Ordering;
+use crate::staking::state::StakingState;
 
 static KEY_POLL_CONFIG: &[u8] = b"poll-config";
 static KEY_POLL_STATE: &[u8] = b"poll-state";
@@ -33,6 +36,14 @@ impl PollConfig {
     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<PollConfig> {
         singleton_read(storage, KEY_CONFIG)
     }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        PollConfig::singleton(storage).save(self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<PollConfig> {
+        PollConfig::singleton_read(storage).load()
+    }
 }
 
 
@@ -49,6 +60,31 @@ impl PollState {
     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<PollState> {
         singleton_read(storage, KEY_POLL_STATE)
     }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        PollState::singleton(storage).save(self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<PollState> {
+        PollState::singleton_read(storage).load()
+    }
+}
+
+pub fn get_poll_id(storage: &mut dyn Storage, deposit_amount: &Uint128) -> StdResult<u64> {
+    let mut poll_state = PollState::load(storage)?;
+    let poll_id = poll_state.poll_count + 1;
+
+    poll_state.poll_count += 1;
+
+    StakingState::singleton(deps.storage).update(|mut staking_config| {
+        staking_config.total_deposit += deposit_amount;
+
+        Ok(staking_config)
+    })?;
+
+    poll_state.save(storage)?;
+
+    Ok(poll_id)
 }
 
 
@@ -77,6 +113,10 @@ impl Poll {
 
     pub fn bucket_read(storage: &dyn Storage) -> ReadonlyBucket<Poll> {
         bucket_read(storage, PREFIX_POLL)
+    }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        Poll::bucket(storage).save(&self.id.to_be_bytes(), &self)
     }
 
     pub fn load(storage: &dyn Storage, poll_id: &u64) -> StdResult<Poll> {
@@ -183,6 +223,14 @@ impl Poll {
                 Ok((CanonicalAddr::from(k), v))
             })
             .collect()
+    }
+
+    pub fn in_progress(&self, block_height: u64) -> bool {
+        poll.status == PollStatus::InProgress && block_height <= poll.end_height
+    }
+
+    pub fn load_voter(&self, storage: &dyn Storage, address: &CanonicalAddr) -> StdResult<VoterInfo> {
+        Poll::voter_bucket_read(storage, self.id).load(address.as_slice())
     }
 }
 

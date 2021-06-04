@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Response, StdError,
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::governance::messages::{InstantiateMsg, ContractConfigInitMsg};
+use valkyrie::governance::messages::{ContractConfigInitMsg, InstantiateMsg};
 
 use crate::errors::ContractError;
 use crate::poll::state::PollConfig;
@@ -22,7 +22,7 @@ pub fn instantiate(
         boost_contract: None,
     };
 
-    ContractConfig::singleton(deps.storage).save(&config)?;
+    config.save(deps.storage)?;
 
     Ok(Response::default())
 }

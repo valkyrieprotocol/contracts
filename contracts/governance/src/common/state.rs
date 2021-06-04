@@ -1,5 +1,5 @@
-use cosmwasm_std::{CanonicalAddr, Storage, StdResult};
-use cosmwasm_storage::{Singleton, ReadonlySingleton, singleton_read, singleton};
+use cosmwasm_std::{CanonicalAddr, StdResult, Storage};
+use cosmwasm_storage::{ReadonlySingleton, Singleton, singleton, singleton_read};
 
 static KEY_CONTRACT_CONFIG: &[u8] = b"contract-config";
 
@@ -17,6 +17,10 @@ impl ContractConfig {
 
     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<ContractConfig> {
         singleton_read(storage, KEY_CONTRACT_CONFIG)
+    }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        ContractConfig::singleton(storage).save(self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<ContractConfig> {
