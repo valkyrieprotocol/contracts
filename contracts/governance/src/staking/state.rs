@@ -24,7 +24,6 @@ impl StakingConfig {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingState {
     pub total_share: Uint128,
-    pub total_deposit: Uint128,
 }
 
 impl StakingState {

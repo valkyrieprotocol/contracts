@@ -50,6 +50,7 @@ impl PollConfig {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PollState {
     pub poll_count: u64,
+    pub total_deposit: Uint128,
 }
 
 impl PollState {
@@ -75,13 +76,7 @@ pub fn get_poll_id(storage: &mut dyn Storage, deposit_amount: &Uint128) -> StdRe
     let poll_id = poll_state.poll_count + 1;
 
     poll_state.poll_count += 1;
-
-    StakingState::singleton(deps.storage).update(|mut staking_config| {
-        staking_config.total_deposit += deposit_amount;
-
-        Ok(staking_config)
-    })?;
-
+    poll_state.total_deposit += deposit_amount;
     poll_state.save(storage)?;
 
     Ok(poll_id)

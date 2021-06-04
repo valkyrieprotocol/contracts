@@ -6,7 +6,7 @@ use crate::staking::state::StakerState;
 use valkyrie::errors::ContractError;
 use crate::common::state::ContractConfig;
 use crate::cw20::{load_cw20_balance, create_send_msg, create_send_attr, create_send_msg_response};
-use crate::poll::state::Poll;
+use crate::poll::state::{Poll, PollState};
 use valkyrie::governance::enumerations::PollStatus;
 
 pub fn instantiate(
@@ -16,7 +16,6 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     let state = StakingState {
         total_share: Uint128::zero(),
-        total_deposit: Uint128::zero(),
     };
 
     state.save(deps.storage)?;
@@ -36,6 +35,7 @@ pub fn stake_voting_token(
     }
 
     let contract_config = ContractConfig::load(deps.storage)?;
+    let poll_state = PollState::load(deps.storage)?;
     let mut staking_state = StakingState::load(deps.storage)?;
 
     let sender_address = deps.api.addr_canonicalize(sender.as_str())?;
@@ -47,7 +47,7 @@ pub fn stake_voting_token(
         &deps.api.addr_humanize(&contract_config.token_contract)?,
         &deps.api.addr_canonicalize(env.contract.address.as_str())?,
     )?;
-    let total_balance = contract_balance.checked_sub(staking_state.total_deposit + amount)?;
+    let total_balance = contract_balance.checked_sub(poll_state.total_deposit + amount)?;
 
     let share = if total_balance.is_zero() || staking_state.total_share.is_zero() {
         amount
@@ -88,6 +88,7 @@ pub fn unstake_voting_token(
 
     if let Some(mut staker_state) = staker_state {
         let contract_config = ContractConfig::load(deps.storage)?;
+        let poll_state = PollState::load(deps.storage)?;
         let mut staking_state = StakingState::load(deps.storage)?;
 
         // Load total share & total balance except proposal deposit amount
@@ -97,7 +98,7 @@ pub fn unstake_voting_token(
             &deps.api.addr_humanize(&contract_config.token_contract)?,
             &deps.api.addr_canonicalize(env.contract.address.as_str())?,
         )?;
-        let total_balance = contract_balance.checked_sub(staking_state.total_deposit)?.u128();
+        let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?.u128();
 
         let locked_balance = compute_locked_balance(deps.storage, &mut staker_state, &sender_address)?;
         let locked_share = locked_balance * total_share / total_balance;

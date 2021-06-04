@@ -206,7 +206,7 @@ pub fn cast_vote(
         &deps.api.addr_humanize(&contract_config.token_contract)?,
         &deps.api.addr_canonicalize(env.contract.address.as_str())?,
     )?;
-    let total_balance = contract_balance.checked_sub(staking_state.total_deposit)?;
+    let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
 
     if staker_state.share.multiply_ratio(total_balance, total_share) < amount {
         return Err(ContractError::Std(StdError::generic_err("User does not have enough staked tokens.")));
@@ -280,7 +280,8 @@ pub fn end_poll(
     let mut messages: Vec<CosmosMsg> = vec![];
     let contract_config = ContractConfig::load(deps.storage)?;
     let poll_config = PollConfig::load(deps.storage)?;
-    let mut staking_state = StakingState::load(deps.storage)?;
+    let staking_state = StakingState::load(deps.storage)?;
+    let mut poll_state = PollState::load(deps.storage)?;
 
     let (quorum, staked_weight) = if staking_state.total_share.u128() == 0 {
         (Decimal::zero(), Uint128::zero())
@@ -292,7 +293,7 @@ pub fn end_poll(
             &deps.api.addr_humanize(&contract_config.token_contract)?,
             &deps.api.addr_canonicalize(env.contract.address.as_str())?,
         )?;
-        let staked_weight = contract_balance.checked_sub(staking_state.total_deposit)?;
+        let staked_weight = contract_balance.checked_sub(poll_state.total_deposit)?;
 
         (Decimal::from_ratio(tallied_weight, staked_weight), staked_weight)
     };
@@ -327,8 +328,8 @@ pub fn end_poll(
     }
 
     // Decrease total deposit amount
-    staking_state.total_deposit = staking_state.total_deposit.checked_sub(poll.deposit_amount)?;
-    staking_state.save(deps.storage)?;
+    poll_state.total_deposit = poll_state.total_deposit.checked_sub(poll.deposit_amount)?;
+    poll_state.save(deps.storage)?;
 
     // Update poll indexer
     Poll::indexer_bucket(deps.storage, &PollStatus::InProgress).remove(&poll.id.to_be_bytes());
@@ -476,13 +477,13 @@ pub fn snapshot_poll(
 
     // store the current staked amount for quorum calculation
     let contract_config = ContractConfig::load(deps.storage)?;
-    let staking_state = StakingState::load(deps.storage)?;
+    let poll_state = PollState::load(deps.storage)?;
     let contract_balance = load_cw20_balance(
         &deps.querier,
         &deps.api.addr_humanize(&contract_config.token_contract)?,
         &deps.api.addr_canonicalize(env.contract.address.as_str())?,
     )?;
-    let staked_amount = contract_balance.checked_sub(staking_state.total_deposit)?;
+    let staked_amount = contract_balance.checked_sub(poll_state.total_deposit)?;
 
     poll.staked_amount = Some(staked_amount);
     poll.save(deps.storage)?;
