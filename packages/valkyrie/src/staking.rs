@@ -45,13 +45,8 @@ pub struct MigrateMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    State {
-        block_height: Option<u64>,
-    },
-    StakerInfo {
-        staker: String,
-        block_height: Option<u64>,
-    },
+    State { block_height: Option<u64> },
+    StakerInfo { staker: String },
 }
 
 // We define a custom struct for each query response

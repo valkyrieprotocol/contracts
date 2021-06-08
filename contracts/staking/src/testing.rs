@@ -93,7 +93,6 @@ fn test_bond_tokens() {
                 env.clone(),
                 QueryMsg::StakerInfo {
                     staker: "addr0000".to_string(),
-                    block_height: None,
                 },
             )
             .unwrap(),
@@ -141,7 +140,6 @@ fn test_bond_tokens() {
                 env.clone(),
                 QueryMsg::StakerInfo {
                     staker: "addr0000".to_string(),
-                    block_height: None,
                 },
             )
             .unwrap(),
@@ -300,7 +298,6 @@ fn test_compute_reward() {
                 env.clone(),
                 QueryMsg::StakerInfo {
                     staker: Addr::unchecked("addr0000").to_string(),
-                    block_height: None,
                 },
             )
             .unwrap()
@@ -331,7 +328,6 @@ fn test_compute_reward() {
                 env.clone(),
                 QueryMsg::StakerInfo {
                     staker: Addr::unchecked("addr0000").to_string(),
-                    block_height: None,
                 },
             )
             .unwrap()
@@ -346,6 +342,9 @@ fn test_compute_reward() {
     );
 
     // query future block
+
+    env.block.height = 12345 + 120;
+
     assert_eq!(
         from_binary::<StakerInfoResponse>(
             &query(
@@ -353,7 +352,6 @@ fn test_compute_reward() {
                 env.clone(),
                 QueryMsg::StakerInfo {
                     staker: Addr::unchecked("addr0000").to_string(),
-                    block_height: Some(12345 + 120),
                 },
             )
             .unwrap()

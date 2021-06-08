@@ -1,7 +1,7 @@
 // use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128, WasmMsg,
+    attr, from_binary, to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 
 use valkyrie::staking::{
@@ -9,7 +9,7 @@ use valkyrie::staking::{
     StakerInfoResponse, StateResponse,
 };
 
-use crate::state::{read_staker_info, Config, StakerInfo, State, CONFIG, STAKER_INFO, STATE};
+use crate::state::{read_staker_info, Config, StakerInfo, State, CONFIG, STAKER_INFO, STATE, UST};
 
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terra_cosmwasm::TerraQuerier;
@@ -17,7 +17,6 @@ use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -25,9 +24,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
-        valkyrie_token: deps.api.addr_canonicalize(&msg.valkyrie_token.as_str())?,
-        liquidity_token: deps.api.addr_canonicalize(&msg.liquidity_token.as_str())?, //bond는 liquidity_token만 가능.
-        pair_contract: deps.api.addr_canonicalize(&msg.pair_contract.as_str())?,
+        valkyrie_token: deps.api.addr_validate(&msg.valkyrie_token.as_str())?,
+        liquidity_token: deps.api.addr_validate(&msg.liquidity_token.as_str())?, //bond는 liquidity_token만 가능.
+        pair_contract: deps.api.addr_validate(&msg.pair_contract.as_str())?,
         distribution_schedule: msg.distribution_schedule,
     };
 
@@ -49,7 +48,6 @@ pub fn instantiate(
     })
 }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
@@ -77,7 +75,7 @@ pub fn receive_cw20(
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::Bond {} => {
             // only staking token contract can execute this message
-            if config.liquidity_token != deps.api.addr_canonicalize(&info.sender.as_str())? {
+            if config.liquidity_token != deps.api.addr_validate(&info.sender.as_str())? {
                 return Err(StdError::generic_err("unauthorized"));
             }
             bond(deps, env, cw20_msg.sender, cw20_msg.amount)
@@ -86,7 +84,7 @@ pub fn receive_cw20(
 }
 
 pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
-    let sender_addr_raw: CanonicalAddr = deps.api.addr_canonicalize(&sender_addr.as_str())?;
+    let sender_addr_raw: Addr = deps.api.addr_validate(&sender_addr.as_str())?;
 
     let config: Config = CONFIG.load(deps.storage)?;
     let mut state: State = STATE.load(deps.storage)?;
@@ -99,7 +97,13 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     // Increase bond_amount
     state.total_bond_amount += amount;
     staker_info.bond_amount += amount;
-    STAKER_INFO.save(deps.storage, &sender_addr_raw, &staker_info)?;
+    STAKER_INFO.save(
+        deps.storage,
+        deps.api
+            .addr_canonicalize(sender_addr_raw.as_str())?
+            .as_slice(),
+        &staker_info,
+    )?;
     STATE.save(deps.storage, &state)?;
 
     Ok(Response {
@@ -114,6 +118,7 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     })
 }
 
+//CONTRACT: the executor must increase allowance of valkyrie token first before executing auto stake
 pub fn auto_stake(
     deps: DepsMut,
     env: Env,
@@ -122,11 +127,11 @@ pub fn auto_stake(
     slippage_tolerance: Option<Decimal>,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let token_addr = deps.api.addr_humanize(&config.valkyrie_token)?.to_string();
-    let liquidity_token_addr = deps.api.addr_humanize(&config.liquidity_token)?.to_string();
-    let pair_addr = deps.api.addr_humanize(&config.pair_contract)?.to_string();
+    let token_addr = &config.valkyrie_token.as_str().to_string();
+    let liquidity_token_addr = &config.liquidity_token.as_str().to_string();
+    let pair_addr = &config.pair_contract.as_str().to_string();
 
-    if info.funds.len() != 1 || info.funds[0].denom != "uusd".to_string() {
+    if info.funds.len() != 1 || info.funds[0].denom != *UST {
         return Err(StdError::generic_err("UST only."));
     }
 
@@ -172,9 +177,9 @@ pub fn auto_stake(
                 msg: to_binary(&PairExecuteMsg::ProvideLiquidity {
                     assets: [
                         Asset {
-                            amount: (uusd_amount.clone().checked_sub(tax_amount))?,
+                            amount: (uusd_amount.checked_sub(tax_amount))?,
                             info: AssetInfo::NativeToken {
-                                denom: "uusd".to_string(),
+                                denom: UST.to_string(),
                             },
                         },
                         Asset {
@@ -187,7 +192,7 @@ pub fn auto_stake(
                     slippage_tolerance,
                 })?,
                 send: vec![Coin {
-                    denom: "uusd".to_string(),
+                    denom: UST.to_string(),
                     amount: uusd_amount.checked_sub(tax_amount)?,
                 }],
             }),
@@ -216,7 +221,7 @@ fn compute_uusd_tax(querier: &QuerierWrapper, amount: Uint128) -> StdResult<Uint
     let terra_querier = TerraQuerier::new(querier);
 
     let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
-    let tax_cap: Uint128 = (terra_querier.query_tax_cap("uusd".to_string())?).cap;
+    let tax_cap: Uint128 = (terra_querier.query_tax_cap(UST.to_string())?).cap;
     Ok(std::cmp::min(
         amount.checked_sub(amount.multiply_ratio(
             DECIMAL_FRACTION,
@@ -239,7 +244,7 @@ pub fn auto_stake_hook(
     }
 
     let config: Config = CONFIG.load(deps.as_ref().storage)?;
-    let liquidity_token = deps.api.addr_humanize(&config.liquidity_token)?;
+    let liquidity_token = config.liquidity_token;
 
     // stake all lp tokens received, compare with staking token amount before liquidity provision was executed
     let current_staking_token_amount = query_token_balance(
@@ -255,7 +260,7 @@ pub fn auto_stake_hook(
 
 pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let sender_addr_raw: CanonicalAddr = deps.api.addr_canonicalize(&info.sender.as_str())?;
+    let sender_addr_raw: Addr = info.sender;
 
     let mut state: State = STATE.load(deps.storage)?;
     let mut staker_info: StakerInfo = read_staker_info(&deps.as_ref(), &sender_addr_raw)?;
@@ -276,23 +281,34 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     staker_info.bond_amount = (staker_info.bond_amount.checked_sub(amount))?;
     if staker_info.pending_reward.is_zero() && staker_info.bond_amount.is_zero() {
         //스테이킹된거 없고, 지급예정금액 없을때.
-        STAKER_INFO.remove(deps.storage, sender_addr_raw.as_slice());
+        STAKER_INFO.remove(
+            deps.storage,
+            deps.api
+                .addr_canonicalize(sender_addr_raw.as_str())?
+                .as_slice(),
+        );
     } else {
-        STAKER_INFO.save(deps.storage, sender_addr_raw.as_slice(), &staker_info)?;
+        STAKER_INFO.save(
+            deps.storage,
+            deps.api
+                .addr_canonicalize(sender_addr_raw.as_str())?
+                .as_slice(),
+            &staker_info,
+        )?;
     }
 
     Ok(Response {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: deps.api.addr_humanize(&config.liquidity_token)?.to_string(),
+            contract_addr: config.liquidity_token.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.as_str().to_string(),
+                recipient: sender_addr_raw.to_string(),
                 amount,
             })?,
             send: vec![],
         })],
         attributes: vec![
             attr("action", "unbond"),
-            attr("owner", info.sender.as_str()),
+            attr("owner", sender_addr_raw.to_string()),
             attr("amount", amount.to_string()),
         ],
         data: None,
@@ -302,7 +318,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 
 // withdraw rewards to executor
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
-    let sender_addr_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
+    let sender_addr_raw = info.sender;
 
     let config: Config = CONFIG.load(deps.storage)?;
     let mut state: State = STATE.load(deps.storage)?;
@@ -320,23 +336,34 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     // Store or remove updated rewards info
     // depends on the left pending reward and bond amount
     if staker_info.bond_amount.is_zero() {
-        STAKER_INFO.remove(deps.storage, sender_addr_raw.as_slice());
+        STAKER_INFO.remove(
+            deps.storage,
+            deps.api
+                .addr_canonicalize(sender_addr_raw.as_str())?
+                .as_slice(),
+        );
     } else {
-        STAKER_INFO.save(deps.storage, sender_addr_raw.as_slice(), &staker_info)?;
+        STAKER_INFO.save(
+            deps.storage,
+            deps.api
+                .addr_canonicalize(sender_addr_raw.as_str())?
+                .as_slice(),
+            &staker_info,
+        )?;
     }
 
     Ok(Response {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: deps.api.addr_humanize(&config.valkyrie_token)?.to_string(),
+            contract_addr: config.valkyrie_token.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.as_str().to_string(),
+                recipient: sender_addr_raw.to_string(),
                 amount,
             })?,
             send: vec![],
         })],
         attributes: vec![
             attr("action", "withdraw"),
-            attr("owner", info.sender.as_str()),
+            attr("owner", sender_addr_raw.to_string()),
             attr("amount", amount.to_string()),
         ],
         data: None,
@@ -392,23 +419,19 @@ fn compute_staker_reward(state: &State, staker_info: &mut StakerInfo) -> StdResu
     Ok(())
 }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::State { block_height } => to_binary(&query_state(deps, block_height)?),
-        QueryMsg::StakerInfo {
-            staker,
-            block_height,
-        } => to_binary(&query_staker_info(deps, staker, block_height)?),
+        QueryMsg::StakerInfo { staker } => to_binary(&query_staker_info(deps, env, staker)?),
     }
 }
 
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
-        valkyrie_token: deps.api.addr_humanize(&config.valkyrie_token)?.to_string(),
-        staking_token: deps.api.addr_humanize(&config.liquidity_token)?.to_string(),
+        valkyrie_token: config.valkyrie_token.to_string(),
+        staking_token: config.liquidity_token.to_string(),
         distribution_schedule: config.distribution_schedule,
     };
 
@@ -429,21 +452,17 @@ pub fn query_state(deps: Deps, block_height: Option<u64>) -> StdResult<StateResp
     })
 }
 
-pub fn query_staker_info(
-    deps: Deps,
-    staker: String,
-    block_height: Option<u64>,
-) -> StdResult<StakerInfoResponse> {
-    let staker_raw = deps.api.addr_canonicalize(&staker.as_str())?;
+pub fn query_staker_info(deps: Deps, env: Env, staker: String) -> StdResult<StakerInfoResponse> {
+    let block_height = env.block.height;
+    let staker_raw = deps.api.addr_validate(&staker.as_str())?;
 
     let mut staker_info: StakerInfo = read_staker_info(&deps, &staker_raw)?;
-    if let Some(block_height) = block_height {
-        let config: Config = CONFIG.load(deps.storage)?;
-        let mut state: State = STATE.load(deps.storage)?;
 
-        compute_reward(&config, &mut state, block_height);
-        compute_staker_reward(&state, &mut staker_info)?;
-    }
+    let config: Config = CONFIG.load(deps.storage)?;
+    let mut state: State = STATE.load(deps.storage)?;
+
+    compute_reward(&config, &mut state, block_height);
+    compute_staker_reward(&state, &mut staker_info)?;
 
     Ok(StakerInfoResponse {
         staker,
@@ -453,7 +472,6 @@ pub fn query_staker_info(
     })
 }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }

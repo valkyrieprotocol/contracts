@@ -4,7 +4,7 @@
   "type": "object",
   "required": [
     "distribution_schedule",
-    "lp_token",
+    "liquidity_token",
     "pair_contract",
     "valkyrie_token"
   ],
@@ -32,7 +32,7 @@
         "minItems": 3
       }
     },
-    "lp_token": {
+    "liquidity_token": {
       "type": "string"
     },
     "pair_contract": {
