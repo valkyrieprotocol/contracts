@@ -384,6 +384,7 @@ pub fn reply_execution(
     Ok(Response::default())
 }
 
+#[cfg(feature = "expire")]
 pub fn expire_poll(
     deps: DepsMut,
     env: Env,

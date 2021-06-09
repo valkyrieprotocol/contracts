@@ -91,6 +91,7 @@ pub fn execute(
             info,
             poll_id,
         ),
+        #[cfg(feature = "expire")]
         ExecuteMsg::ExpirePoll {
             poll_id,
         } => crate::poll::executions::expire_poll(

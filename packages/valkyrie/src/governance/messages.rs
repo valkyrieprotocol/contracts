@@ -51,6 +51,7 @@ pub enum ExecuteMsg {
     },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
+    #[cfg(feature = "expire")]
     ExpirePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
     UpdateValkyrieConfig {
