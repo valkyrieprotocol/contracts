@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, StdError};
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
@@ -73,6 +73,10 @@ pub fn add_campaign_code_whitelist(
     campaign_code.save(deps.storage)?;
 
     let mut valkyrie_config = ValkyrieConfig::load(deps.storage)?;
+
+    if valkyrie_config.campaign_code_whitelist.contains(&code_id) {
+        return Err(ContractError::Std(StdError::generic_err("Already whitelisted campaign code")))
+    }
 
     valkyrie_config.campaign_code_whitelist.push(code_id);
     valkyrie_config.save(deps.storage)?;
