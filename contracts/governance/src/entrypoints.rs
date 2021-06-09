@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Response, to_binary};
+use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, to_binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cw20::Cw20ReceiveMsg;
@@ -180,10 +180,13 @@ pub fn receive_cw20(
     }
 }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
-// pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
-//
-// }
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+    match msg.id {
+        crate::poll::executions::REPLY_EXECUTION => crate::poll::executions::reply_execution(deps, env, msg),
+        _ => Err(ContractError::Std(StdError::not_found("reply_id")))
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(

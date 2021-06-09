@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg, SubMsg, ReplyOn, Reply};
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
@@ -10,7 +10,7 @@ use crate::common::states::{ContractConfig, load_contract_available_balance, is_
 use crate::staking::states::StakerState;
 
 use super::states::{Execution, get_poll_id, Poll, PollConfig, PollState};
-use crate::poll::states::PollResult;
+use crate::poll::states::{PollResult, PollExecutionContext};
 use valkyrie::message_factories;
 
 const MIN_TITLE_LENGTH: usize = 4;
@@ -299,6 +299,8 @@ pub fn end_poll(
     )
 }
 
+pub const REPLY_EXECUTION: u64 = 1;
+
 pub fn execute_poll(
     deps: DepsMut,
     env: Env,
@@ -307,7 +309,7 @@ pub fn execute_poll(
 ) -> ContractResult<Response> {
     // Validate
     let poll_config = PollConfig::load(deps.storage)?;
-    let mut poll = Poll::load(deps.storage, &poll_id)?;
+    let poll = Poll::load(deps.storage, &poll_id)?;
 
     if poll.status != PollStatus::Passed {
         return Err(ContractError::Std(StdError::generic_err("Poll is not in passed status")));
@@ -317,7 +319,7 @@ pub fn execute_poll(
         return Err(ContractError::Std(StdError::generic_err("Execution delay period has not expired")));
     }
 
-    let mut executions = poll.executions.clone().unwrap_or(vec![]);
+    let mut executions = poll.executions.unwrap_or(vec![]);
     if executions.is_empty() {
         return Err(ContractError::Std(StdError::generic_err("The poll does now have executions")));
     }
@@ -325,22 +327,29 @@ pub fn execute_poll(
     // Execute
     executions.sort();
 
-    let messages = executions.iter().map(|execution| {
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: execution.contract.to_string(),
-            msg: execution.msg.clone(),
-            send: vec![],
-        })
+    let submessages = executions.iter().map(|execution| {
+        SubMsg {
+            id: REPLY_EXECUTION,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: execution.contract.to_string(),
+                msg: execution.msg.clone(),
+                send: vec![],
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Always,
+        }
     }).collect();
 
-    poll.status = PollStatus::Executed;
-    poll.save_with_index(deps.storage)?;
-
     // Response
+    PollExecutionContext {
+        poll_id: poll.id,
+        execution_count: executions.len(),
+    }.save(deps.storage)?;
+
     Ok(
         Response {
-            submessages: vec![],
-            messages,
+            submessages,
+            messages: vec![],
             attributes: vec![
                 attr("action", "execute_poll"),
                 attr("poll_id", poll_id.to_string()),
@@ -348,6 +357,31 @@ pub fn execute_poll(
             data: None,
         }
     )
+}
+
+pub fn reply_execution(
+    deps: DepsMut,
+    _env: Env,
+    msg: Reply,
+) -> ContractResult<Response> {
+    let mut poll_execution_context = PollExecutionContext::load(deps.storage)?;
+    let mut poll = Poll::load(deps.storage, &poll_execution_context.poll_id)?;
+
+    poll.status = if msg.result.is_ok() {
+        PollStatus::Executed
+    } else {
+        PollStatus::Failed
+    };
+
+    poll.save_with_index(deps.storage)?;
+
+    poll_execution_context.execution_count -= 1;
+
+    if poll_execution_context.execution_count == 0 {
+        PollExecutionContext::remove(deps.storage);
+    }
+
+    Ok(Response::default())
 }
 
 pub fn expire_poll(

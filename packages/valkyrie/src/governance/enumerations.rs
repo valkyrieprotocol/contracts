@@ -29,6 +29,7 @@ pub enum PollStatus {
     Rejected,
     Executed,
     Expired,
+    Failed,
 }
 
 impl fmt::Display for PollStatus {

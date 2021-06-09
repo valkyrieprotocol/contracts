@@ -308,6 +308,29 @@ impl Poll {
 }
 
 
+const POLL_EXECUTION_TEMP: Item<PollExecutionContext> = Item::new("poll-execution-context");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PollExecutionContext {
+    pub poll_id: u64,
+    pub execution_count: usize,
+}
+
+impl PollExecutionContext {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        POLL_EXECUTION_TEMP.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<PollExecutionContext> {
+        POLL_EXECUTION_TEMP.load(storage)
+    }
+
+    pub fn remove(storage: &mut dyn Storage) {
+        POLL_EXECUTION_TEMP.remove(storage)
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct Execution {
     pub order: u64,
