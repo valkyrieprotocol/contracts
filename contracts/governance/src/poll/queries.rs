@@ -5,9 +5,9 @@ use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::governance::models::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse, VotersResponseItem};
 
-use crate::poll::state::Poll;
+use crate::poll::states::Poll;
 
-use super::state::{PollConfig, PollState};
+use super::states::{PollConfig, PollState};
 
 pub fn get_poll_config(
     deps: Deps,
@@ -47,12 +47,13 @@ pub fn get_poll(
     _env: Env,
     poll_id: u64,
 ) -> ContractResult<PollResponse> {
-    let poll = match Poll::may_load(deps.storage, &poll_id)? {
-        Some(poll) => Some(poll),
-        None => return Err(ContractError::Std(StdError::generic_err("Poll does not exist"))),
-    }.unwrap();
+    let poll = Poll::may_load(deps.storage, &poll_id)?;
 
-    Ok(poll.to_response(deps.api)?)
+    if poll.is_none() {
+        return Err(ContractError::Std(StdError::generic_err("Poll does not exist")));
+    }
+
+    Ok(poll.unwrap().to_response())
 }
 
 pub fn query_polls(
@@ -64,7 +65,7 @@ pub fn query_polls(
     order_by: Option<OrderBy>,
 ) -> ContractResult<PollsResponse> {
     let polls = Poll::query(deps.storage, filter, start_after, limit, order_by)?.iter()
-        .map(|poll| poll.to_response(deps.api).unwrap())
+        .map(|poll| poll.to_response())
         .collect();
 
     Ok(
@@ -82,34 +83,23 @@ pub fn query_voters(
     limit: Option<u32>,
     order_by: Option<OrderBy>,
 ) -> ContractResult<VotersResponse> {
-    let poll = match Poll::may_load(deps.storage, &poll_id)? {
-        Some(poll) => Some(poll),
-        None => return Err(ContractError::Std(StdError::generic_err("Poll does not exist"))),
-    }.unwrap();
+    let poll = Poll::may_load(deps.storage, &poll_id)?;
 
-    let voters = if poll.status != PollStatus::InProgress {
+    if poll.is_none() {
+        return Err(ContractError::Std(StdError::generic_err("Poll does not exist")));
+    }
+
+    let voters = if poll.unwrap().status != PollStatus::InProgress {
         vec![]
     } else {
-        let after = if let Some(start_after) = start_after {
-            Some(deps.api.addr_canonicalize(&start_after.as_str())?)
-        } else {
-            None
-        };
-
-        Poll::read_voters(
-            deps.storage,
-            &poll_id,
-            after,
-            limit,
-            order_by,
-        )?
+        Poll::read_voters(deps.storage, &poll_id, start_after, limit, order_by)?
     };
 
     let response_items = voters.iter().map(|(voter, voter_info)| {
         VotersResponseItem {
-            voter: deps.api.addr_humanize(&voter).unwrap(),
-            vote: voter_info.vote.clone(),
-            balance: voter_info.balance,
+            voter: voter.clone(),
+            vote: voter_info.option.clone(),
+            balance: voter_info.amount,
         }
     }).collect();
 

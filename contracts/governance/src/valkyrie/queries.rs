@@ -3,7 +3,7 @@ use cosmwasm_std::{Deps, Env};
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::{CampaignCodeInfoResponse, ValkyrieConfigResponse};
 
-use super::state::{CampaignCode, ValkyrieConfig};
+use super::states::{CampaignCode, ValkyrieConfig};
 
 pub fn get_valkyrie_config(
     deps: Deps,
@@ -14,8 +14,7 @@ pub fn get_valkyrie_config(
     Ok(
         ValkyrieConfigResponse {
             campaign_code_whitelist: valkyrie_config.campaign_code_whitelist,
-            boost_contract: valkyrie_config.boost_contract
-                .map(|address| deps.api.addr_humanize(&address).unwrap()),
+            boost_contract: valkyrie_config.boost_contract,
         }
     )
 }

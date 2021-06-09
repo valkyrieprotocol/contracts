@@ -1,14 +1,11 @@
-use cosmwasm_std::{Addr, Deps, Env, Uint128};
+use cosmwasm_std::{Addr, Deps, Env};
 
 use valkyrie::common::ContractResult;
-use valkyrie::cw20::query_cw20_balance;
-use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::governance::models::{StakerStateResponse, StakingStateResponse};
 
-use crate::common::state::ContractConfig;
-use crate::poll::state::{Poll, PollState};
+use crate::common::states::load_contract_available_balance;
 
-use super::state::{StakerState, StakingState};
+use super::states::{StakerState, StakingState};
 
 pub fn get_staking_state(
     deps: Deps,
@@ -25,41 +22,21 @@ pub fn get_staking_state(
 
 pub fn get_staker_state(
     deps: Deps,
-    env: Env,
+    _env: Env,
     address: Addr,
 ) -> ContractResult<StakerStateResponse> {
-    let contract_config = ContractConfig::load(deps.storage)?;
-    let poll_state = PollState::load(deps.storage)?;
-    let staking_state = StakingState::load(deps.storage)?;
-    let mut staker_state = StakerState::load(
-        deps.storage,
-        &deps.api.addr_canonicalize(address.as_str())?,
-    )?;
+    let mut staker_state = StakerState::load(deps.storage, &address)?;
 
-    staker_state.locked_balance.retain(|(poll_id, _)| {
-        let poll = Poll::load(deps.storage, &poll_id).unwrap();
+    let contract_available_balance = load_contract_available_balance(deps.clone())?;
+    let balance = staker_state.load_balance(deps.storage, contract_available_balance)?;
 
-        poll.status == PollStatus::InProgress
-    });
-
-    let contract_balance = query_cw20_balance(
-        &deps.querier,
-        deps.api,
-        &contract_config.token_contract,
-        &env.contract.address,
-    )?;
-    let total_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
-    let balance = if !staking_state.total_share.is_zero() {
-        staker_state.share.multiply_ratio(total_balance, staking_state.total_share)
-    } else {
-        Uint128::zero()
-    };
+    staker_state.clean_votes(deps.storage);
 
     Ok(
         StakerStateResponse {
             balance,
             share: staker_state.share,
-            locked_balance: staker_state.locked_balance,
+            votes: staker_state.votes,
         }
     )
 }

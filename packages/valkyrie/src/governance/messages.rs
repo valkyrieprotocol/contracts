@@ -34,9 +34,6 @@ pub struct PollConfigInitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    UpdateContractConfig {
-        admin: Option<Addr>,
-    },
     UnstakeVotingToken { amount: Option<Uint128> },
     UpdatePollConfig {
         quorum: Option<Decimal>,

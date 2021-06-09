@@ -7,7 +7,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 
-use crate::common::state::ContractConfig;
+use crate::common::states::ContractConfig;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -35,14 +35,6 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateContractConfig {
-            admin,
-        } => crate::common::executions::update_config(
-            deps,
-            env,
-            info,
-            admin,
-        ),
         ExecuteMsg::UnstakeVotingToken {
             amount,
         } => crate::staking::executions::unstake_voting_token(
@@ -155,8 +147,8 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
     // only asset contract can execute this message
-    let config = ContractConfig::singleton_read(deps.storage).load()?;
-    if config.is_token_contract(deps.api.addr_canonicalize(info.sender.as_str())?) {
+    let config = ContractConfig::load(deps.storage)?;
+    if config.is_token_contract(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -253,12 +245,12 @@ pub fn query(
             &crate::staking::queries::get_staker_state(deps, env, address)?
         ),
         QueryMsg::ValkyrieConfig {} => to_binary(
-            &crate::valkyrie::querier::get_valkyrie_config(deps, env)?
+            &crate::valkyrie::queries::get_valkyrie_config(deps, env)?
         ),
         QueryMsg::CampaignCodeInfo {
             code_id,
         } => to_binary(
-            &crate::valkyrie::querier::get_campaign_code_info(deps, env, code_id)?
+            &crate::valkyrie::queries::get_campaign_code_info(deps, env, code_id)?
         ),
     }?;
 

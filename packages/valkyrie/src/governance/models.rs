@@ -7,9 +7,10 @@ use super::enumerations::{PollStatus, VoteOption};
 // Models
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct VoterInfo {
-    pub vote: VoteOption,
-    pub balance: Uint128,
+pub struct VoteInfo {
+    pub voter: Addr,
+    pub option: VoteOption,
+    pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -25,7 +26,6 @@ pub struct ExecutionMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
-    pub admin: Addr,
     pub token_contract: Addr,
 }
 
@@ -38,7 +38,7 @@ pub struct StakingStateResponse {
 pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
-    pub locked_balance: Vec<(u64, VoterInfo)>,
+    pub votes: Vec<(u64, VoteInfo)>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

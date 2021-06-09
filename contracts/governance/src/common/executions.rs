@@ -1,44 +1,24 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
-use valkyrie::errors::ContractError;
 use valkyrie::governance::messages::ContractConfigInitMsg;
 
-use super::state::ContractConfig;
+use super::states::ContractConfig;
 
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
+    env: Env,
+    _info: MessageInfo,
     msg: ContractConfigInitMsg,
 ) -> ContractResult<Response> {
+    // Execute
     let config = ContractConfig {
-        admin: deps.api.addr_canonicalize(info.sender.as_str())?,
-        token_contract: deps.api.addr_canonicalize(msg.token_contract.as_str())?,
+        address: env.contract.address,
+        token_contract: msg.token_contract,
     };
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
-}
-
-pub fn update_config(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    admin: Option<Addr>,
-) -> ContractResult<Response> {
-    let mut contract_config = ContractConfig::load(deps.storage)?;
-
-    if !contract_config.is_admin(deps.api.addr_canonicalize(info.sender.as_str())?) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if let Some(admin) = admin {
-        contract_config.admin = deps.api.addr_canonicalize(admin.as_str())?
-    }
-
-    contract_config.save(deps.storage)?;
-
+    // Response
     Ok(Response::default())
 }

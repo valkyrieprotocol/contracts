@@ -1,3 +1,3 @@
-pub mod state;
+pub mod states;
 pub mod executions;
-pub mod querier;
+pub mod queries;
