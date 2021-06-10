@@ -14,8 +14,9 @@ use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrap
 pub fn mock_dependencies(
     contract_balance: &[Coin],
 ) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
-    let custom_querier: WasmMockQuerier =
-        WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
+    let custom_querier = WasmMockQuerier::new(
+        MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]),
+    );
 
     OwnedDeps {
         storage: MockStorage::default(),
@@ -207,6 +208,20 @@ impl WasmMockQuerier {
     // configure the mint whitelist mock querier
     pub fn with_token_balances(&mut self, balances: &[(&String, &[(&String, &Uint128)])]) {
         self.token_querier = TokenQuerier::new(balances);
+    }
+
+    pub fn plus_token_balances(&mut self, balances: &[(&String, &[(&String, &Uint128)])]) {
+        for (contract_addr, balances) in balances.iter() {
+            let mut contract_balances_map = self.token_querier.balances.get(**contract_addr.as_str()).unwrap_or(&HashMap::new());
+
+            for (addr, balance) in balances.iter() {
+                let mut current_balance = contract_balances_map.get(**addr.as_str()).unwrap_or(&Uint128::zero());
+                current_balance += **balance;
+                contract_balances_map.insert(addr.to_string(), *current_balance);
+            }
+
+            balances_map.insert(contract_addr.to_string(), contract_balances_map);
+        }
     }
 
     // configure the token owner mock querier
