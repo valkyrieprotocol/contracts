@@ -36,7 +36,6 @@ pub fn instantiate(
         threshold: msg.threshold,
         voting_period: msg.voting_period,
         execution_delay_period: msg.execution_delay_period,
-        expiration_period: msg.expiration_period,
         proposal_deposit: msg.proposal_deposit,
         snapshot_period: msg.snapshot_period,
     };
@@ -62,7 +61,6 @@ pub fn update_poll_config(
     threshold: Option<Decimal>,
     voting_period: Option<u64>,
     execution_delay_period: Option<u64>,
-    expiration_period: Option<u64>,
     proposal_deposit: Option<Uint128>,
     snapshot_period: Option<u64>,
 ) -> ContractResult<Response> {
@@ -88,10 +86,6 @@ pub fn update_poll_config(
 
     if let Some(execution_delay_period) = execution_delay_period {
         poll_config.execution_delay_period = execution_delay_period;
-    }
-
-    if let Some(expiration_period) = expiration_period {
-        poll_config.expiration_period = expiration_period;
     }
 
     if let Some(proposal_deposit) = proposal_deposit {

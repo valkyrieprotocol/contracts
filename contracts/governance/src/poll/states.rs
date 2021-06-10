@@ -25,7 +25,6 @@ pub struct PollConfig {
     pub threshold: Decimal,
     pub voting_period: u64,
     pub execution_delay_period: u64,
-    pub expiration_period: u64,
     pub proposal_deposit: Uint128,
     pub snapshot_period: u64,
 }

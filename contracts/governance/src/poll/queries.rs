@@ -21,7 +21,6 @@ pub fn get_poll_config(
             threshold: poll_config.threshold,
             voting_period: poll_config.voting_period,
             execution_delay_period: poll_config.execution_delay_period,
-            expiration_period: poll_config.expiration_period,
             proposal_deposit: poll_config.proposal_deposit,
             snapshot_period: poll_config.snapshot_period,
         }

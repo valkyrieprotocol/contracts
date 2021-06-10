@@ -25,7 +25,6 @@ pub struct PollConfigInitMsg {
     pub threshold: Decimal,
     pub voting_period: u64,
     pub execution_delay_period: u64,
-    pub expiration_period: u64,
     pub proposal_deposit: Uint128,
     pub snapshot_period: u64,
 }
@@ -40,7 +39,6 @@ pub enum ExecuteMsg {
         threshold: Option<Decimal>,
         voting_period: Option<u64>,
         execution_delay_period: Option<u64>,
-        expiration_period: Option<u64>,
         proposal_deposit: Option<Uint128>,
         snapshot_period: Option<u64>,
     },
@@ -51,8 +49,6 @@ pub enum ExecuteMsg {
     },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
-    #[cfg(feature = "expire")]
-    ExpirePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
     UpdateValkyrieConfig {
         boost_contract: Option<Addr>,

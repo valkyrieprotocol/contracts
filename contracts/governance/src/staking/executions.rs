@@ -7,6 +7,7 @@ use valkyrie::errors::ContractError;
 use crate::common::states::{ContractConfig, load_contract_available_balance};
 
 use super::states::{StakerState, StakingState};
+use std::cmp::max;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -92,12 +93,20 @@ pub fn unstake_voting_token(
     let contract_available_balance = load_contract_available_balance(deps.as_ref())?;
     let total_share = staking_state.total_share;
     let locked_balance = staker_state.get_locked_balance();
-    let locked_share = locked_balance.multiply_ratio(total_share, contract_available_balance);
+    let locked_share = locked_balance.multiply_ratio(
+        total_share,
+        contract_available_balance,
+    );
     let user_share = staker_state.share;
     let withdraw_share = amount.map(|v| {
-        std::cmp::max(v.multiply_ratio(total_share, contract_available_balance), Uint128::new(1u128))
+        max(
+            v.multiply_ratio(total_share, contract_available_balance),
+            Uint128::new(1u128),
+        )
     }).unwrap_or_else(|| user_share.checked_sub(locked_share).unwrap());
-    let withdraw_amount = amount.unwrap_or_else(|| withdraw_share.multiply_ratio(contract_available_balance, total_share));
+    let withdraw_amount = amount.unwrap_or_else(|| {
+        withdraw_share.multiply_ratio(contract_available_balance, total_share)
+    });
 
     if locked_share + withdraw_share > user_share {
         return Err(ContractError::Std(StdError::generic_err(

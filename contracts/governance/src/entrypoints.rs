@@ -48,7 +48,6 @@ pub fn execute(
             threshold,
             voting_period,
             execution_delay_period,
-            expiration_period,
             proposal_deposit,
             snapshot_period,
         } => crate::poll::executions::update_poll_config(
@@ -59,7 +58,6 @@ pub fn execute(
             threshold,
             voting_period,
             execution_delay_period,
-            expiration_period,
             proposal_deposit,
             snapshot_period,
         ),
