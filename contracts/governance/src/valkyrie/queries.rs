@@ -14,7 +14,7 @@ pub fn get_valkyrie_config(
     Ok(
         ValkyrieConfigResponse {
             campaign_code_whitelist: valkyrie_config.campaign_code_whitelist,
-            boost_contract: valkyrie_config.boost_contract,
+            boost_contract: valkyrie_config.boost_contract.map(|v| v.to_string()),
         }
     )
 }

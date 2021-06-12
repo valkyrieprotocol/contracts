@@ -13,7 +13,7 @@ pub fn get_contract_config(
 
     Ok(
         ContractConfigResponse {
-            token_contract: contract_config.token_contract,
+            token_contract: contract_config.token_contract.to_string(),
         }
     )
 }

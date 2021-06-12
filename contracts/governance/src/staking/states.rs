@@ -4,9 +4,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::models::VoteInfo;
 
-use crate::poll::states::Poll;
+use crate::poll::states::{Poll, VoteInfo};
 
 // static KEY_STAKING_CONFIG: &[u8] = b"staking-config";
 

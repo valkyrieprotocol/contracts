@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
+use cosmwasm_std::{Binary, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -7,8 +7,8 @@ use super::enumerations::{PollStatus, VoteOption};
 // Models
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct VoteInfo {
-    pub voter: Addr,
+pub struct VoteInfoMsg {
+    pub voter: String,
     pub option: VoteOption,
     pub amount: Uint128,
 }
@@ -17,7 +17,7 @@ pub struct VoteInfo {
 #[serde(rename_all = "snake_case")]
 pub struct ExecutionMsg {
     pub order: u64,
-    pub contract: Addr,
+    pub contract: String,
     pub msg: Binary,
 }
 
@@ -26,7 +26,7 @@ pub struct ExecutionMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
-    pub token_contract: Addr,
+    pub token_contract: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -38,7 +38,7 @@ pub struct StakingStateResponse {
 pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
-    pub votes: Vec<(u64, VoteInfo)>,
+    pub votes: Vec<(u64, VoteInfoMsg)>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -64,7 +64,7 @@ pub struct PollResponse {
     pub description: String,
     pub link: Option<String>,
     pub executions: Option<Vec<ExecutionMsg>>,
-    pub creator: Addr,
+    pub creator: String,
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
     pub no_votes: Uint128,
@@ -86,7 +86,7 @@ pub struct PollCountResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotersResponseItem {
-    pub voter: Addr,
+    pub voter: String,
     pub vote: VoteOption,
     pub balance: Uint128,
 }
@@ -99,7 +99,7 @@ pub struct VotersResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ValkyrieConfigResponse {
     pub campaign_code_whitelist: Vec<u64>,
-    pub boost_contract: Option<Addr>,
+    pub boost_contract: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

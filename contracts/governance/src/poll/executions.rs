@@ -129,7 +129,7 @@ pub fn create_poll(
     // Execute
     let executions = execution_msgs.map(|executions| {
         executions.iter()
-            .map(|execution| Execution::from(execution))
+            .map(|execution| Execution::from(deps.api, execution))
             .collect()
     });
 

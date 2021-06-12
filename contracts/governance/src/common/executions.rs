@@ -14,7 +14,7 @@ pub fn instantiate(
     // Execute
     let config = ContractConfig {
         address: env.contract.address,
-        token_contract: msg.token_contract,
+        token_contract: deps.api.addr_validate(&msg.token_contract)?,
     };
 
     config.save(deps.storage)?;

@@ -11,7 +11,7 @@ fn instantiate() {
     let env = mock_env();
     let info = mock_info("", &[]);
     let msg = ContractConfigInitMsg {
-        token_contract: Addr::unchecked(""),
+        token_contract: String::from("TokenContract"),
     };
 
     // Execute
@@ -20,6 +20,6 @@ fn instantiate() {
     // Validate
     let contract_config = ContractConfig::load(&deps.storage).unwrap();
 
-    assert_eq!(msg.token_contract, contract_config.token_contract);
+    assert_eq!(msg.token_contract, contract_config.token_contract.as_str());
     assert_eq!(env.contract.address, contract_config.address);
 }

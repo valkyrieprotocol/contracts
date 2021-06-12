@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, Env, StdError};
+use cosmwasm_std::{Deps, Env, StdError};
 
 use valkyrie::common::{ContractResult, OrderBy};
 use valkyrie::errors::ContractError;
@@ -78,7 +78,7 @@ pub fn query_voters(
     deps: Deps,
     _env: Env,
     poll_id: u64,
-    start_after: Option<Addr>,
+    start_after: Option<String>,
     limit: Option<u32>,
     order_by: Option<OrderBy>,
 ) -> ContractResult<VotersResponse> {
@@ -88,6 +88,8 @@ pub fn query_voters(
         return Err(ContractError::Std(StdError::generic_err("Poll does not exist")));
     }
 
+    let start_after = start_after.map(|v| deps.api.addr_validate(&v).unwrap());
+
     let voters = if poll.unwrap().status != PollStatus::InProgress {
         vec![]
     } else {
@@ -96,7 +98,7 @@ pub fn query_voters(
 
     let response_items = voters.iter().map(|(voter, voter_info)| {
         VotersResponseItem {
-            voter: voter.clone(),
+            voter: voter.to_string(),
             vote: voter_info.option.clone(),
             balance: voter_info.amount,
         }

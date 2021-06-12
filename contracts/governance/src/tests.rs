@@ -4,7 +4,7 @@ use valkyrie::governance::messages::{InstantiateMsg, PollConfigInitMsg, Contract
 use cosmwasm_std::testing::{MockStorage, MockApi, mock_env, mock_info};
 use valkyrie::mock_querier::{WasmMockQuerier, mock_dependencies};
 
-pub const TOKEN_CONTRACT: Addr = Addr::unchecked("TokenContractAddress");
+pub const TOKEN_CONTRACT: String = String::from("TokenContractAddress");
 
 pub const POLL_QUORUM: Decimal = Decimal::percent(30);
 pub const POLL_THRESHOLD: Decimal = Decimal::percent(50);

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigInitMsg {
-    pub token_contract: Addr,
+    pub token_contract: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -51,7 +51,7 @@ pub enum ExecuteMsg {
     ExecutePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
     UpdateValkyrieConfig {
-        boost_contract: Option<Addr>,
+        boost_contract: Option<String>,
     },
     AddCampaignCodeWhitelist {
         code_id: u64,
@@ -91,12 +91,12 @@ pub enum QueryMsg {
     },
     Voters {
         poll_id: u64,
-        start_after: Option<Addr>,
+        start_after: Option<String>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
     StakingState {},
-    StakerState { address: Addr },
+    StakerState { address: String },
     ValkyrieConfig {},
     CampaignCodeInfo { code_id: u64 },
 }

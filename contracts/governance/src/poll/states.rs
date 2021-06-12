@@ -1,14 +1,14 @@
 use std::cmp::Ordering;
 use std::fmt;
 
-use cosmwasm_std::{Addr, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128, Api};
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie::common::OrderBy;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::models::{ExecutionMsg, PollResponse, VoteInfo};
+use valkyrie::governance::models::{ExecutionMsg, PollResponse};
 
 use crate::common::states::load_contract_available_balance;
 use crate::staking::states::{StakingState, StakerState};
@@ -282,7 +282,7 @@ impl Poll {
             executions = Some(
                 all_executions.iter().map(|v| ExecutionMsg {
                     order: v.order,
-                    contract: v.contract.clone(),
+                    contract: v.contract.to_string(),
                     msg: v.msg.clone(),
                 }).collect()
             )
@@ -294,7 +294,7 @@ impl Poll {
             description: self.description.to_string(),
             link: self.link.clone(),
             executions,
-            creator: self.creator.clone(),
+            creator: self.creator.to_string(),
             deposit_amount: self.deposit_amount,
             yes_votes: self.yes_votes,
             no_votes: self.no_votes,
@@ -329,6 +329,12 @@ impl PollExecutionContext {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct VoteInfo {
+    pub voter: Addr,
+    pub option: VoteOption,
+    pub amount: Uint128,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct Execution {
@@ -358,10 +364,10 @@ impl Ord for Execution {
 }
 
 impl Execution {
-    pub fn from(msg: &ExecutionMsg) -> Execution {
+    pub fn from(api: &dyn Api, msg: &ExecutionMsg) -> Execution {
         Execution {
             order: msg.order,
-            contract: msg.contract.clone(),
+            contract: api.addr_validate(&msg.contract).unwrap(),
             msg: msg.msg.clone(),
         }
     }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, StdError};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError};
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
@@ -29,7 +29,7 @@ pub fn update_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    boost_contract: Option<Addr>,
+    boost_contract: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, env, &info.sender) {
@@ -40,7 +40,7 @@ pub fn update_config(
     let mut valkyrie_config = ValkyrieConfig::load(deps.storage)?;
 
     if let Some(boost_contract) = boost_contract {
-        valkyrie_config.boost_contract = Some(boost_contract)
+        valkyrie_config.boost_contract = Some(deps.api.addr_validate(&boost_contract)?);
     }
 
     valkyrie_config.save(deps.storage)?;

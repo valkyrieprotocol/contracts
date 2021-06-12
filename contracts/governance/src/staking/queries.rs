@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr, Deps, Env};
+use cosmwasm_std::{Deps, Env};
 
 use valkyrie::common::ContractResult;
-use valkyrie::governance::models::{StakerStateResponse, StakingStateResponse};
+use valkyrie::governance::models::{StakerStateResponse, StakingStateResponse, VoteInfoMsg};
 
 use crate::common::states::load_contract_available_balance;
 
@@ -23,8 +23,9 @@ pub fn get_staking_state(
 pub fn get_staker_state(
     deps: Deps,
     _env: Env,
-    address: Addr,
+    address: String,
 ) -> ContractResult<StakerStateResponse> {
+    let address = deps.api.addr_validate(&address)?;
     let mut staker_state = StakerState::load(deps.storage, &address)?;
 
     let contract_available_balance = load_contract_available_balance(deps.clone())?;
@@ -32,11 +33,21 @@ pub fn get_staker_state(
 
     staker_state.clean_votes(deps.storage);
 
+    let votes = staker_state.votes.iter().map(|(poll_id, vote)| {
+        let msg = VoteInfoMsg {
+            voter: vote.voter.to_string(),
+            option: vote.option.clone(),
+            amount: vote.amount,
+        };
+
+        (*poll_id, msg)
+    }).collect();
+
     Ok(
         StakerStateResponse {
             balance,
             share: staker_state.share,
-            votes: staker_state.votes,
+            votes,
         }
     )
 }
