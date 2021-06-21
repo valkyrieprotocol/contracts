@@ -558,27 +558,12 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw20",
- "schemars",
- "serde",
- "terra-cosmwasm",
-]
-
-[[package]]
-name = "valkyrie-campaign-base"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
- "protobuf",
  "schemars",
  "serde",
  "terra-cosmwasm",
  "thiserror",
- "valkyrie",
 ]
 
 [[package]]
@@ -594,7 +579,6 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
- "thiserror",
  "valkyrie",
 ]
 
