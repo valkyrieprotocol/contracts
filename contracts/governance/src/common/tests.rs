@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use valkyrie::governance::messages::ContractConfigInitMsg;
+use valkyrie::governance::execute_msgs::ContractConfigInitMsg;
 use cosmwasm_std::Addr;
 use crate::common::executions;
 use crate::common::states::ContractConfig;

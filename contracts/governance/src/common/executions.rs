@@ -1,7 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
-use valkyrie::governance::messages::ContractConfigInitMsg;
+use valkyrie::governance::execute_msgs::ContractConfigInitMsg;
 
 use super::states::ContractConfig;
 

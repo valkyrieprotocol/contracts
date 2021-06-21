@@ -3,7 +3,7 @@ use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Re
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::messages::PollConfigInitMsg;
+use valkyrie::governance::execute_msgs::PollConfigInitMsg;
 use valkyrie::governance::models::ExecutionMsg;
 
 use crate::common::states::{ContractConfig, load_contract_available_balance, is_admin};

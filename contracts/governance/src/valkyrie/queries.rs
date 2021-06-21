@@ -1,7 +1,7 @@
 use cosmwasm_std::{Deps, Env};
 
 use valkyrie::common::ContractResult;
-use valkyrie::governance::models::{CampaignCodeInfoResponse, ValkyrieConfigResponse};
+use valkyrie::governance::query_msgs::{CampaignCodeInfoResponse, ValkyrieConfigResponse};
 
 use super::states::{CampaignCode, ValkyrieConfig};
 

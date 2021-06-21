@@ -1,7 +1,8 @@
 use cosmwasm_std::{Deps, Env};
 
 use valkyrie::common::ContractResult;
-use valkyrie::governance::models::{StakerStateResponse, StakingStateResponse, VoteInfoMsg};
+use valkyrie::governance::models::VoteInfoMsg;
+use valkyrie::governance::query_msgs::{StakerStateResponse, StakingStateResponse};
 
 use crate::common::states::load_contract_available_balance;
 

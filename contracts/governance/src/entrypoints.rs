@@ -5,7 +5,8 @@ use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+use valkyrie::governance::query_msgs::QueryMsg;
 
 use crate::common::states::ContractConfig;
 
