@@ -6,6 +6,8 @@ use crate::campaign::enumerations::Denom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
+    pub governance: String,
+    pub token_contract: String,
     pub campaign_code_id: Uint64,
     pub creation_fee_amount: Uint128,
 }

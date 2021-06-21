@@ -372,7 +372,7 @@ pub fn reply_execution(
     poll_execution_context.execution_count -= 1;
 
     if poll_execution_context.execution_count == 0 {
-        PollExecutionContext::remove(deps.storage);
+        PollExecutionContext::clear(deps.storage);
     }
 
     Ok(Response::default())

@@ -567,6 +567,23 @@ dependencies = [
 ]
 
 [[package]]
+[[package]]
+name = "valkyrie-campaign-factory"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "protobuf",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "valkyrie",
+]
+
+[[package]]
 name = "valkyrie-governance"
 version = "0.1.0"
 dependencies = [

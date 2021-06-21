@@ -11,6 +11,8 @@ pub enum QueryMsg {
 }
 
 pub struct ConfigResponse {
+    pub governance: String,
+    pub token_contract: String,
     pub campaign_code_id: Uint64,
     pub creation_fee_amount: Uint128,
 }
@@ -18,5 +20,6 @@ pub struct ConfigResponse {
 pub struct CampaignResponse {
     pub code_id: Uint64,
     pub address: String,
+    pub creator: String,
     pub created_block: Uint64,
 }

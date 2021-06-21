@@ -11,3 +11,17 @@ pub fn cw20_transfer(token: &Addr, recipient: &Addr, amount: Uint128) -> CosmosM
         }).unwrap(),
     })
 }
+
+pub fn wasm_instantiate(
+    code_id: u64,
+    admin: Option<Addr>,
+    msg: Binary,
+) -> CosmosMsg {
+    CosmosMsg::Wasm(WasmMsg::Instantiate {
+        admin: admin.map(|v| v.to_string()),
+        code_id,
+        msg,
+        send: vec![],
+        label: String::new(),
+    })
+}
