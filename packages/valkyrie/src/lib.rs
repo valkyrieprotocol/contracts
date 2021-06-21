@@ -1,6 +1,8 @@
 pub mod common;
 pub mod errors;
 pub mod governance;
+pub mod campaign;
+pub mod factory;
 
 pub mod cw20;
 pub mod message_factories;
