@@ -22,7 +22,7 @@ pub fn instantiate(
     crate::common::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
     crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
     crate::poll::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
-    crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.valkyrie_config)?;
 
     Ok(Response::default())
 }
@@ -90,15 +90,6 @@ pub fn execute(
             info,
             poll_id,
         ),
-        #[cfg(feature = "expire")]
-        ExecuteMsg::ExpirePoll {
-            poll_id,
-        } => crate::poll::executions::expire_poll(
-            deps,
-            env,
-            info,
-            poll_id,
-        ),
         ExecuteMsg::SnapshotPoll {
             poll_id,
         } => crate::poll::executions::snapshot_poll(
@@ -108,35 +99,15 @@ pub fn execute(
             poll_id,
         ),
         ExecuteMsg::UpdateValkyrieConfig {
-            boost_contract,
+            burn_contract,
+            reward_withdraw_burn_rate,
         } => crate::valkyrie::executions::update_config(
             deps,
             env,
             info,
-            boost_contract,
+            burn_contract,
+            reward_withdraw_burn_rate,
         ),
-        ExecuteMsg::AddCampaignCodeWhitelist {
-            code_id,
-            source_code_url,
-            description,
-            maintainer,
-        } => crate::valkyrie::executions::add_campaign_code_whitelist(
-            deps,
-            env,
-            info,
-            code_id,
-            source_code_url,
-            description,
-            maintainer,
-        ),
-        ExecuteMsg::RemoveCampaignCodeWhitelist {
-            code_id,
-        } => crate::valkyrie::executions::remove_campaign_code_whitelist(
-            deps,
-            env,
-            info,
-            code_id,
-        )
     }
 }
 
@@ -249,11 +220,6 @@ pub fn query(
         ),
         QueryMsg::ValkyrieConfig {} => to_binary(
             &crate::valkyrie::queries::get_valkyrie_config(deps, env)?
-        ),
-        QueryMsg::CampaignCodeInfo {
-            code_id,
-        } => to_binary(
-            &crate::valkyrie::queries::get_campaign_code_info(deps, env, code_id)?
         ),
     }?;
 

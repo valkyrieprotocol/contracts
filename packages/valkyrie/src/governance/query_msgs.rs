@@ -28,7 +28,6 @@ pub enum QueryMsg {
     StakingState {},
     StakerState { address: String },
     ValkyrieConfig {},
-    CampaignCodeInfo { code_id: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -105,14 +104,6 @@ pub struct VotersResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ValkyrieConfigResponse {
-    pub campaign_code_whitelist: Vec<u64>,
-    pub boost_contract: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CampaignCodeInfoResponse {
-    pub code_id: u64,
-    pub source_code_url: String,
-    pub description: String,
-    pub maintainer: Option<String>,
+    pub burn_contract: String,
+    pub reward_withdraw_burn_rate: Decimal,
 }
