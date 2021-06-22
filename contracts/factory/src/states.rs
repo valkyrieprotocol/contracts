@@ -1,5 +1,7 @@
-use cosmwasm_std::{StdResult, Storage, Addr};
+use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 const FACTORY_CONFIG: Item<FactoryConfig> = Item::new("factory_config");
 
@@ -37,7 +39,7 @@ pub fn is_token_contract(storage: &dyn Storage, address: &Addr) -> bool {
     FactoryConfig::load(storage).unwrap().is_token_contract(address)
 }
 
-const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignTemp> = Item::new("create-campaign-context");
+const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignContext> = Item::new("create-campaign-context");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CreateCampaignContext {

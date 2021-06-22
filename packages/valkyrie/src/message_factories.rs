@@ -1,5 +1,15 @@
-use cosmwasm_std::{Addr, CosmosMsg, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, CosmosMsg, to_binary, Uint128, WasmMsg, BankMsg, Coin, Binary};
 use cw20::Cw20ExecuteMsg;
+
+pub fn native_send(denom: String, recipient: &Addr, amount: Uint128) -> CosmosMsg {
+    CosmosMsg::Bank(BankMsg::Send {
+        to_address: recipient.to_string(),
+        amount: vec![Coin {
+            denom,
+            amount,
+        }],
+    })
+}
 
 pub fn cw20_transfer(token: &Addr, recipient: &Addr, amount: Uint128) -> CosmosMsg {
     CosmosMsg::Wasm(WasmMsg::Execute {

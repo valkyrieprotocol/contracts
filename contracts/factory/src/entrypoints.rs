@@ -1,4 +1,5 @@
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, to_binary};
+use cosmwasm_std::entry_point;
 use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;

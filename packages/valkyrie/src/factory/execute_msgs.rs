@@ -1,8 +1,7 @@
-use cosmwasm_std::{Addr, Decimal, Uint128, Binary, Uint64};
+use cosmwasm_std::{Uint128, Binary, Uint64};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::campaign::enumerations::Denom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {

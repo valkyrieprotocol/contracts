@@ -1,6 +1,26 @@
 use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery};
 use cosmwasm_storage::to_length_prefixed;
 use crate::message_factories;
+use cw20::Denom;
+
+pub fn query_balance(
+    querier: &QuerierWrapper,
+    api: &dyn Api,
+    denom: Denom,
+    address: Addr,
+) -> StdResult<u128> {
+    match denom {
+        Denom::Native(denom) => querier.query_balance(address, denom).map(|v| {
+            v.amount.u128()
+        }),
+        Denom::Cw20(contract_addr) => query_cw20_balance(
+            querier,
+            api,
+            &contract_addr,
+            &address,
+        ).map(|v| v.u128()),
+    }
+}
 
 pub fn query_cw20_balance(
     querier: &QuerierWrapper,

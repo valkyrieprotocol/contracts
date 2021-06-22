@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Env, Response, Uint128, Uint64};
+use cosmwasm_std::{Deps, Env, Uint128, Uint64};
 
 use valkyrie::common::ContractResult;
 use valkyrie::factory::query_msgs::{CampaignResponse, ConfigResponse};

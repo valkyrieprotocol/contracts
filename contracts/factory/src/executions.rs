@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::states::{FactoryConfig, is_governance, CreateCampaignContext, Campaign};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
-use protobuf::Message;
+use valkyrie::utils::find;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -42,7 +42,7 @@ pub fn update_config(
     }
 
     if creation_fee_amount.is_some() {
-        factory_config.creation_fee_amount = creation_fee_amount.unwrap().u64();
+        factory_config.creation_fee_amount = creation_fee_amount.unwrap().u128();
     }
 
     factory_config.save(deps.storage)?;
@@ -77,7 +77,7 @@ pub fn create_campaign(
 
     let create_campaign_msg = message_factories::wasm_instantiate(
         factory_config.campaign_code_id,
-        Some(factory_config.governance),
+        Some(factory_config.governance.clone()),
         campaign_init_msg,
     );
 
@@ -109,24 +109,28 @@ pub fn created_campaign(
     env: Env,
     msg: Reply,
 ) -> ContractResult<Response> {
-    //TODO: protobuf
-    let res: MsgInstantiateContractResponse =
-        Message::parse_from_bytes(msg.result.unwrap().data.unwrap().as_slice()).map_err(|_| {
-            StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
-        })?;
+    let events = msg.result.unwrap().events;
+    let event = find(&events, |e| e.kind == "instantiate_contract");
+    if event.is_none() {
+        return Err(ContractError::Std(StdError::generic_err("Failed to parse data")));
+    }
 
-    let contract_address = res.get_contract_address();
+    let contract_address = find(&event.unwrap().attributes, |a| a.key == "contract_address");
+    if contract_address.is_none() {
+        return Err(ContractError::Std(StdError::generic_err("Failed to parse data")));
+    }
+    let contract_address = &contract_address.unwrap().value;
 
     let context = CreateCampaignContext::load(deps.storage)?;
 
     Campaign {
         code_id: context.code_id,
-        address: contract_address,
+        address: deps.api.addr_validate(contract_address)?,
         creator: context.creator,
         created_block: env.block.height,
     }.save(deps.storage)?;
 
-    CreateCampaignContext::clear(deps.storage)?;
+    CreateCampaignContext::clear(deps.storage);
 
     Ok(Response::default())
 }
