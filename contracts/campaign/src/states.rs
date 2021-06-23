@@ -1,11 +1,12 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Storage, StdResult, StdError, Timestamp};
+use cosmwasm_std::{Addr, Storage, StdResult, StdError, Timestamp, QuerierWrapper};
 use cw_storage_plus::{Item, Map, Bound};
 use cw20::Denom;
 use valkyrie::utils::find_mut_or_push;
 use valkyrie::common::OrderBy;
+use valkyrie::governance::query_msgs::ValkyrieConfigResponse;
 
 
 const MAX_LIMIT: u32 = 30;
@@ -17,7 +18,6 @@ const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract_info");
 pub struct ContractConfig {
     pub admin: Addr,
     pub governance: Addr,
-    pub deactivate_period: u64,
 }
 
 impl ContractConfig {
@@ -33,18 +33,18 @@ impl ContractConfig {
         self.admin.eq(address)
     }
 
-    pub fn is_governance(&self, address: &Addr) -> bool {
-        self.governance.eq(address)
-    }
+    // pub fn is_governance(&self, address: &Addr) -> bool {
+    //     self.governance.eq(address)
+    // }
 }
 
 pub fn is_admin(storage: &dyn Storage, address: &Addr) -> bool {
     ContractConfig::load(storage).unwrap().is_admin(address)
 }
 
-pub fn is_governance(storage: &dyn Storage, address: &Addr) -> bool {
-    ContractConfig::load(storage).unwrap().is_governance(address)
-}
+// pub fn is_governance(storage: &dyn Storage, address: &Addr) -> bool {
+//     ContractConfig::load(storage).unwrap().is_governance(address)
+// }
 
 
 const CAMPAIGN_INFO: Item<CampaignInfo> = Item::new("campaign_info");
@@ -79,7 +79,7 @@ pub struct CampaignState {
     pub cumulative_distribution_amount: Vec<(Denom, u128)>, //todo: Map 으로 변경?
     pub locked_balance: Vec<(Denom, u128)>,
     pub active_flag: bool,
-    pub last_active_block: u64,
+    pub last_active_block: Option<u64>,
 }
 
 impl CampaignState {
@@ -91,10 +91,20 @@ impl CampaignState {
         CAMPAIGN_STATE.load(storage)
     }
 
-    pub fn is_active(&self, storage: &dyn Storage, block_height: u64) -> StdResult<bool> {
-        let config = ContractConfig::load(storage)?;
+    pub fn is_active(&self, storage: &dyn Storage, querier: &QuerierWrapper, block_height: u64) -> StdResult<bool> {
+        if !self.active_flag {
+            return Ok(false)
+        }
 
-        Ok(self.active_flag && config.deactivate_period + self.last_active_block >= block_height)
+        let config = ContractConfig::load(storage)?;
+        let valkyrie_config = load_valkyrie_config(querier, &config.governance)?;
+
+        //TODO: deactivate_period 를 그냥 campaign 에서 관리할까?
+        Ok(valkyrie_config.campaign_deactivate_period.u64() + self.last_active_block.unwrap_or_default() >= block_height)
+    }
+
+    pub fn is_pending(&self) -> bool {
+        self.last_active_block.is_none()
     }
 
     pub fn plus_distribution(&mut self, denom: Denom, amount: u128) {
@@ -135,6 +145,14 @@ impl CampaignState {
 
         Ok(balance.1)
     }
+}
+
+// pub fn is_active(storage: &dyn Storage, querier: &QuerierWrapper, block_height: u64) -> StdResult<bool> {
+//     CampaignState::load(storage)?.is_active(storage, querier, block_height)
+// }
+
+pub fn is_pending(storage: &dyn Storage) -> StdResult<bool> {
+    Ok(CampaignState::load(storage)?.is_pending())
 }
 
 
@@ -205,4 +223,11 @@ impl Participation {
             |v| v.1 += amount,
         );
     }
+}
+
+pub fn load_valkyrie_config(querier: &QuerierWrapper, governance: &Addr) -> StdResult<ValkyrieConfigResponse> {
+    querier.query_wasm_smart(
+        governance,
+        &valkyrie::governance::query_msgs::QueryMsg::ValkyrieConfig {},
+    )
 }

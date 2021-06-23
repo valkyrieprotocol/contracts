@@ -101,12 +101,14 @@ pub fn execute(
         ExecuteMsg::UpdateValkyrieConfig {
             burn_contract,
             reward_withdraw_burn_rate,
+            campaign_deactivate_period,
         } => crate::valkyrie::executions::update_config(
             deps,
             env,
             info,
             burn_contract,
             reward_withdraw_burn_rate,
+            campaign_deactivate_period,
         ),
     }
 }

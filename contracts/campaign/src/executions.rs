@@ -1,15 +1,15 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, Addr, StdError, StdResult};
-use valkyrie::common::ContractResult;
-use valkyrie::campaign::execute_msgs::InstantiateMsg;
-use valkyrie::message_factories;
-use crate::states::{CampaignInfo, DistributionConfig, CampaignState, is_governance, ContractConfig, is_admin, Participation};
+use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128};
 use cw20::Denom;
-use valkyrie::errors::ContractError;
-use valkyrie::utils::{map_u128, calc_ratio_amount};
-use valkyrie::cw20::query_balance;
-use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::governance::query_msgs::ValkyrieConfigResponse;
 
+use valkyrie::campaign::enumerations::Referrer;
+use valkyrie::campaign::execute_msgs::InstantiateMsg;
+use valkyrie::common::ContractResult;
+use valkyrie::cw20::query_balance;
+use valkyrie::errors::ContractError;
+use valkyrie::message_factories;
+use valkyrie::utils::{calc_ratio_amount, map_u128};
+
+use crate::states::{CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin, is_pending, load_valkyrie_config, Participation};
 
 const MIN_TITLE_LENGTH: usize = 4;
 const MAX_TITLE_LENGTH: usize = 64;
@@ -50,7 +50,7 @@ pub fn instantiate(
         cumulative_distribution_amount: vec![],
         locked_balance: vec![],
         active_flag: false,
-        last_active_block: 0,
+        last_active_block: None,
     }.save(deps.storage)?;
 
     DistributionConfig {
@@ -62,48 +62,38 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-// TODO: governance 용과 admin 용을 나누는게 좋을까
 pub fn update_info(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    title: Option<String>,
     url: Option<String>,
+    title: Option<String>,
     description: Option<String>,
 ) -> ContractResult<Response> {
-    // Validate, Execute
+    // Validate
+    if !is_admin(deps.storage, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
 
-    // governance == admin 고려
-    let mut authorized = false;
-    let contract_config = ContractConfig::load(deps.storage)?;
-
+    // Execute
     let mut campaign_info = CampaignInfo::load(deps.storage)?;
 
-    if contract_config.is_governance(&info.sender) {
-        authorized = true;
-
-        // if url.is_some() {
-        //     validate_url(&url.unwrap())?;
-        //     campaign_info.url = url.unwrap();
-        // }
-    }
-
-    if contract_config.is_admin(&info.sender) {
-        authorized = true;
-
-        if title.is_some() {
-            validate_title(&title.unwrap())?;
-            campaign_info.title = title.unwrap();
+    if let Some(url) = url {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err("Only modifiable in pending status")));
         }
 
-        if description.is_some() {
-            validate_description(&description.unwrap())?;
-            campaign_info.description = description.unwrap();
-        }
+        campaign_info.url = url;
     }
 
-    if !authorized {
-        return Err(ContractError::Unauthorized {})
+    if let Some(title) = title {
+        validate_title(&title)?;
+        campaign_info.title = title;
+    }
+
+    if let Some(description) = description {
+        validate_description(&description)?;
+        campaign_info.description = description;
     }
 
     campaign_info.save(deps.storage)?;
@@ -112,29 +102,33 @@ pub fn update_info(
     Ok(Response::default())
 }
 
-// pub fn update_distribution_config(
-//     deps: DepsMut,
-//     _env: Env,
-//     info: MessageInfo,
-//     denom: valkyrie::campaign::enumerations::Denom,
-//     amounts: Vec<Uint128>,
-// ) -> ContractResult<Response> {
-//     // Validate
-//     if !is_governance(deps.storage, &info.sender) {
-//         return Err(ContractError::Unauthorized {});
-//     }
-//
-//     // Execute
-//     let mut distribution_config = DistributionConfig::load(deps.storage)?;
-//
-//     distribution_config.denom = denom.to_cw20(deps.api);
-//     distribution_config.amounts = map_u128(amounts);
-//
-//     distribution_config.save(deps.storage)?;
-//
-//     // Response
-//     Ok(Response::default())
-// }
+pub fn update_distribution_config(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    denom: valkyrie::campaign::enumerations::Denom,
+    amounts: Vec<Uint128>,
+) -> ContractResult<Response> {
+    // Validate
+    if !is_admin(deps.storage, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if !is_pending(deps.storage)? {
+        return Err(ContractError::Std(StdError::generic_err("Only modifiable in pending status")));
+    }
+
+    // Execute
+    let mut distribution_config = DistributionConfig::load(deps.storage)?;
+
+    distribution_config.denom = denom.to_cw20(deps.api);
+    distribution_config.amounts = map_u128(amounts);
+
+    distribution_config.save(deps.storage)?;
+
+    // Response
+    Ok(Response::default())
+}
 
 pub fn update_admin(
     deps: DepsMut,
@@ -175,7 +169,7 @@ pub fn update_activation(
     campaign_state.active_flag = is_active;
 
     if is_active {
-        campaign_state.last_active_block = env.block.height;
+        campaign_state.last_active_block = Some(env.block.height);
     }
 
     campaign_state.save(deps.storage)?;
@@ -211,14 +205,15 @@ pub fn withdraw_reward(
     }
 
     // Execute
-    let valkyrie_config: ValkyrieConfigResponse = deps.querier.query_wasm_smart(
-        contract_config.governance,
-        &valkyrie::governance::query_msgs::QueryMsg::ValkyrieConfig {},
-    )?;
-    let (burn_amount, receive_amount) = calc_ratio_amount(
-        withdraw_amount,
-        valkyrie_config.reward_withdraw_burn_rate,
-    );
+    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.governance)?;
+    let (burn_amount, receive_amount) = if campaign_state.is_pending() {
+        (0u128, withdraw_amount)
+    } else {
+        calc_ratio_amount(
+            withdraw_amount,
+            valkyrie_config.reward_withdraw_burn_rate,
+        )
+    };
 
     let denom_cw20 = denom.to_cw20(deps.api);
     let burn_msg = make_send_msg(
@@ -282,8 +277,8 @@ pub fn participate(
 ) -> ContractResult<Response> {
     // Validate
     let mut campaign_state = CampaignState::load(deps.storage)?;
-    if !campaign_state.is_active(deps.storage, env.block.height)? {
-        return Err(ContractError::Std(StdError::generic_err("Deactivated campaign")))
+    if !campaign_state.is_active(deps.storage, &deps.querier, env.block.height)? {
+        return Err(ContractError::Std(StdError::generic_err("Deactivated campaign")));
     }
 
     if Participation::load(deps.storage, &info.sender).is_ok() {
@@ -326,7 +321,7 @@ pub fn participate(
     }
 
     campaign_state.participation_count += 1;
-    campaign_state.last_active_block = env.block.height;
+    campaign_state.last_active_block = Some(env.block.height);
     campaign_state.save(deps.storage)?;
 
     let campaign_balance = query_balance(

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -106,4 +106,5 @@ pub struct VotersResponse {
 pub struct ValkyrieConfigResponse {
     pub burn_contract: String,
     pub reward_withdraw_burn_rate: Decimal,
+    pub campaign_deactivate_period: Uint64,
 }
