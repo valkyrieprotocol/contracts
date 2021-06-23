@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128, Uint64};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,7 @@ use super::models::ExecutionMsg;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
+    pub staking_config: StakingConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
     pub valkyrie_config: ValkyrieConfigInitMsg,
 }
@@ -16,6 +17,11 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigInitMsg {
     pub token_contract: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct StakingConfigInitMsg {
+    pub withdraw_delay: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,7 +44,11 @@ pub struct ValkyrieConfigInitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
+    UpdateStakingConfig {
+        withdraw_delay: Option<Uint64>,
+    },
     UnstakeVotingToken { amount: Option<Uint128> },
+    WithdrawVotingToken {},
     UpdatePollConfig {
         quorum: Option<Decimal>,
         threshold: Option<Decimal>,
