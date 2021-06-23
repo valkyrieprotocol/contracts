@@ -20,7 +20,7 @@ pub fn instantiate(
     let mut deps_mut = deps;
 
     crate::common::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
-    crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.staking_config)?;
     crate::poll::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
     crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.valkyrie_config)?;
 
@@ -36,6 +36,14 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::UpdateStakingConfig {
+            withdraw_delay,
+        } => crate::staking::executions::update_config(
+            deps,
+            env,
+            info,
+            withdraw_delay,
+        ),
         ExecuteMsg::UnstakeVotingToken {
             amount,
         } => crate::staking::executions::unstake_voting_token(
@@ -43,6 +51,11 @@ pub fn execute(
             env,
             info,
             amount,
+        ),
+        ExecuteMsg::WithdrawVotingToken {} => crate::staking::executions::withdraw_voting_token(
+            deps,
+            env,
+            info,
         ),
         ExecuteMsg::UpdatePollConfig {
             quorum,
@@ -170,6 +183,9 @@ pub fn query(
     let result = match msg {
         QueryMsg::ContractConfig {} => to_binary(
             &crate::common::queries::get_contract_config(deps, env)?
+        ),
+        QueryMsg::StakingConfig {} => to_binary(
+            &crate::staking::queries::get_staking_config(deps, env)?
         ),
         QueryMsg::PollConfig {} => to_binary(
             &crate::poll::queries::get_poll_config(deps, env)?

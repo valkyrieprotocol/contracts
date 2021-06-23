@@ -10,6 +10,7 @@ use super::super::common::OrderBy;
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     ContractConfig {},
+    StakingConfig {},
     PollConfig {},
     PollState {},
     Poll { poll_id: u64 },
@@ -33,6 +34,11 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
     pub token_contract: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct StakingConfigResponse {
+    pub withdraw_delay: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

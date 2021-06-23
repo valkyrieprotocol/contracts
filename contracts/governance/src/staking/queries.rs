@@ -1,12 +1,24 @@
-use cosmwasm_std::{Deps, Env};
+use cosmwasm_std::{Deps, Env, Uint64};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
-use valkyrie::governance::query_msgs::{StakerStateResponse, StakingStateResponse};
+use valkyrie::governance::query_msgs::{StakerStateResponse, StakingConfigResponse, StakingStateResponse};
 
 use crate::common::states::load_contract_available_balance;
+use crate::staking::states::StakingConfig;
 
 use super::states::{StakerState, StakingState};
+
+pub fn get_staking_config(
+    deps: Deps,
+    _env: Env,
+) -> ContractResult<StakingConfigResponse> {
+    let staking_config = StakingConfig::load(deps.storage)?;
+
+    Ok(StakingConfigResponse {
+        withdraw_delay: Uint64::from(staking_config.withdraw_delay),
+    })
+}
 
 pub fn get_staking_state(
     deps: Deps,
