@@ -17,6 +17,7 @@ const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract_info");
 pub struct ContractConfig {
     pub admin: Addr,
     pub governance: Addr,
+    pub deactivate_period: u64,
 }
 
 impl ContractConfig {
@@ -78,6 +79,7 @@ pub struct CampaignState {
     pub cumulative_distribution_amount: Vec<(Denom, u128)>, //todo: Map 으로 변경?
     pub locked_balance: Vec<(Denom, u128)>,
     pub active_flag: bool,
+    pub last_active_block: u64,
 }
 
 impl CampaignState {
@@ -89,8 +91,10 @@ impl CampaignState {
         CAMPAIGN_STATE.load(storage)
     }
 
-    pub fn is_active(&self) -> bool {
-        self.active_flag
+    pub fn is_active(&self, storage: &dyn Storage, block_height: u64) -> StdResult<bool> {
+        let config = ContractConfig::load(storage)?;
+
+        Ok(self.active_flag && config.deactivate_period + self.last_active_block >= block_height)
     }
 
     pub fn plus_distribution(&mut self, denom: Denom, amount: u128) {

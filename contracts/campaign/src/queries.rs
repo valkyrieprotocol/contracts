@@ -61,7 +61,7 @@ pub fn get_campaign_state(
         cumulative_distribution_amount: Uint128::from(cumulative_distribution_amount),
         locked_balance: Uint128::from(locked_balance),
         balance: Uint128::from(balance),
-        is_active: state.is_active(),
+        is_active: state.is_active(deps.storage, env.block.height)?,
     })
 }
 

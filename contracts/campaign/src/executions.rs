@@ -49,7 +49,8 @@ pub fn instantiate(
         participation_count: 0,
         cumulative_distribution_amount: vec![],
         locked_balance: vec![],
-        active_flag: true,
+        active_flag: false,
+        last_active_block: 0,
     }.save(deps.storage)?;
 
     DistributionConfig {
@@ -81,19 +82,22 @@ pub fn update_info(
     if contract_config.is_governance(&info.sender) {
         authorized = true;
 
-        if url.is_some() {
-            campaign_info.url = url.unwrap();
-        }
+        // if url.is_some() {
+        //     validate_url(&url.unwrap())?;
+        //     campaign_info.url = url.unwrap();
+        // }
     }
 
     if contract_config.is_admin(&info.sender) {
         authorized = true;
 
         if title.is_some() {
+            validate_title(&title.unwrap())?;
             campaign_info.title = title.unwrap();
         }
 
         if description.is_some() {
+            validate_description(&description.unwrap())?;
             campaign_info.description = description.unwrap();
         }
     }
@@ -108,29 +112,29 @@ pub fn update_info(
     Ok(Response::default())
 }
 
-pub fn update_distribution_config(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    denom: valkyrie::campaign::enumerations::Denom,
-    amounts: Vec<Uint128>,
-) -> ContractResult<Response> {
-    // Validate
-    if !is_governance(deps.storage, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Execute
-    let mut distribution_config = DistributionConfig::load(deps.storage)?;
-
-    distribution_config.denom = denom.to_cw20(deps.api);
-    distribution_config.amounts = map_u128(amounts);
-
-    distribution_config.save(deps.storage)?;
-
-    // Response
-    Ok(Response::default())
-}
+// pub fn update_distribution_config(
+//     deps: DepsMut,
+//     _env: Env,
+//     info: MessageInfo,
+//     denom: valkyrie::campaign::enumerations::Denom,
+//     amounts: Vec<Uint128>,
+// ) -> ContractResult<Response> {
+//     // Validate
+//     if !is_governance(deps.storage, &info.sender) {
+//         return Err(ContractError::Unauthorized {});
+//     }
+//
+//     // Execute
+//     let mut distribution_config = DistributionConfig::load(deps.storage)?;
+//
+//     distribution_config.denom = denom.to_cw20(deps.api);
+//     distribution_config.amounts = map_u128(amounts);
+//
+//     distribution_config.save(deps.storage)?;
+//
+//     // Response
+//     Ok(Response::default())
+// }
 
 pub fn update_admin(
     deps: DepsMut,
@@ -156,7 +160,7 @@ pub fn update_admin(
 
 pub fn update_activation(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     is_active: bool,
 ) -> ContractResult<Response> {
@@ -169,6 +173,10 @@ pub fn update_activation(
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
     campaign_state.active_flag = is_active;
+
+    if is_active {
+        campaign_state.last_active_block = env.block.height;
+    }
 
     campaign_state.save(deps.storage)?;
 
@@ -274,7 +282,7 @@ pub fn participate(
 ) -> ContractResult<Response> {
     // Validate
     let mut campaign_state = CampaignState::load(deps.storage)?;
-    if !campaign_state.active_flag {
+    if !campaign_state.is_active(deps.storage, env.block.height)? {
         return Err(ContractError::Std(StdError::generic_err("Deactivated campaign")))
     }
 
@@ -318,6 +326,7 @@ pub fn participate(
     }
 
     campaign_state.participation_count += 1;
+    campaign_state.last_active_block = env.block.height;
     campaign_state.save(deps.storage)?;
 
     let campaign_balance = query_balance(
