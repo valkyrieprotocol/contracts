@@ -6,6 +6,7 @@ use crate::cw20::query_balance;
 use crate::utils::decompress_addr;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Denom {
     Native(String),
     Token(String),
@@ -36,6 +37,7 @@ impl Denom {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Referrer {
     Address(String),
     Compressed(String),
