@@ -204,7 +204,7 @@ pub fn cast_vote(
 
     // Execute
     poll.vote(deps.storage, &mut staker_state, option.clone(), amount)?;
-    poll.snapshot_staked_amount(deps.storage, env.block.height, contract_available_balance)?;
+    poll.snapshot_staked_amount(deps.storage, env.block.height, contract_available_balance).ok(); //snapshot 실패하더라도 무시
 
     poll.save(deps.storage)?;
     staker_state.save(deps.storage)?;
