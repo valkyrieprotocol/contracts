@@ -1,4 +1,5 @@
-use cosmwasm_std::{Uint128, Decimal, StdResult};
+use cosmwasm_std::{Uint128, Decimal, StdResult, Binary};
+use bigint::U256;
 
 pub fn map_u128(value: Vec<Uint128>) -> Vec<u128> {
     value.iter().map(|v| v.u128()).collect()
@@ -108,73 +109,33 @@ pub fn put_query_parameter(url: &String, key: &String, value: &String) -> String
     result
 }
 
-// const TERRA_ADDRESS_PREFIX: &str = "terra1";
-pub fn compress_addr(address: &String) -> StdResult<String> {
-    // // '6' is hrp + delimiter length of terra address
-    // let data_chars = address[6..].chars();
-    // let char_count = address.len() - 6;
-    //
-    // let mut boxed = bitbox![Lsb0, u8; 0; char_count * 5];
-    //
-    // unsafe {
-    //     for (_, c) in data_chars.enumerate() {
-    //         let bech_index: Vec<bool> = bech32_index_of(c).unwrap().to_be_bytes().as_bits()
-    //             .iter()
-    //             .map(|v: BitRef<Const, Lsb0, u8>| v.into_bitptr().read())
-    //             .collect();
-    //
-    //         boxed.shift_left(5);
-    //         boxed |= bech_index;
-    //     }
-    // }
-    //
-    // Ok(Binary::from(boxed.as_slice()).to_base64())
+const TERRA_ADDRESS_HRP: &str = "terra1";
+const TERRA_ADDRESS_HRP_LENGTH: usize = 6;
+const TERRA_ADDRESS_LENGTH: usize = 44;
+const BECH32_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+pub fn compress_addr(address: &String) -> String {
+    let mut result = U256::zero();
+    for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
+        let index = BECH32_CHARSET.find(c).unwrap();
+        result = (result << 5) | U256::from(index);
+    }
 
-    Ok(address.to_string())
+    let mut bytes = [0u8, 32];
+    result.to_big_endian(&mut bytes);
+
+    Binary::from(&bytes).to_base64()
 }
 
-pub fn decompress_addr(text: &String) -> StdResult<String> {
-    // let mut data = Binary::from_base64(text.as_str())?;
-    // let bits: &mut BitSlice<Lsb0, u8> = data.as_slice().view_bits_mut();
-    //
-    // let mut result: Vec<char> = vec![];
-    // // '38' is data part length of terra address
-    // for _ in 1..38 {
-    //     let byte = &bits[..bits.len() - 5];
-    //     // byte.bitand_assign(0x1F.to_be_bytes());
-    //
-    //     let index = usize::from_be_bytes([0, 0, 0, byte.as_raw_slice()[0]]);
-    //     result.insert(0, bech32_char_of(index).unwrap());
-    //
-    //     bits.shift_right(5);
-    // }
-    //
-    // Ok(result.iter().collect())
+pub fn decompress_addr(text: &String) -> String {
+    let mut bytes = Binary::from_base64(text).unwrap().as_slice();
+    let mut data = U256::from_big_endian(bytes);
+    let mut result = String::new();
 
-    Ok(text.to_string())
+    for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_ADDRESS_LENGTH {
+        let index = (data & U256::from(0x1F)).as_u32() as usize;
+        result = BECH32_CHARSET.chars().nth(index).unwrap().to_string() + &result;
+        data = data >> 5;
+    }
+
+    TERRA_ADDRESS_HRP + &result
 }
-
-// static BECH32: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-// fn bech32_index_of(value: char) -> Option<usize> {
-//     let mut i = 0;
-//
-//     for c in BECH32.chars() {
-//         if c == value {
-//             return Some(i)
-//         }
-//
-//         i += 1;
-//     }
-//
-//     None
-// }
-//
-// fn bech32_char_of(index: usize) -> Option<char> {
-//     let chars: Vec<char> = BECH32.chars().collect();
-//
-//     if index < 32 {
-//         Some(chars[index])
-//     } else {
-//         None
-//     }
-// }

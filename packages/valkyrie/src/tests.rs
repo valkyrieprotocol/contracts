@@ -23,3 +23,17 @@ fn query_cw20_balance() {
             .unwrap()
     );
 }
+
+#[test]
+fn compress_address() {
+    let address = "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn";
+    println!(address);
+
+    let compressed_address = super::utils::compress_addr(&address.to_string());
+    println!(compressed_address);
+
+    let decompressed_address = decompress_address(&compressed_address);
+    println!(decompressed_address);
+
+    assert_eq!(address, decompressed_address);
+}
