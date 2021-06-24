@@ -1,13 +1,13 @@
-use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary, Uint128, Uint64};
 use cw20::Denom;
 
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::campaign::execute_msgs::InstantiateMsg;
+use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, InstantiateMsg};
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::query_balance;
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
-use valkyrie::utils::{calc_ratio_amount, map_u128};
+use valkyrie::utils::{calc_ratio_amount, find, map_u128};
 
 use crate::states::{CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin, is_pending, load_valkyrie_config, Participation};
 
@@ -294,7 +294,7 @@ pub fn participate(
         None
     };
     let my_participation = Participation {
-        actor_address: info.sender,
+        actor_address: info.sender.clone(),
         referrer_address: referrer.clone(),
         rewards: vec![],
     };
@@ -311,7 +311,7 @@ pub fn participate(
 
     let mut distributions: Vec<(Addr, Vec<(Denom, u128)>)> = vec![];
 
-    for (participation, reward_amount) in participations.iter_mut().zip(distribution_config.amounts) {
+    for (participation, reward_amount) in participations.iter_mut().zip(distribution_config.amounts.clone()) {
         participation.plus_reward(distribution_config.denom.clone(), reward_amount);
         participation.save(deps.storage)?;
 
@@ -331,7 +331,7 @@ pub fn participate(
         env.contract.address,
     )?;
 
-    if campaign_state.locked_balance(distribution_config.denom) > campaign_balance {
+    if campaign_state.locked_balance(distribution_config.denom.clone()) > campaign_balance {
         return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
     }
 
@@ -339,11 +339,36 @@ pub fn participate(
     //TODO: boost msg
 
     // Response
+    let mut distribution_amount = Uint128::zero();
+    let mut distributions_response: Vec<Distribution> = vec![];
+
+    for (index, (address, rewards)) in distributions.iter().enumerate() {
+        let amount = find(rewards, |(denom, _)| distribution_config.denom.eq(denom))
+            .map_or(Uint128::zero(), |(_, amount)| Uint128::from(*amount));
+
+        distribution_amount += amount;
+        distributions_response.push(
+            Distribution {
+                address: address.to_string(),
+                distance: Uint64::from(index as u64),
+                amount,
+            }
+        );
+    }
+
+    let result = DistributeResult {
+        actor_address: info.sender.to_string(),
+        reward_denom: valkyrie::campaign::enumerations::Denom::from_cw20(distribution_config.denom.clone()),
+        configured_reward_amount: Uint128::new(distribution_config.amounts.iter().sum()),
+        distributed_reward_amount: distribution_amount,
+        distributions: distributions_response,
+    };
+
     Ok(Response {
         submessages: vec![],
         messages: vec![],
         attributes: vec![],
-        data: None,
+        data: Some(to_binary(&result)?),
     })
 }
 

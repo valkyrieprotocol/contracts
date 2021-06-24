@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Uint64};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -47,4 +47,20 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DistributeResult {
+    pub actor_address: String,
+    pub reward_denom: Denom,
+    pub configured_reward_amount: Uint128,
+    pub distributed_reward_amount: Uint128,
+    pub distributions: Vec<Distribution>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Distribution {
+    pub address: String,
+    pub distance: Uint64,
+    pub amount: Uint128,
 }
