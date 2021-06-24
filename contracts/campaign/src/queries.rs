@@ -73,7 +73,7 @@ pub fn get_share_url(
     deps.api.addr_validate(&address)?;
 
     let campaign_info = CampaignInfo::load(deps.storage)?;
-    let compressed = compress_addr(&address)?;
+    let compressed = compress_addr(&address);
     let url = put_query_parameter(&campaign_info.url, &campaign_info.parameter_key, &compressed);
 
     Ok(ShareUrlResponse {

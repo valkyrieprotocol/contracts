@@ -34,15 +34,14 @@ incremental = false
 overflow-checks = true
 
 [dependencies]
+serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-protobuf = { version = "2", features = ["with-bytes"] }
-cw20 = { version = "0.6.1" }
-cosmwasm-std = { version = "0.14.0" }
-cosmwasm-storage = { version = "0.14.0" }
-cw-storage-plus = { version = "0.6.1" }
+cw20 = { version = "0.6.2" }
+cosmwasm-std = { version = "0.14.1" }
+cosmwasm-storage = { version = "0.14.1" }
+cw-storage-plus = { version = "0.6.2" }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "0.1.0" }
 terra-cosmwasm = { version = "2.0.0" }
 
 [dev-dependencies]
-cosmwasm-schema = { version = "0.14.0" }
+cosmwasm-schema = { version = "0.14.1" }

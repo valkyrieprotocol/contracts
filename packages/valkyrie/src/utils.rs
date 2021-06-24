@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Decimal, StdResult, Binary};
+use cosmwasm_std::{Uint128, Decimal, Binary};
 use bigint::U256;
 
 pub fn map_u128(value: Vec<Uint128>) -> Vec<u128> {
@@ -120,15 +120,18 @@ pub fn compress_addr(address: &String) -> String {
         result = (result << 5) | U256::from(index);
     }
 
-    let mut bytes = [0u8, 32];
+    let mut bytes = [0u8; 32];
     result.to_big_endian(&mut bytes);
 
-    Binary::from(&bytes).to_base64()
+    Binary::from(&bytes[8..]).to_base64()
 }
 
 pub fn decompress_addr(text: &String) -> String {
-    let mut bytes = Binary::from_base64(text).unwrap().as_slice();
-    let mut data = U256::from_big_endian(bytes);
+    let decoded = Binary::from_base64(text).unwrap();
+    let mut bytes = [0u8; 32];
+    bytes[8..].clone_from_slice(decoded.as_slice());
+
+    let mut data = U256::from_big_endian(&bytes);
     let mut result = String::new();
 
     for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_ADDRESS_LENGTH {
@@ -137,5 +140,5 @@ pub fn decompress_addr(text: &String) -> String {
         data = data >> 5;
     }
 
-    TERRA_ADDRESS_HRP + &result
+    TERRA_ADDRESS_HRP.to_string() + &result
 }
