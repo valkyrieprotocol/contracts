@@ -5,7 +5,8 @@ use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::governance::messages::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+use valkyrie::governance::query_msgs::QueryMsg;
 
 use crate::common::states::ContractConfig;
 
@@ -19,9 +20,9 @@ pub fn instantiate(
     let mut deps_mut = deps;
 
     crate::common::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.contract_config)?;
-    crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::staking::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.staking_config)?;
     crate::poll::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.poll_config)?;
-    crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone())?;
+    crate::valkyrie::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg.valkyrie_config)?;
 
     Ok(Response::default())
 }
@@ -35,6 +36,14 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::UpdateStakingConfig {
+            withdraw_delay,
+        } => crate::staking::executions::update_config(
+            deps,
+            env,
+            info,
+            withdraw_delay,
+        ),
         ExecuteMsg::UnstakeVotingToken {
             amount,
         } => crate::staking::executions::unstake_voting_token(
@@ -42,6 +51,11 @@ pub fn execute(
             env,
             info,
             amount,
+        ),
+        ExecuteMsg::WithdrawVotingToken {} => crate::staking::executions::withdraw_voting_token(
+            deps,
+            env,
+            info,
         ),
         ExecuteMsg::UpdatePollConfig {
             quorum,
@@ -89,15 +103,6 @@ pub fn execute(
             info,
             poll_id,
         ),
-        #[cfg(feature = "expire")]
-        ExecuteMsg::ExpirePoll {
-            poll_id,
-        } => crate::poll::executions::expire_poll(
-            deps,
-            env,
-            info,
-            poll_id,
-        ),
         ExecuteMsg::SnapshotPoll {
             poll_id,
         } => crate::poll::executions::snapshot_poll(
@@ -107,35 +112,15 @@ pub fn execute(
             poll_id,
         ),
         ExecuteMsg::UpdateValkyrieConfig {
-            boost_contract,
+            burn_contract,
+            reward_withdraw_burn_rate,
         } => crate::valkyrie::executions::update_config(
             deps,
             env,
             info,
-            boost_contract,
+            burn_contract,
+            reward_withdraw_burn_rate,
         ),
-        ExecuteMsg::AddCampaignCodeWhitelist {
-            code_id,
-            source_code_url,
-            description,
-            maintainer,
-        } => crate::valkyrie::executions::add_campaign_code_whitelist(
-            deps,
-            env,
-            info,
-            code_id,
-            source_code_url,
-            description,
-            maintainer,
-        ),
-        ExecuteMsg::RemoveCampaignCodeWhitelist {
-            code_id,
-        } => crate::valkyrie::executions::remove_campaign_code_whitelist(
-            deps,
-            env,
-            info,
-            code_id,
-        )
     }
 }
 
@@ -197,6 +182,9 @@ pub fn query(
         QueryMsg::ContractConfig {} => to_binary(
             &crate::common::queries::get_contract_config(deps, env)?
         ),
+        QueryMsg::StakingConfig {} => to_binary(
+            &crate::staking::queries::get_staking_config(deps, env)?
+        ),
         QueryMsg::PollConfig {} => to_binary(
             &crate::poll::queries::get_poll_config(deps, env)?
         ),
@@ -248,11 +236,6 @@ pub fn query(
         ),
         QueryMsg::ValkyrieConfig {} => to_binary(
             &crate::valkyrie::queries::get_valkyrie_config(deps, env)?
-        ),
-        QueryMsg::CampaignCodeInfo {
-            code_id,
-        } => to_binary(
-            &crate::valkyrie::queries::get_campaign_code_info(deps, env, code_id)?
         ),
     }?;
 
