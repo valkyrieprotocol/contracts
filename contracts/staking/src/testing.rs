@@ -1,4 +1,4 @@
-use crate::contract::{execute, instantiate, query};
+use crate::entrypoints::{execute, instantiate, query};
 use crate::mock_querier::mock_dependencies_with_querier;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
@@ -25,7 +25,6 @@ fn proper_initialization() {
 
     let env = mock_env();
     let info = mock_info(Addr::unchecked("addr0000").as_str(), &[]);
-
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), env.clone(), info, msg).unwrap();
 

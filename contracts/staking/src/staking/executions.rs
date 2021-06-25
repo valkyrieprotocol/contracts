@@ -1,87 +1,20 @@
-// use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128, WasmMsg,
+    attr, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 
-use valkyrie::staking::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-    StakerInfoResponse, StateResponse,
+use valkyrie::staking::ExecuteMsg;
+
+use crate::staking::states::{
+    compute_reward, compute_staker_reward, read_staker_info, Config, StakerInfo, State, CONFIG,
+    STAKER_INFO, STATE, UST,
 };
 
-use crate::state::{read_staker_info, Config, StakerInfo, State, CONFIG, STAKER_INFO, STATE, UST};
-
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+use cw20::Cw20ExecuteMsg;
 use terra_cosmwasm::TerraQuerier;
 use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
-
-pub fn instantiate(
-    deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
-    msg: InstantiateMsg,
-) -> StdResult<Response> {
-    let config = Config {
-        valkyrie_token: deps.api.addr_validate(&msg.valkyrie_token.as_str())?,
-        liquidity_token: deps.api.addr_validate(&msg.liquidity_token.as_str())?, //bond는 liquidity_token만 가능.
-        pair_contract: deps.api.addr_validate(&msg.pair_contract.as_str())?,
-        distribution_schedule: msg.distribution_schedule,
-    };
-
-    CONFIG.save(deps.storage, &config)?;
-
-    let state = State {
-        last_distributed: env.block.height, //마지막 분배
-        total_bond_amount: Uint128::zero(), //총 본딩 된 금액.
-        global_reward_index: Decimal::zero(),
-    };
-
-    STATE.save(deps.storage, &state)?;
-
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![],
-        submessages: vec![],
-        data: None,
-    })
-}
-
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
-    match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::Unbond { amount } => unbond(deps, env, info, amount),
-        ExecuteMsg::Withdraw {} => withdraw(deps, env, info),
-        ExecuteMsg::AutoStake {
-            token_amount,
-            slippage_tolerance,
-        } => auto_stake(deps, env, info, token_amount, slippage_tolerance),
-        ExecuteMsg::AutoStakeHook {
-            staker_addr,
-            already_staked_amount,
-        } => auto_stake_hook(deps, env, info, staker_addr, already_staked_amount),
-    }
-}
-
-pub fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    match from_binary(&cw20_msg.msg)? {
-        Cw20HookMsg::Bond {} => {
-            // only staking token contract can execute this message
-            if config.liquidity_token != deps.api.addr_validate(&info.sender.as_str())? {
-                return Err(StdError::generic_err("unauthorized"));
-            }
-            bond(deps, env, cw20_msg.sender, cw20_msg.amount)
-        }
-    }
-}
 
 pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
     let sender_addr_raw: Addr = deps.api.addr_validate(&sender_addr.as_str())?;
@@ -97,13 +30,7 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     // Increase bond_amount
     state.total_bond_amount += amount;
     staker_info.bond_amount += amount;
-    STAKER_INFO.save(
-        deps.storage,
-        deps.api
-            .addr_canonicalize(sender_addr_raw.as_str())?
-            .as_slice(),
-        &staker_info,
-    )?;
+    STAKER_INFO.save(deps.storage, sender_addr_raw.as_str(), &staker_info)?;
     STATE.save(deps.storage, &state)?;
 
     Ok(Response {
@@ -280,21 +207,10 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     // depends on the left pending reward and bond amount
     staker_info.bond_amount = (staker_info.bond_amount.checked_sub(amount))?;
     if staker_info.pending_reward.is_zero() && staker_info.bond_amount.is_zero() {
-        //스테이킹된거 없고, 지급예정금액 없을때.
-        STAKER_INFO.remove(
-            deps.storage,
-            deps.api
-                .addr_canonicalize(sender_addr_raw.as_str())?
-                .as_slice(),
-        );
+        //no bond, no reward.
+        STAKER_INFO.remove(deps.storage, sender_addr_raw.as_str());
     } else {
-        STAKER_INFO.save(
-            deps.storage,
-            deps.api
-                .addr_canonicalize(sender_addr_raw.as_str())?
-                .as_slice(),
-            &staker_info,
-        )?;
+        STAKER_INFO.save(deps.storage, sender_addr_raw.as_str(), &staker_info)?;
     }
 
     Ok(Response {
@@ -329,27 +245,15 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     compute_staker_reward(&state, &mut staker_info)?;
     STATE.save(deps.storage, &state)?;
 
-    //pending reward sender에게 전송.
     let amount = staker_info.pending_reward;
     staker_info.pending_reward = Uint128::zero();
 
     // Store or remove updated rewards info
     // depends on the left pending reward and bond amount
     if staker_info.bond_amount.is_zero() {
-        STAKER_INFO.remove(
-            deps.storage,
-            deps.api
-                .addr_canonicalize(sender_addr_raw.as_str())?
-                .as_slice(),
-        );
+        STAKER_INFO.remove(deps.storage, sender_addr_raw.as_str());
     } else {
-        STAKER_INFO.save(
-            deps.storage,
-            deps.api
-                .addr_canonicalize(sender_addr_raw.as_str())?
-                .as_slice(),
-            &staker_info,
-        )?;
+        STAKER_INFO.save(deps.storage, sender_addr_raw.as_str(), &staker_info)?;
     }
 
     Ok(Response {
@@ -369,109 +273,4 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         data: None,
         submessages: vec![],
     })
-}
-
-// compute distributed rewards and update global reward index
-fn compute_reward(config: &Config, state: &mut State, block_height: u64) {
-    if state.total_bond_amount.is_zero() {
-        state.last_distributed = block_height;
-        return;
-    }
-
-    let mut distributed_amount: Uint128 = Uint128::zero();
-    for s in config.distribution_schedule.iter() {
-        //s.0 = 시작시점
-        //s.1 = 종료시점
-        if s.0 > block_height || s.1 < state.last_distributed {
-            //현재위치가, 시작시점보다 이전이거나, 종료시점보다 크면 continue
-            continue;
-        }
-
-        // min(s.1, block_height) - max(s.0, last_distributed)
-        let passed_blocks =
-            std::cmp::min(s.1, block_height) - std::cmp::max(s.0, state.last_distributed);
-        //passed_blocks = (입력받은 height or 종료시점) - (마지막분배시점 or 시작시점)
-
-        let num_blocks = s.1 - s.0;
-        let distribution_amount_per_block: Decimal = Decimal::from_ratio(s.2, num_blocks);
-        // distribution_amount_per_block = 이번회차 분배금액 / 블록의 갯수.
-        //                               = 블록당 분배금액.
-        distributed_amount += distribution_amount_per_block * Uint128(passed_blocks as u128);
-        //분배금액의합 += 블록당분배금액 * 경과블록.
-    }
-
-    state.last_distributed = block_height;
-    state.global_reward_index = state.global_reward_index
-        + Decimal::from_ratio(distributed_amount, state.total_bond_amount);
-    // state.global_reward_index = state.global_reward_index + (distributed_amount / state.total_bond_amount)
-    // 누적 분배 비율
-}
-
-// withdraw reward to pending reward
-fn compute_staker_reward(state: &State, staker_info: &mut StakerInfo) -> StdResult<()> {
-    let pending_reward = (staker_info.bond_amount * state.global_reward_index)
-        .checked_sub(staker_info.bond_amount * staker_info.reward_index)?;
-    //  pending_reward = (본딩금액 * (global인덱스 - old인덱스)) 인덱스의 차이만큼..
-    //  pending_reward = (본딩금액 * 이번회차%)
-
-    staker_info.reward_index = state.global_reward_index;
-    staker_info.pending_reward += pending_reward;
-    Ok(())
-}
-
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::State { block_height } => to_binary(&query_state(deps, block_height)?),
-        QueryMsg::StakerInfo { staker } => to_binary(&query_staker_info(deps, env, staker)?),
-    }
-}
-
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
-    let resp = ConfigResponse {
-        valkyrie_token: config.valkyrie_token.to_string(),
-        staking_token: config.liquidity_token.to_string(),
-        distribution_schedule: config.distribution_schedule,
-    };
-
-    Ok(resp)
-}
-
-pub fn query_state(deps: Deps, block_height: Option<u64>) -> StdResult<StateResponse> {
-    let mut state: State = STATE.load(deps.storage)?;
-    if let Some(block_height) = block_height {
-        let config: Config = CONFIG.load(deps.storage)?;
-        compute_reward(&config, &mut state, block_height);
-    }
-
-    Ok(StateResponse {
-        last_distributed: state.last_distributed,
-        total_bond_amount: state.total_bond_amount,
-        global_reward_index: state.global_reward_index,
-    })
-}
-
-pub fn query_staker_info(deps: Deps, env: Env, staker: String) -> StdResult<StakerInfoResponse> {
-    let block_height = env.block.height;
-    let staker_raw = deps.api.addr_validate(&staker.as_str())?;
-
-    let mut staker_info: StakerInfo = read_staker_info(&deps, &staker_raw)?;
-
-    let config: Config = CONFIG.load(deps.storage)?;
-    let mut state: State = STATE.load(deps.storage)?;
-
-    compute_reward(&config, &mut state, block_height);
-    compute_staker_reward(&state, &mut staker_info)?;
-
-    Ok(StakerInfoResponse {
-        staker,
-        reward_index: staker_info.reward_index,
-        bond_amount: staker_info.bond_amount,
-        pending_reward: staker_info.pending_reward,
-    })
-}
-
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    Ok(Response::default())
 }
