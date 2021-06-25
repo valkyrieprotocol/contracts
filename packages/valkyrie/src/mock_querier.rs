@@ -3,7 +3,6 @@ use cosmwasm_std::{
     from_slice, to_binary, Api, CanonicalAddr, Coin, ContractResult, Decimal,
     OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
-use cosmwasm_storage::to_length_prefixed;
 use std::collections::HashMap;
 
 use cw20::TokenInfoResponse;
@@ -220,4 +219,21 @@ impl WasmMockQuerier {
     //         self.base.update_balance(addr, balance.to_vec());
     //     }
     // }
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn to_length_prefixed(namespace: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(namespace.len() + 2);
+    out.extend_from_slice(&encode_length(namespace));
+    out.extend_from_slice(namespace);
+    out
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn encode_length(namespace: &[u8]) -> [u8; 2] {
+    if namespace.len() > 0xFFFF {
+        panic!("only supports namespaces up to length 0xFFFF")
+    }
+    let length_bytes = (namespace.len() as u32).to_be_bytes();
+    [length_bytes[2], length_bytes[3]]
 }
