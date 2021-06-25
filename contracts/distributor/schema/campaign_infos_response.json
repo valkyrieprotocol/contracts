@@ -1,27 +1,27 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "DistributorInfosResponse",
+  "title": "CampaignInfosResponse",
   "type": "object",
   "required": [
-    "distributors"
+    "campaigns"
   ],
   "properties": {
-    "distributors": {
+    "campaigns": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/DistributorInfoResponse"
+        "$ref": "#/definitions/CampaignInfoResponse"
       }
     }
   },
   "definitions": {
-    "DistributorInfoResponse": {
+    "CampaignInfoResponse": {
       "type": "object",
       "required": [
-        "distributor",
+        "campaign_addr",
         "spend_limit"
       ],
       "properties": {
-        "distributor": {
+        "campaign_addr": {
           "type": "string"
         },
         "spend_limit": {

@@ -1,11 +1,11 @@
 use crate::entrypoints::{execute, instantiate, query};
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{attr, from_binary, to_binary, CosmosMsg, Uint128, WasmMsg};
+use cosmwasm_std::{attr, from_binary, to_binary, CosmosMsg, Decimal, StdError, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::distributor::{
-    execute_msgs::{ExecuteMsg, InstantiateMsg},
+    execute_msgs::{BoosterConfig, ExecuteMsg, InstantiateMsg},
     query_msgs::{ContractConfigResponse, QueryMsg},
 };
 use valkyrie::errors::ContractError;
@@ -17,8 +17,32 @@ fn test_initialization() {
     let msg = InstantiateMsg {
         governance: "gov".to_string(),
         token_contract: "valkyrie".to_string(),
+        booster_config: BoosterConfig {
+            drop_booster_ratio: Decimal::percent(10),
+            activity_booster_ratio: Decimal::percent(70),
+            plus_booster_ratio: Decimal::percent(10),
+        },
     };
 
+    // invalid boost config
+    let info = mock_info("addr0000", &[]);
+    match instantiate(deps.as_mut(), mock_env(), info, msg) {
+        Err(ContractError::Std(StdError::GenericErr { msg, .. })) => {
+            assert_eq!(msg, "invalid boost_config")
+        }
+        _ => panic!("DO NOT ENTER HERE"),
+    }
+
+    // valid boost config
+    let msg = InstantiateMsg {
+        governance: "gov".to_string(),
+        token_contract: "valkyrie".to_string(),
+        booster_config: BoosterConfig {
+            drop_booster_ratio: Decimal::percent(10),
+            activity_booster_ratio: Decimal::percent(80),
+            plus_booster_ratio: Decimal::percent(10),
+        },
+    };
     let info = mock_info("addr0000", &[]);
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -30,7 +54,7 @@ fn test_initialization() {
 }
 
 #[test]
-fn test_add_distributor() {
+fn test_add_campaign() {
     let mut deps = mock_dependencies(&[]);
 
     let _res = instantiate(
@@ -40,12 +64,17 @@ fn test_add_distributor() {
         InstantiateMsg {
             governance: "gov".to_string(),
             token_contract: "valkyrie".to_string(),
+            booster_config: BoosterConfig {
+                drop_booster_ratio: Decimal::percent(10),
+                activity_booster_ratio: Decimal::percent(80),
+                plus_booster_ratio: Decimal::percent(10),
+            },
         },
     )
     .unwrap();
 
-    let msg = ExecuteMsg::AddDistributor {
-        distributor: "distributor0000".to_string(),
+    let msg = ExecuteMsg::AddCampaign {
+        campaign_addr: "campaign0000".to_string(),
         spend_limit: Uint128::from(10000000000u128),
     };
 
@@ -62,9 +91,12 @@ fn test_add_distributor() {
     assert_eq!(
         res.attributes,
         vec![
-            attr("action", "add_distributor"),
-            attr("distributor", "distributor0000"),
+            attr("action", "add_campaign"),
+            attr("campaign_addr", "campaign0000"),
             attr("spend_limit", "10000000000"),
+            attr("drop_booster_amount", "1000000000"),
+            attr("activity_booster_amount", "8000000000"),
+            attr("plus_booster_amount", "1000000000"),
         ]
     );
 
@@ -76,7 +108,7 @@ fn test_add_distributor() {
 }
 
 #[test]
-fn test_remove_distributor() {
+fn test_remove_campaign() {
     let mut deps = mock_dependencies(&[]);
 
     let _res = instantiate(
@@ -86,6 +118,11 @@ fn test_remove_distributor() {
         InstantiateMsg {
             governance: "gov".to_string(),
             token_contract: "valkyrie".to_string(),
+            booster_config: BoosterConfig {
+                drop_booster_ratio: Decimal::percent(10),
+                activity_booster_ratio: Decimal::percent(80),
+                plus_booster_ratio: Decimal::percent(10),
+            },
         },
     )
     .unwrap();
@@ -94,15 +131,15 @@ fn test_remove_distributor() {
         deps.as_mut(),
         mock_env(),
         mock_info("gov", &[]),
-        ExecuteMsg::AddDistributor {
-            distributor: "distributor0000".to_string(),
+        ExecuteMsg::AddCampaign {
+            campaign_addr: "campaign0000".to_string(),
             spend_limit: Uint128::from(10000000000u128),
         },
     )
     .unwrap();
 
-    let msg = ExecuteMsg::RemoveDistributor {
-        distributor: "distributor0000".to_string(),
+    let msg = ExecuteMsg::RemoveCampaign {
+        campaign_addr: "campaign0000".to_string(),
     };
 
     // Unauthorized Remove
@@ -118,8 +155,8 @@ fn test_remove_distributor() {
     assert_eq!(
         res.attributes,
         vec![
-            attr("action", "remove_distributor"),
-            attr("distributor", "distributor0000"),
+            attr("action", "remove_campaign"),
+            attr("campaign_addr", "campaign0000"),
         ]
     );
 
@@ -141,6 +178,11 @@ fn test_spend() {
         InstantiateMsg {
             governance: "gov".to_string(),
             token_contract: "valkyrie".to_string(),
+            booster_config: BoosterConfig {
+                drop_booster_ratio: Decimal::percent(10),
+                activity_booster_ratio: Decimal::percent(80),
+                plus_booster_ratio: Decimal::percent(10),
+            },
         },
     )
     .unwrap();
@@ -149,8 +191,8 @@ fn test_spend() {
         deps.as_mut(),
         mock_env(),
         mock_info("gov", &[]),
-        ExecuteMsg::AddDistributor {
-            distributor: "distributor0000".to_string(),
+        ExecuteMsg::AddCampaign {
+            campaign_addr: "campaign0000".to_string(),
             spend_limit: Uint128::from(10000000000u128),
         },
     )
@@ -161,21 +203,21 @@ fn test_spend() {
         amount: Uint128::from(1000000u128),
     };
 
-    // Distributor Not Found
-    let not_found_info = mock_info("distributor0001", &[]);
+    // Campaign Not Found
+    let not_found_info = mock_info("campaign0001", &[]);
     match execute(deps.as_mut(), mock_env(), not_found_info, msg.clone()) {
         Err(ContractError::NotFound {}) => {}
         _ => panic!("DO NOT ENTER HERE"),
     }
 
     // Normal Spend
-    let info = mock_info("distributor0000", &[]);
+    let info = mock_info("campaign0000", &[]);
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
     assert_eq!(
         res.attributes,
         vec![
             attr("action", "spend"),
-            attr("distributor", "distributor0000"),
+            attr("campaign_addr", "campaign0000"),
             attr("recipient", "addr0000"),
             attr("amount", "1000000"),
         ]

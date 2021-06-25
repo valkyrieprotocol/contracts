@@ -38,7 +38,7 @@ pub struct TokenQuerier {
 }
 
 impl TokenQuerier {
-    pub fn new(balances: &[(&String, &[(&String, &Uint128)])]) -> Self {
+    pub fn new(balances: &[(&str, &[(&str, &Uint128)])]) -> Self {
         TokenQuerier {
             balances: balances_to_map(balances),
         }
@@ -46,7 +46,7 @@ impl TokenQuerier {
 }
 
 pub(crate) fn balances_to_map(
-    balances: &[(&String, &[(&String, &Uint128)])],
+    balances: &[(&str, &[(&str, &Uint128)])],
 ) -> HashMap<String, HashMap<String, Uint128>> {
     let mut balances_map: HashMap<String, HashMap<String, Uint128>> = HashMap::new();
     for (contract_addr, balances) in balances.iter() {
@@ -68,7 +68,7 @@ pub struct TaxQuerier {
 }
 
 impl TaxQuerier {
-    pub fn new(rate: Decimal, caps: &[(&String, &Uint128)]) -> Self {
+    pub fn new(rate: Decimal, caps: &[(&str, &Uint128)]) -> Self {
         TaxQuerier {
             rate,
             caps: caps_to_map(caps),
@@ -76,7 +76,7 @@ impl TaxQuerier {
     }
 }
 
-pub(crate) fn caps_to_map(caps: &[(&String, &Uint128)]) -> HashMap<String, Uint128> {
+pub(crate) fn caps_to_map(caps: &[(&str, &Uint128)]) -> HashMap<String, Uint128> {
     let mut owner_map: HashMap<String, Uint128> = HashMap::new();
     for (denom, cap) in caps.iter() {
         owner_map.insert(denom.to_string(), **cap);
@@ -206,12 +206,12 @@ impl WasmMockQuerier {
     }
 
     // configure the mint whitelist mock querier
-    pub fn with_token_balances(&mut self, balances: &[(&String, &[(&String, &Uint128)])]) {
+    pub fn with_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
         self.token_querier = TokenQuerier::new(balances);
     }
 
     // configure the token owner mock querier
-    pub fn with_tax(&mut self, rate: Decimal, caps: &[(&String, &Uint128)]) {
+    pub fn with_tax(&mut self, rate: Decimal, caps: &[(&str, &Uint128)]) {
         self.tax_querier = TaxQuerier::new(rate, caps);
     }
 

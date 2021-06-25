@@ -9,7 +9,7 @@ pub fn map_uint128(value: Vec<u128>) -> Vec<Uint128> {
     value.iter().map(|&v| Uint128::from(v)).collect()
 }
 
-pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T) -> ()>(
+pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T)>(
     vec: &mut Vec<T>,
     predicate: P,
     new: N,
@@ -24,7 +24,7 @@ pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T) -> ()>
 }
 
 pub fn find<T, P: Fn(&T) -> bool>(
-    vec: &Vec<T>,
+    vec: &[T],
     predicate: P,
 ) -> Option<&T> {
     for each in vec {
@@ -33,7 +33,7 @@ pub fn find<T, P: Fn(&T) -> bool>(
         }
     }
 
-    return None
+    None
 }
 
 static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
@@ -44,7 +44,7 @@ pub fn calc_ratio_amount(value: u128, ratio: Decimal) -> (u128, u128) {
     (value.checked_sub(base).unwrap().u128(), base.u128())
 }
 
-pub fn add_query_parameter(url: &String, key: &String, value: &String) -> String {
+pub fn add_query_parameter(url: &str, key: &str, value: &str) -> String {
     let mut result = String::from(url);
 
     if result.contains('?') {
@@ -61,7 +61,7 @@ pub fn add_query_parameter(url: &String, key: &String, value: &String) -> String
     result
 }
 
-pub fn put_query_parameter(url: &String, key: &String, value: &String) -> String {
+pub fn put_query_parameter(url: &str, key: &str, value: &str) -> String {
     let query_start_index = url.find('?');
     if query_start_index.is_none() {
         return add_query_parameter(url, key, value);
@@ -113,7 +113,7 @@ const TERRA_ADDRESS_HRP: &str = "terra1";
 const TERRA_ADDRESS_HRP_LENGTH: usize = 6;
 const TERRA_ADDRESS_LENGTH: usize = 44;
 const BECH32_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-pub fn compress_addr(address: &String) -> String {
+pub fn compress_addr(address: &str) -> String {
     let mut result = U256::zero();
     for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
         let index = BECH32_CHARSET.find(c).unwrap();
@@ -126,7 +126,7 @@ pub fn compress_addr(address: &String) -> String {
     Binary::from(&bytes[8..]).to_base64()
 }
 
-pub fn decompress_addr(text: &String) -> String {
+pub fn decompress_addr(text: &str) -> String {
     let decoded = Binary::from_base64(text).unwrap();
     let mut bytes = [0u8; 32];
     bytes[8..].clone_from_slice(decoded.as_slice());

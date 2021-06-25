@@ -4,9 +4,7 @@ use std::fs::create_dir_all;
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use valkyrie::distributor::{
     execute_msgs::{ExecuteMsg, InstantiateMsg},
-    query_msgs::{
-        ContractConfigResponse, DistributorInfoResponse, DistributorInfosResponse, QueryMsg,
-    },
+    query_msgs::{CampaignInfoResponse, CampaignInfosResponse, ContractConfigResponse, QueryMsg},
 };
 
 fn main() {
@@ -19,6 +17,6 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(ContractConfigResponse), &out_dir);
-    export_schema(&schema_for!(DistributorInfoResponse), &out_dir);
-    export_schema(&schema_for!(DistributorInfosResponse), &out_dir);
+    export_schema(&schema_for!(CampaignInfoResponse), &out_dir);
+    export_schema(&schema_for!(CampaignInfosResponse), &out_dir);
 }

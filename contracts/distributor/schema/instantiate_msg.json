@@ -3,14 +3,43 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "booster_config",
     "governance",
     "token_contract"
   ],
   "properties": {
+    "booster_config": {
+      "$ref": "#/definitions/BoosterConfig"
+    },
     "governance": {
       "type": "string"
     },
     "token_contract": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "BoosterConfig": {
+      "type": "object",
+      "required": [
+        "activity_booster_ratio",
+        "drop_booster_ratio",
+        "plus_booster_ratio"
+      ],
+      "properties": {
+        "activity_booster_ratio": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "drop_booster_ratio": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "plus_booster_ratio": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
       "type": "string"
     }
   }

@@ -7,8 +7,8 @@ use valkyrie::distributor::execute_msgs::{ExecuteMsg, InstantiateMsg};
 use valkyrie::distributor::query_msgs::QueryMsg;
 
 use crate::{
-    executions::{add_distributor, remove_distributor, spend},
-    queries::{get_contract_config, get_distributor_info, get_distributor_infos},
+    executions::{add_campaign, remove_campaign, spend, update_booster_config},
+    queries::{get_campaign_info, get_campaign_infos, get_contract_config},
     states::ContractConfig,
 };
 
@@ -22,8 +22,10 @@ pub fn instantiate(
     let config = ContractConfig {
         governance: deps.api.addr_validate(&msg.governance)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
+        booster_config: msg.booster_config,
     };
 
+    config.booster_config.validate()?;
     config.save(deps.storage)?;
 
     Ok(Response::default())
@@ -37,14 +39,17 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::AddDistributor {
-            distributor,
+        ExecuteMsg::AddCampaign {
+            campaign_addr,
             spend_limit,
-        } => add_distributor(deps, env, info, distributor, spend_limit),
-        ExecuteMsg::RemoveDistributor { distributor } => {
-            remove_distributor(deps, env, info, distributor)
+        } => add_campaign(deps, env, info, campaign_addr, spend_limit),
+        ExecuteMsg::RemoveCampaign { campaign_addr } => {
+            remove_campaign(deps, env, info, campaign_addr)
         }
         ExecuteMsg::Spend { recipient, amount } => spend(deps, env, info, recipient, amount),
+        ExecuteMsg::UpdateBoosterConfig { booster_config } => {
+            update_booster_config(deps, env, info, booster_config)
+        }
     }
 }
 
@@ -52,14 +57,14 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let result = match msg {
         QueryMsg::ContractConfig {} => to_binary(&get_contract_config(deps, env)?),
-        QueryMsg::DistributorInfo { distributor } => {
-            to_binary(&get_distributor_info(deps, env, distributor)?)
+        QueryMsg::CampaignInfo { campaign_addr } => {
+            to_binary(&get_campaign_info(deps, env, campaign_addr)?)
         }
-        QueryMsg::DistributorInfos {
+        QueryMsg::CampaignInfos {
             start_after,
             limit,
             order_by,
-        } => to_binary(&get_distributor_infos(
+        } => to_binary(&get_campaign_infos(
             deps,
             env,
             start_after,

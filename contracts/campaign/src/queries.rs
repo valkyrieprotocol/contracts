@@ -1,17 +1,18 @@
-use cosmwasm_std::{Deps, Env, Uint64, Uint128};
+use cosmwasm_std::{Deps, Env, Uint128, Uint64};
 
 use valkyrie::campaign::enumerations::{Denom, Referrer};
-use valkyrie::campaign::query_msgs::{CampaignInfoResponse, DistributionConfigResponse, CampaignStateResponse, ShareUrlResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse};
+use valkyrie::campaign::query_msgs::{
+    CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse,
+    GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse,
+    ShareUrlResponse,
+};
 use valkyrie::common::{ContractResult, OrderBy};
-use valkyrie::utils::{map_uint128, find, compress_addr, put_query_parameter};
+use valkyrie::utils::{compress_addr, find, put_query_parameter};
 
-use crate::states::{CampaignInfo, DistributionConfig, CampaignState, Participation};
+use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation};
 use valkyrie::cw20::query_balance;
 
-pub fn get_campaign_info(
-    deps: Deps,
-    _env: Env,
-) -> ContractResult<CampaignInfoResponse> {
+pub fn get_campaign_info(deps: Deps, _env: Env) -> ContractResult<CampaignInfoResponse> {
     let campaign_info = CampaignInfo::load(deps.storage)?;
 
     Ok(CampaignInfoResponse {
@@ -33,28 +34,33 @@ pub fn get_distribution_config(
 
     Ok(DistributionConfigResponse {
         denom: Denom::from_cw20(distribution_config.denom),
-        amounts: map_uint128(distribution_config.amounts),
+        amounts: distribution_config.amounts,
     })
 }
 
-pub fn get_campaign_state(
-    deps: Deps,
-    env: Env,
-) -> ContractResult<CampaignStateResponse> {
+pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateResponse> {
     let distribution_config = DistributionConfig::load(deps.storage)?;
     let state = CampaignState::load(deps.storage)?;
 
-    let cumulative_distribution_amount = find(
-        &state.cumulative_distribution_amount,
-        |(denom, _)| { distribution_config.denom.eq(denom) },
-    ).unwrap_or(&(distribution_config.denom.clone(), 0u128)).1;
+    let cumulative_distribution_amount =
+        find(&state.cumulative_distribution_amount, |(denom, _)| {
+            distribution_config.denom.eq(denom)
+        })
+        .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
+        .1;
 
-    let locked_balance = find(
-        &state.locked_balance,
-        |(denom, _)| { distribution_config.denom.eq(denom) },
-    ).unwrap_or(&(distribution_config.denom.clone(), 0u128)).1;
+    let locked_balance = find(&state.locked_balance, |(denom, _)| {
+        distribution_config.denom.eq(denom)
+    })
+    .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
+    .1;
 
-    let balance = query_balance(&deps.querier, deps.api, distribution_config.denom, env.contract.address)?;
+    let balance = query_balance(
+        &deps.querier,
+        deps.api,
+        distribution_config.denom,
+        env.contract.address,
+    )?;
 
     Ok(CampaignStateResponse {
         participation_count: Uint64::from(state.participation_count),
@@ -65,16 +71,16 @@ pub fn get_campaign_state(
     })
 }
 
-pub fn get_share_url(
-    deps: Deps,
-    _env: Env,
-    address: String,
-) -> ContractResult<ShareUrlResponse> {
+pub fn get_share_url(deps: Deps, _env: Env, address: String) -> ContractResult<ShareUrlResponse> {
     deps.api.addr_validate(&address)?;
 
     let campaign_info = CampaignInfo::load(deps.storage)?;
     let compressed = compress_addr(&address);
-    let url = put_query_parameter(&campaign_info.url, &campaign_info.parameter_key, &compressed);
+    let url = put_query_parameter(
+        &campaign_info.url,
+        &campaign_info.parameter_key,
+        &compressed,
+    );
 
     Ok(ShareUrlResponse {
         address,
@@ -100,8 +106,15 @@ pub fn get_participation(
 ) -> ContractResult<ParticipationResponse> {
     let actor = deps.api.addr_validate(&address)?;
     let participation = Participation::load(deps.storage, &actor)?;
-    let rewards: Vec<(Denom, Uint128)> = participation.rewards.iter()
-        .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), Uint128::from(amount.clone())))
+    let rewards: Vec<(Denom, Uint128)> = participation
+        .rewards
+        .iter()
+        .map(|(denom, amount)| {
+            (
+                Denom::from_cw20(denom.clone()),
+                Uint128::from(amount.clone()),
+            )
+        })
         .collect();
 
     Ok(ParticipationResponse {
@@ -122,8 +135,15 @@ pub fn query_participations(
     let participations = Participation::query(deps.storage, start_after, limit, order_by)?
         .iter()
         .map(|v| {
-            let rewards: Vec<(Denom, Uint128)> = v.rewards.iter()
-                .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), Uint128::from(amount.clone())))
+            let rewards: Vec<(Denom, Uint128)> = v
+                .rewards
+                .iter()
+                .map(|(denom, amount)| {
+                    (
+                        Denom::from_cw20(denom.clone()),
+                        Uint128::from(amount.clone()),
+                    )
+                })
                 .collect();
 
             ParticipationResponse {
@@ -134,7 +154,5 @@ pub fn query_participations(
         })
         .collect();
 
-    Ok(ParticipationsResponse {
-        participations,
-    })
+    Ok(ParticipationsResponse { participations })
 }

@@ -5,20 +5,22 @@ use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Item, Map};
 use valkyrie::{
     common::{ContractResult, OrderBy},
-    distributor::query_msgs::{DistributorInfoResponse, DistributorInfosResponse},
+    distributor::execute_msgs::BoosterConfig,
+    distributor::query_msgs::{CampaignInfoResponse, CampaignInfosResponse},
     errors::ContractError,
 };
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
 
-const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("config");
-const DISTRIBUTOR: Map<&Addr, Uint128> = Map::new("distributor");
+const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract_config");
+const CAMPAIGN: Map<&Addr, Uint128> = Map::new("campaign");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfig {
     pub governance: Addr,
     pub token_contract: Addr,
+    pub booster_config: BoosterConfig,
 }
 
 impl ContractConfig {
@@ -36,24 +38,24 @@ impl ContractConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct DistributorInfo {
-    pub distributor: Addr,
+pub struct CampaignInfo {
+    pub campaign: Addr,
     pub spend_limit: Uint128,
 }
 
-impl DistributorInfo {
+impl CampaignInfo {
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        DISTRIBUTOR.save(storage, &self.distributor, &self.spend_limit)
+        CAMPAIGN.save(storage, &self.campaign, &self.spend_limit)
     }
 
     pub fn remove(&self, storage: &mut dyn Storage) {
-        DISTRIBUTOR.remove(storage, &self.distributor)
+        CAMPAIGN.remove(storage, &self.campaign)
     }
 
-    pub fn load(storage: &dyn Storage, address: &Addr) -> ContractResult<DistributorInfo> {
-        Ok(DistributorInfo {
-            distributor: address.clone(),
-            spend_limit: DISTRIBUTOR
+    pub fn load(storage: &dyn Storage, address: &Addr) -> ContractResult<CampaignInfo> {
+        Ok(CampaignInfo {
+            campaign: address.clone(),
+            spend_limit: CAMPAIGN
                 .load(storage, address)
                 .map_err(|_| ContractError::NotFound {})?,
         })
@@ -64,7 +66,7 @@ impl DistributorInfo {
         start_after: Option<String>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,
-    ) -> StdResult<DistributorInfosResponse> {
+    ) -> StdResult<CampaignInfosResponse> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start_after = start_after.map(Bound::exclusive);
         let (min, max, order_by) = match order_by {
@@ -72,20 +74,20 @@ impl DistributorInfo {
             _ => (None, start_after, Order::Descending),
         };
 
-        let distributors: StdResult<Vec<DistributorInfoResponse>> = DISTRIBUTOR
+        let campaigns: StdResult<Vec<CampaignInfoResponse>> = CAMPAIGN
             .range(storage, min, max, order_by)
             .take(limit)
             .map(|item| {
                 let (k, v) = item?;
-                Ok(DistributorInfoResponse {
-                    distributor: String::from_utf8(k)?,
+                Ok(CampaignInfoResponse {
+                    campaign_addr: String::from_utf8(k)?,
                     spend_limit: v,
                 })
             })
             .collect();
 
-        Ok(DistributorInfosResponse {
-            distributors: distributors?,
+        Ok(CampaignInfosResponse {
+            campaigns: campaigns?,
         })
     }
 }
