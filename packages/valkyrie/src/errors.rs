@@ -17,4 +17,13 @@ pub enum ContractError {
 
     #[error("Asset mismatch")]
     AssetMismatch {},
+
+    #[error("Not found")]
+    NotFound {},
+
+    #[error("Exceed limit")]
+    ExceedLimit {},
+
+    #[error("Already exists")]
+    AlreadyExists {},
 }

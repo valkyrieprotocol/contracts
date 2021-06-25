@@ -10,6 +10,7 @@ const VALKYRIE_CONFIG: Item<ValkyrieConfig> = Item::new("valkyrie-config");
 pub struct ValkyrieConfig {
     pub burn_contract: Addr,
     pub reward_withdraw_burn_rate: Decimal,
+    pub campaign_deactivate_period: u64,
 }
 
 impl ValkyrieConfig {

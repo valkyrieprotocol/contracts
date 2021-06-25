@@ -325,7 +325,7 @@ impl PollExecutionContext {
         POLL_EXECUTION_TEMP.load(storage)
     }
 
-    pub fn remove(storage: &mut dyn Storage) {
+    pub fn clear(storage: &mut dyn Storage) {
         POLL_EXECUTION_TEMP.remove(storage)
     }
 }

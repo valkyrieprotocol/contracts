@@ -7,6 +7,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bigint"
+version = "4.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0e8c8a600052b52482eff2cf4d810e462fdff1f656ac1ecb6232132a1ed7def"
+dependencies = [
+ "byteorder",
+ "crunchy 0.1.6",
+]
+
+[[package]]
 name = "bitvec"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -31,12 +41,6 @@ name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
-name = "bytes"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 
 [[package]]
 name = "cfg-if"
@@ -362,15 +366,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "2.24.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db50e77ae196458ccd3dc58a31ea1a90b0698ab1b7928d89f644c25d72070267"
-dependencies = [
- "bytes",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -594,6 +589,7 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 name = "valkyrie"
 version = "0.1.0"
 dependencies = [
+ "bigint",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -606,6 +602,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "valkyrie-campaign"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "valkyrie",
+]
+
+[[package]]
+name = "valkyrie-campaign-factory"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "valkyrie",
+]
+
+[[package]]
+name = "valkyrie-distributor"
+version = "0.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "valkyrie",
+]
+
+[[package]]
 name = "valkyrie-governance"
 version = "0.1.0"
 dependencies = [
@@ -614,7 +655,6 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
- "protobuf",
  "schemars",
  "serde",
  "terra-cosmwasm",

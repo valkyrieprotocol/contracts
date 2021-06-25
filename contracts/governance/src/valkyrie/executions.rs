@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Decimal};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Decimal, Uint64};
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
@@ -18,6 +18,7 @@ pub fn instantiate(
     let config = ValkyrieConfig {
         burn_contract: deps.api.addr_validate(msg.burn_contract.as_str())?,
         reward_withdraw_burn_rate: msg.reward_withdraw_burn_rate,
+        campaign_deactivate_period: msg.campaign_deactivate_period.u64(),
     };
 
     config.save(deps.storage)?;
@@ -32,6 +33,7 @@ pub fn update_config(
     info: MessageInfo,
     burn_contract: Option<String>,
     reward_withdraw_burn_rate: Option<Decimal>,
+    campaign_deactivate_period: Option<Uint64>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, env, &info.sender) {
@@ -47,6 +49,10 @@ pub fn update_config(
 
     if let Some(reward_withdraw_burn_rate) = reward_withdraw_burn_rate {
         valkyrie_config.reward_withdraw_burn_rate = reward_withdraw_burn_rate;
+    }
+
+    if let Some(campaign_deactivate_period) = campaign_deactivate_period {
+        valkyrie_config.campaign_deactivate_period = campaign_deactivate_period.u64();
     }
 
     valkyrie_config.save(deps.storage)?;

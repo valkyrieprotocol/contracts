@@ -1,26 +1,21 @@
 [package]
-name = "valkyrie-governance"
-version = "0.1.0"
+name = "valkyrie-distributor"
+version = "0.0.0"
 authors = ["Terraform Labs, PTE."]
 edition = "2018"
-description = "Common valkyrie types"
+description = "A Distributor contract for Valkyrie Protocol - provides claim interface only from the whitelisted contract"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/contracts.git"
-homepage = "https://valkyrieprotocol.com"
-documentation = "https://docs.valkyrieprotocol.com"
 
 exclude = [
-    "contract.wasm",
-    "hash.txt",
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
 ]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-
-[features]
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
 
 [profile.release]
 opt-level = 3
@@ -32,6 +27,11 @@ codegen-units = 1
 panic = 'abort'
 incremental = false
 overflow-checks = true
+
+[features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 serde = { version = "1.0.126", default-features = false, features = ["derive"] }

@@ -2,9 +2,9 @@ use cosmwasm_std::{Decimal, Uint128, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use super::super::common::OrderBy;
 use super::enumerations::{PollStatus, VoteOption};
 use super::models::{ExecutionMsg, VoteInfoMsg};
-use super::super::common::OrderBy;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -13,7 +13,9 @@ pub enum QueryMsg {
     StakingConfig {},
     PollConfig {},
     PollState {},
-    Poll { poll_id: u64 },
+    Poll {
+        poll_id: u64,
+    },
     Polls {
         filter: Option<PollStatus>,
         start_after: Option<u64>,
@@ -27,7 +29,12 @@ pub enum QueryMsg {
         order_by: Option<OrderBy>,
     },
     StakingState {},
-    StakerState { address: String },
+    StakerState {
+        address: String,
+    },
+    VotingPower {
+        address: String,
+    },
     ValkyrieConfig {},
 }
 
@@ -112,4 +119,10 @@ pub struct VotersResponse {
 pub struct ValkyrieConfigResponse {
     pub burn_contract: String,
     pub reward_withdraw_burn_rate: Decimal,
+    pub campaign_deactivate_period: Uint64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct VotingPowerResponse {
+    pub voting_power: Decimal,
 }

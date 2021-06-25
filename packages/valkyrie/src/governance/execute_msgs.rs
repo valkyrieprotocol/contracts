@@ -38,6 +38,7 @@ pub struct PollConfigInitMsg {
 pub struct ValkyrieConfigInitMsg {
     pub burn_contract: String,
     pub reward_withdraw_burn_rate: Decimal,
+    pub campaign_deactivate_period: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -68,6 +69,7 @@ pub enum ExecuteMsg {
     UpdateValkyrieConfig {
         burn_contract: Option<String>,
         reward_withdraw_burn_rate: Option<Decimal>,
+        campaign_deactivate_period: Option<Uint64>,
     },
 }
 
