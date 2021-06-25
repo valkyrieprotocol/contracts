@@ -69,7 +69,6 @@ pub fn auto_stake(
     let uusd_amount: Uint128 = info.funds[0].amount;
     let already_staked_amount = query_token_balance(
         &deps.querier,
-        deps.api,
         deps.api.addr_validate(liquidity_token_addr.as_str())?,
         env.contract.address.clone(),
     )?;
@@ -174,12 +173,8 @@ pub fn auto_stake_hook(
     let liquidity_token = config.liquidity_token;
 
     // stake all lp tokens received, compare with staking token amount before liquidity provision was executed
-    let current_staking_token_amount = query_token_balance(
-        &deps.querier,
-        deps.api,
-        liquidity_token,
-        env.contract.address.clone(),
-    )?;
+    let current_staking_token_amount =
+        query_token_balance(&deps.querier, liquidity_token, env.contract.address.clone())?;
     let amount_to_stake = (current_staking_token_amount.checked_sub(already_staked_amount))?;
 
     bond(deps, env, staker_addr, amount_to_stake)

@@ -4,6 +4,7 @@ use cosmwasm_std::{
     QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
+use cw20::BalanceResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
 pub struct WasmMockQuerier {
@@ -71,6 +72,19 @@ impl WasmMockQuerier {
                     }
                 } else {
                     panic!("DO NOT ENTER HERE")
+                }
+            }
+            QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr,
+                msg: _,
+            }) => {
+                if contract_addr == "lp_token" {
+                    let res = BalanceResponse {
+                        balance: Uint128::from(0u64),
+                    };
+                    SystemResult::Ok(ContractResult::from(to_binary(&res)))
+                } else {
+                    self.base.handle_query(request)
                 }
             }
             QueryRequest::Wasm(WasmQuery::Raw {

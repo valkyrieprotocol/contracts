@@ -18,7 +18,7 @@ fn proper_initialization() {
 
     let msg = InstantiateMsg {
         valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "staking0000".to_string(),
+        liquidity_token: "lp_token".to_string(),
         pair_contract: "pair".to_string(),
         distribution_schedule: vec![(100, 200, Uint128::from(1000000u128))],
     };
@@ -35,7 +35,7 @@ fn proper_initialization() {
         config,
         ConfigResponse {
             valkyrie_token: "reward0000".to_string(),
-            staking_token: "staking0000".to_string(),
+            staking_token: "lp_token".to_string(),
             distribution_schedule: vec![(100, 200, Uint128::from(1000000u128))],
         }
     );
@@ -63,7 +63,7 @@ fn test_bond_tokens() {
 
     let msg = InstantiateMsg {
         valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "staking0000".to_string(),
+        liquidity_token: "lp_token".to_string(),
         pair_contract: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
@@ -82,7 +82,7 @@ fn test_bond_tokens() {
     });
 
     let mut env = mock_env();
-    let info = mock_info(Addr::unchecked("staking0000").as_str(), &[]);
+    let info = mock_info(Addr::unchecked("lp_token").as_str(), &[]);
     let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     assert_eq!(
@@ -191,7 +191,7 @@ fn test_unbond() {
 
     let msg = InstantiateMsg {
         valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "staking0000".to_string(),
+        liquidity_token: "lp_token".to_string(),
         pair_contract: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
@@ -210,7 +210,7 @@ fn test_unbond() {
         msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
     });
     let env = mock_env();
-    let info = mock_info(Addr::unchecked("staking0000").as_str(), &[]);
+    let info = mock_info(Addr::unchecked("lp_token").as_str(), &[]);
     let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // unbond 150 tokens; failed
@@ -239,7 +239,7 @@ fn test_unbond() {
     assert_eq!(
         res.messages,
         vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: Addr::unchecked("staking0000").to_string(),
+            contract_addr: Addr::unchecked("lp_token").to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: Addr::unchecked("addr0000").to_string(),
                 amount: Uint128(100u128),
@@ -256,7 +256,7 @@ fn test_compute_reward() {
 
     let msg = InstantiateMsg {
         valkyrie_token: Addr::unchecked("reward0000").to_string(),
-        liquidity_token: Addr::unchecked("staking0000").to_string(),
+        liquidity_token: Addr::unchecked("lp_token").to_string(),
         pair_contract: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
@@ -275,7 +275,7 @@ fn test_compute_reward() {
         msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
     });
     let mut env = mock_env();
-    let mut info = mock_info(Addr::unchecked("staking0000").as_str(), &[]);
+    let mut info = mock_info(Addr::unchecked("lp_token").as_str(), &[]);
     let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     // 100 blocks passed
@@ -371,7 +371,7 @@ fn test_withdraw() {
 
     let msg = InstantiateMsg {
         valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "staking0000".to_string(),
+        liquidity_token: "lp_token".to_string(),
         pair_contract: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
@@ -390,7 +390,7 @@ fn test_withdraw() {
         msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
     });
     let mut env = mock_env();
-    let mut info = mock_info(Addr::unchecked("staking0000").as_str(), &[]);
+    let mut info = mock_info(Addr::unchecked("lp_token").as_str(), &[]);
     let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     // 100 blocks passed
@@ -421,7 +421,7 @@ fn test_auto_stake() {
 
     let init = InstantiateMsg {
         valkyrie_token: Addr::unchecked("asset").to_string(),
-        liquidity_token: "staking0000".to_string(),
+        liquidity_token: Addr::unchecked("lp_token").to_string(),
         pair_contract: Addr::unchecked("pair").to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
