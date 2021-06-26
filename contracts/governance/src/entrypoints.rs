@@ -40,12 +40,6 @@ pub fn instantiate(
         info.clone(),
         msg.poll_config,
     )?;
-    crate::valkyrie::executions::instantiate(
-        deps_mut.branch(),
-        env.clone(),
-        info.clone(),
-        msg.valkyrie_config,
-    )?;
 
     Ok(Response::default())
 }
@@ -100,18 +94,6 @@ pub fn execute(
         ExecuteMsg::SnapshotPoll { poll_id } => {
             crate::poll::executions::snapshot_poll(deps, env, info, poll_id)
         }
-        ExecuteMsg::UpdateValkyrieConfig {
-            burn_contract,
-            reward_withdraw_burn_rate,
-            campaign_deactivate_period,
-        } => crate::valkyrie::executions::update_config(
-            deps,
-            env,
-            info,
-            burn_contract,
-            reward_withdraw_burn_rate,
-            campaign_deactivate_period,
-        ),
     }
 }
 
@@ -214,9 +196,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
-        QueryMsg::ValkyrieConfig {} => {
-            to_binary(&crate::valkyrie::queries::get_valkyrie_config(deps, env)?)
-        }
     }?;
 
     Ok(result)

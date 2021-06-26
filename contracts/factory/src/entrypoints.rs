@@ -32,10 +32,20 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateConfig {
+        ExecuteMsg::UpdateFactoryConfig {
             campaign_code_id,
             creation_fee_amount,
-        } => crate::executions::update_config(deps, env, info, campaign_code_id, creation_fee_amount),
+        } => crate::executions::update_factory_config(deps, env, info, campaign_code_id, creation_fee_amount),
+        ExecuteMsg::UpdateCampaignConfig {
+            reward_withdraw_burn_rate,
+            campaign_deactivate_period,
+        } => crate::executions::update_campaign_config(
+            deps,
+            env,
+            info,
+            reward_withdraw_burn_rate,
+            campaign_deactivate_period,
+        )
     }
 }
 
@@ -76,12 +86,15 @@ pub fn query(
     msg: QueryMsg,
 ) -> ContractResult<Binary> {
     let result = match msg {
-        QueryMsg::Config {} => to_binary(
-            &crate::queries::get_config(deps, env)?
+        QueryMsg::FactoryConfig {} => to_binary(
+            &crate::queries::get_factory_config(deps, env)?
+        ),
+        QueryMsg::CampaignConfig {} => to_binary(
+            &crate::queries::get_campaign_config(deps, env)?
         ),
         QueryMsg::Campaign { address } => to_binary(
             &crate::queries::get_campaign(deps, env, address)?
-        )
+        ),
     }?;
 
     Ok(result)

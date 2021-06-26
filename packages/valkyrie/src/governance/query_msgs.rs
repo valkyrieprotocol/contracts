@@ -35,7 +35,6 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
-    ValkyrieConfig {},
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -113,13 +112,6 @@ pub struct VotersResponseItem {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotersResponse {
     pub voters: Vec<VotersResponseItem>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigResponse {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

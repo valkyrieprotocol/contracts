@@ -11,7 +11,6 @@ pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
     pub staking_config: StakingConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
-    pub valkyrie_config: ValkyrieConfigInitMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -32,13 +31,6 @@ pub struct PollConfigInitMsg {
     pub execution_delay_period: u64,
     pub proposal_deposit: Uint128,
     pub snapshot_period: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigInitMsg {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -66,11 +58,6 @@ pub enum ExecuteMsg {
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
-    UpdateValkyrieConfig {
-        burn_contract: Option<String>,
-        reward_withdraw_burn_rate: Option<Decimal>,
-        campaign_deactivate_period: Option<Uint64>,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

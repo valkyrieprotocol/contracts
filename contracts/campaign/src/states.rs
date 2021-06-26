@@ -5,8 +5,9 @@ use cosmwasm_std::{Addr, QuerierWrapper, StdError, StdResult, Storage, Timestamp
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use valkyrie::common::OrderBy;
-use valkyrie::governance::query_msgs::{ValkyrieConfigResponse, VotingPowerResponse};
+use valkyrie::governance::query_msgs::VotingPowerResponse;
 use valkyrie::utils::find_mut_or_push;
+use valkyrie::factory::query_msgs::CampaignConfigResponse;
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -19,6 +20,7 @@ pub struct ContractConfig {
     pub governance: Addr,
     pub distributor: Addr,
     pub token_contract: Addr,
+    pub factory: Addr,
 }
 
 impl ContractConfig {
@@ -105,7 +107,7 @@ impl CampaignState {
         }
 
         let config = ContractConfig::load(storage)?;
-        let valkyrie_config = load_valkyrie_config(querier, &config.governance)?;
+        let valkyrie_config = load_valkyrie_config(querier, &config.factory)?;
 
         //TODO: deactivate_period 를 그냥 campaign 에서 관리할까?
         Ok(valkyrie_config.campaign_deactivate_period.u64()
@@ -352,11 +354,11 @@ impl Participation {
 
 pub fn load_valkyrie_config(
     querier: &QuerierWrapper,
-    governance: &Addr,
-) -> StdResult<ValkyrieConfigResponse> {
+    factory: &Addr,
+) -> StdResult<CampaignConfigResponse> {
     querier.query_wasm_smart(
-        governance,
-        &valkyrie::governance::query_msgs::QueryMsg::ValkyrieConfig {},
+        factory,
+        &valkyrie::factory::query_msgs::QueryMsg::CampaignConfig {},
     )
 }
 

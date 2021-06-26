@@ -31,6 +31,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
+//TODO: 받은 token 중 token contract 가 아닌건들은 terraswap을 통해서 token contract 로 전환 필요
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,

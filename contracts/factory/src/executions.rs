@@ -1,7 +1,7 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, Uint64, Binary, StdError, SubMsg, ReplyOn, Reply};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, Uint64, Binary, StdError, SubMsg, ReplyOn, Reply, Decimal};
 use valkyrie::factory::execute_msgs::InstantiateMsg;
 use valkyrie::common::ContractResult;
-use crate::states::{FactoryConfig, is_governance, CreateCampaignContext, Campaign};
+use crate::states::{FactoryConfig, is_governance, CreateCampaignContext, Campaign, CampaignConfig};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::find;
@@ -15,14 +15,20 @@ pub fn instantiate(
     FactoryConfig {
         governance: deps.api.addr_validate(msg.governance.as_str())?,
         token_contract: deps.api.addr_validate(msg.token_contract.as_str())?,
+        distributor: deps.api.addr_validate(msg.distributor.as_str())?,
         campaign_code_id: msg.campaign_code_id.u64(),
         creation_fee_amount: msg.creation_fee_amount.u128(),
+    }.save(deps.storage)?;
+
+    CampaignConfig {
+        reward_withdraw_burn_rate: msg.reward_withdraw_burn_rate,
+        campaign_deactivate_period: msg.campaign_deactivate_period,
     }.save(deps.storage)?;
 
     Ok(Response::default())
 }
 
-pub fn update_config(
+pub fn update_factory_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -51,6 +57,35 @@ pub fn update_config(
     Ok(Response::default())
 }
 
+pub fn update_campaign_config(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    reward_withdraw_burn_rate: Option<Decimal>,
+    campaign_deactivate_period: Option<Uint64>,
+) -> ContractResult<Response> {
+    // Validate
+    if !is_governance(deps.storage, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut campaign_config = CampaignConfig::load(deps.storage)?;
+
+    if let Some(reward_withdraw_burn_rate) = reward_withdraw_burn_rate {
+        campaign_config.reward_withdraw_burn_rate = reward_withdraw_burn_rate;
+    }
+
+    if let Some(campaign_deactivate_period) = campaign_deactivate_period {
+        campaign_config.campaign_deactivate_period = campaign_deactivate_period;
+    }
+
+    campaign_config.save(deps.storage)?;
+
+    // Response
+    Ok(Response::default())
+}
+
 pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
 
 pub fn create_campaign(
@@ -59,6 +94,7 @@ pub fn create_campaign(
     sender: String,
     amount: Uint128,
     campaign_init_msg: Binary,
+    //todo: campaign 생성 메시지를 직접 받도록 구현했는데, 이때 주소 파라미터들을 위변조하여 취약점이 발생할 수 있는지 확인.
 ) -> ContractResult<Response> {
     // Validate
     let factory_config = FactoryConfig::load(deps.storage)?;

@@ -42,6 +42,7 @@ pub fn instantiate(
         governance: deps.api.addr_validate(&msg.governance)?,
         distributor: deps.api.addr_validate(&msg.distributor)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
+        factory: deps.api.addr_validate(&msg.factory)?,
     }
     .save(deps.storage)?;
 
@@ -243,7 +244,7 @@ pub fn withdraw_reward(
     }
 
     // Execute
-    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.governance)?;
+    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.factory)?;
     let (burn_amount, receive_amount) = if campaign_state.is_pending() {
         (0u128, withdraw_amount)
     } else {
