@@ -83,6 +83,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             to_binary(&crate::queries::get_distribution_config(deps, env)?)
         }
         QueryMsg::CampaignState {} => to_binary(&crate::queries::get_campaign_state(deps, env)?),
+        QueryMsg::BoosterState {} => to_binary(&crate::queries::get_booster_state(deps, env)?),
         QueryMsg::ShareUrl { address } => {
             to_binary(&crate::queries::get_share_url(deps, env, address)?)
         }

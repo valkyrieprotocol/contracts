@@ -299,6 +299,7 @@ impl Poll {
             deposit_amount: self.deposit_amount,
             yes_votes: self.yes_votes,
             no_votes: self.no_votes,
+            abstain_votes: self.abstain_votes,
             end_height: self.end_height,
             status: self.status.clone(),
             staked_amount: self.snapped_staked_amount,

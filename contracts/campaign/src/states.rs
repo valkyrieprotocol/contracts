@@ -200,6 +200,7 @@ pub struct BoosterState {
     pub activity_booster_left_amount: Uint128,
     pub plus_booster_amount: Uint128,
     pub plus_booster_left_amount: Uint128,
+    pub boosted_at: Timestamp,
 }
 
 impl BoosterState {
@@ -209,6 +210,10 @@ impl BoosterState {
 
     pub fn load(storage: &dyn Storage) -> StdResult<BoosterState> {
         BOOSTER_STATE.load(storage)
+    }
+
+    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<BoosterState>> {
+        BOOSTER_STATE.may_load(storage)
     }
 
     pub fn remove(storage: &mut dyn Storage) {
@@ -304,6 +309,7 @@ pub struct Participation {
     pub actor_address: Addr,
     pub referrer_address: Option<Addr>,
     pub rewards: Vec<(Denom, Uint128)>,
+    pub participated_at: Timestamp,
 
     // booster state
     pub booster_rewards: Uint128,

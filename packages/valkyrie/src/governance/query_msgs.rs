@@ -86,6 +86,7 @@ pub struct PollResponse {
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
     pub no_votes: Uint128,
+    pub abstain_votes: Uint128,
     pub end_height: u64,
     pub status: PollStatus,
     pub staked_amount: Option<Uint128>,

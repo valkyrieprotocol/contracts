@@ -395,6 +395,7 @@ pub fn participate(
         rewards: vec![],
         booster_rewards: plus_booster,
         drop_booster_claimable,
+        participated_at: env.block.time.clone(),
     };
 
     let mut participations = vec![my_participation];
@@ -504,7 +505,7 @@ pub fn participate(
 
 pub fn register_booster(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     drop_booster_amount: Uint128,
     activity_booster_amount: Uint128,
@@ -528,6 +529,7 @@ pub fn register_booster(
         activity_booster_left_amount: activity_booster_amount,
         plus_booster_amount,
         plus_booster_left_amount: plus_booster_amount,
+        boosted_at: env.block.time,
     };
 
     booster_state.save(deps.storage)?;
