@@ -60,12 +60,24 @@ pub fn receive_cw20(
     }
 
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::CreateCampaign { init_msg }) => crate::executions::create_campaign(
+        Ok(Cw20HookMsg::CreateCampaign {
+               title,
+               url,
+               description,
+               parameter_key,
+               distribution_denom,
+               distribution_amounts,
+           }) => crate::executions::create_campaign(
             deps,
             env,
             cw20_msg.sender,
             cw20_msg.amount,
-            init_msg,
+            title,
+            url,
+            description,
+            parameter_key,
+            distribution_denom,
+            distribution_amounts,
         ),
         Err(err) => Err(ContractError::Std(err)),
     }

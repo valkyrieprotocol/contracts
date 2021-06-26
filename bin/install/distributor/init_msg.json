@@ -1,0 +1,9 @@
+{
+  "governance": "terra1u0662ktrfn3lkj9lekawmexhznwj5gywefxvwa",
+  "token_contract": "terra1qxxlalvsdjd07p07y3rc5fu6ll8k4tme7cye8y",
+  "booster_config": {
+    "drop_booster_ratio": "0.1",
+    "activity_booster_ratio": "0.8",
+    "plus_booster_ratio": "0.1"
+  }
+}

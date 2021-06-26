@@ -1,4 +1,4 @@
-use cosmwasm_std::{Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -46,7 +46,7 @@ pub struct DistributionConfigResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignStateResponse {
-    pub participation_count: Uint64,
+    pub participation_count: u64,
     pub cumulative_distribution_amount: Uint128,
     pub locked_balance: Uint128,
     pub balance: Uint128,
@@ -57,7 +57,7 @@ pub struct CampaignStateResponse {
 pub struct BoosterStateResponse {
     pub is_boosting: bool,
     pub assigned_total_amount: Uint128,
-    pub snapped_participation_count: Uint64,
+    pub snapped_participation_count: u64,
     pub drop_booster: Option<BoosterResponse>,
     pub activity_booster: Option<BoosterResponse>,
     pub plus_booster: Option<BoosterResponse>,

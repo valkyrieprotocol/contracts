@@ -37,11 +37,10 @@ pub fn find<T, P: Fn(&T) -> bool>(
 }
 
 static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
-pub fn calc_ratio_amount(value: u128, ratio: Decimal) -> (u128, u128) {
-    let value = Uint128::from(value);
+pub fn calc_ratio_amount(value: Uint128, ratio: Decimal) -> (Uint128, Uint128) {
     let base = value.multiply_ratio(DECIMAL_FRACTION, DECIMAL_FRACTION * ratio + DECIMAL_FRACTION);
 
-    (value.checked_sub(base).unwrap().u128(), base.u128())
+    (value.checked_sub(base).unwrap(), base)
 }
 
 pub fn add_query_parameter(url: &str, key: &str, value: &str) -> String {

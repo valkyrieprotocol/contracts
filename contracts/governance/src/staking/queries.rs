@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Deps, Env, Uint64};
+use cosmwasm_std::{Decimal, Deps, Env};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
@@ -15,7 +15,7 @@ pub fn get_staking_config(deps: Deps, _env: Env) -> ContractResult<StakingConfig
     let staking_config = StakingConfig::load(deps.storage)?;
 
     Ok(StakingConfigResponse {
-        withdraw_delay: Uint64::from(staking_config.withdraw_delay),
+        withdraw_delay: staking_config.withdraw_delay,
     })
 }
 

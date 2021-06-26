@@ -110,9 +110,7 @@ impl CampaignState {
         let valkyrie_config = load_valkyrie_config(querier, &config.factory)?;
 
         //TODO: deactivate_period 를 그냥 campaign 에서 관리할까?
-        Ok(valkyrie_config.campaign_deactivate_period.u64()
-            + self.last_active_block.unwrap_or_default()
-            >= block_height)
+        Ok(valkyrie_config.campaign_deactivate_period + self.last_active_block.unwrap_or_default() >= block_height)
     }
 
     pub fn is_pending(&self) -> bool {

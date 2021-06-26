@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Env, Uint128, Uint64, Timestamp};
+use cosmwasm_std::{Deps, Env, Uint128, Timestamp};
 
 use valkyrie::campaign::enumerations::{Denom, Referrer};
 use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterStateResponse, BoosterResponse};
@@ -58,10 +58,10 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
     )?;
 
     Ok(CampaignStateResponse {
-        participation_count: Uint64::from(state.participation_count),
-        cumulative_distribution_amount,
-        locked_balance,
-        balance: Uint128::from(balance),
+        participation_count: state.participation_count,
+        cumulative_distribution_amount: Uint128::from(cumulative_distribution_amount),
+        locked_balance: Uint128::from(locked_balance),
+        balance,
         is_active: state.is_active(deps.storage, &deps.querier, env.block.height)?,
     })
 }
@@ -69,7 +69,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
 pub fn get_booster_state(deps: Deps, _env: Env) -> ContractResult<BoosterStateResponse> {
     let mut is_boosting = false;
     let mut assigned_total_amount = Uint128::zero();
-    let mut snapped_participation_count = Uint64::zero();
+    let mut snapped_participation_count = 0u64;
     let mut drop_booster: Option<BoosterResponse> = None;
     let mut activity_booster: Option<BoosterResponse> = None;
     let mut plus_booster: Option<BoosterResponse> = None;
@@ -80,7 +80,7 @@ pub fn get_booster_state(deps: Deps, _env: Env) -> ContractResult<BoosterStateRe
     if let Some(booster) = booster {
         is_boosting = true;
         assigned_total_amount = booster.drop_booster_amount + booster.activity_booster_amount + booster.plus_booster_amount;
-        snapped_participation_count = Uint64::from(booster.drop_booster_participations);
+        snapped_participation_count = booster.drop_booster_participations;
         drop_booster = Some(BoosterResponse {
             assigned_amount: booster.drop_booster_amount,
             distributed_amount: booster.drop_booster_amount.checked_sub(booster.drop_booster_left_amount)?,

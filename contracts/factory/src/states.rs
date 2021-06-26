@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage, Decimal, Uint64};
+use cosmwasm_std::{Addr, StdResult, Storage, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ pub struct FactoryConfig {
     pub token_contract: Addr,
     pub distributor: Addr,
     pub campaign_code_id: u64,
-    pub creation_fee_amount: u128,
+    pub creation_fee_amount: Uint128,
 }
 
 impl FactoryConfig {
@@ -45,7 +45,7 @@ const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign-config");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CampaignConfig {
     pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
+    pub campaign_deactivate_period: u64,
 }
 
 impl CampaignConfig {

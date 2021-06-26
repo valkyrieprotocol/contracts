@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub struct ContractConfigInitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingConfigInitMsg {
-    pub withdraw_delay: Uint64,
+    pub withdraw_delay: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,7 +38,7 @@ pub struct PollConfigInitMsg {
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     UpdateStakingConfig {
-        withdraw_delay: Option<Uint64>,
+        withdraw_delay: Option<u64>,
     },
     UnstakeVotingToken { amount: Option<Uint128> },
     WithdrawVotingToken {},

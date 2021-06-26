@@ -1,5 +1,5 @@
 use crate::campaign::enumerations::{Denom, Referrer};
-use cosmwasm_std::{Uint128, Uint64};
+use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -69,6 +69,6 @@ pub struct DistributeResult {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Distribution {
     pub address: String,
-    pub distance: Uint64,
+    pub distance: u64,
     pub rewards: Vec<(Denom, Uint128)>,
 }

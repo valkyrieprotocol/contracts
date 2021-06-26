@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, QuerierWrapper, StdResult};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;

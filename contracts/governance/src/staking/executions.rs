@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128, Uint64};
+use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::create_send_msg_response;
@@ -20,7 +20,7 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     // Execute
     StakingConfig {
-        withdraw_delay: msg.withdraw_delay.u64(),
+        withdraw_delay: msg.withdraw_delay,
     }.save(deps.storage)?;
 
     StakingState {
@@ -35,7 +35,7 @@ pub fn update_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    withdraw_delay: Option<Uint64>,
+    withdraw_delay: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, env, &info.sender) {
@@ -46,7 +46,7 @@ pub fn update_config(
     let mut config = StakingConfig::load(deps.storage)?;
 
     if let Some(withdraw_delay) = withdraw_delay {
-        config.withdraw_delay = withdraw_delay.u64();
+        config.withdraw_delay = withdraw_delay;
     }
 
     config.save(deps.storage)?;

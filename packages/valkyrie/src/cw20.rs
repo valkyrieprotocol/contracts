@@ -8,13 +8,13 @@ pub fn query_balance(
     api: &dyn Api,
     denom: Denom,
     address: Addr,
-) -> StdResult<u128> {
+) -> StdResult<Uint128> {
     match denom {
         Denom::Native(denom) => querier
             .query_balance(address, denom)
-            .map(|v| v.amount.u128()),
+            .map(|v| v.amount),
         Denom::Cw20(contract_addr) => {
-            query_cw20_balance(querier, api, &contract_addr, &address).map(|v| v.u128())
+            query_cw20_balance(querier, api, &contract_addr, &address)
         }
     }
 }

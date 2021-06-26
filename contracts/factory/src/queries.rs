@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Env, Uint128, Uint64};
+use cosmwasm_std::{Deps, Env, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::factory::query_msgs::{CampaignResponse, FactoryConfigResponse, CampaignConfigResponse};
@@ -15,7 +15,7 @@ pub fn get_factory_config(
         governance: factory_config.governance.to_string(),
         token_contract: factory_config.token_contract.to_string(),
         distributor: factory_config.distributor.to_string(),
-        campaign_code_id: Uint64::from(factory_config.campaign_code_id),
+        campaign_code_id: factory_config.campaign_code_id,
         creation_fee_amount: Uint128::from(factory_config.creation_fee_amount),
     })
 }
@@ -43,9 +43,9 @@ pub fn get_campaign(
     )?;
 
     Ok(CampaignResponse {
-        code_id: Uint64::from(campaign.code_id),
+        code_id: campaign.code_id,
         address: campaign.address.to_string(),
         creator: campaign.creator.to_string(),
-        created_block: Uint64::from(campaign.created_block),
+        created_block: campaign.created_block,
     })
 }

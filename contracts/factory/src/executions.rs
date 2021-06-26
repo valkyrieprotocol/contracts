@@ -1,10 +1,11 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, Uint64, Binary, StdError, SubMsg, ReplyOn, Reply, Decimal};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, StdError, SubMsg, ReplyOn, Reply, Decimal, to_binary};
 use valkyrie::factory::execute_msgs::InstantiateMsg;
 use valkyrie::common::ContractResult;
 use crate::states::{FactoryConfig, is_governance, CreateCampaignContext, Campaign, CampaignConfig};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::find;
+use valkyrie::campaign::enumerations::Denom;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -16,8 +17,8 @@ pub fn instantiate(
         governance: deps.api.addr_validate(msg.governance.as_str())?,
         token_contract: deps.api.addr_validate(msg.token_contract.as_str())?,
         distributor: deps.api.addr_validate(msg.distributor.as_str())?,
-        campaign_code_id: msg.campaign_code_id.u64(),
-        creation_fee_amount: msg.creation_fee_amount.u128(),
+        campaign_code_id: msg.campaign_code_id,
+        creation_fee_amount: msg.creation_fee_amount,
     }.save(deps.storage)?;
 
     CampaignConfig {
@@ -32,7 +33,7 @@ pub fn update_factory_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    campaign_code_id: Option<Uint64>,
+    campaign_code_id: Option<u64>,
     creation_fee_amount: Option<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
@@ -44,11 +45,11 @@ pub fn update_factory_config(
     let mut factory_config = FactoryConfig::load(deps.storage)?;
 
     if campaign_code_id.is_some() {
-        factory_config.campaign_code_id = campaign_code_id.unwrap().u64();
+        factory_config.campaign_code_id = campaign_code_id.unwrap();
     }
 
     if creation_fee_amount.is_some() {
-        factory_config.creation_fee_amount = creation_fee_amount.unwrap().u128();
+        factory_config.creation_fee_amount = creation_fee_amount.unwrap();
     }
 
     factory_config.save(deps.storage)?;
@@ -62,7 +63,7 @@ pub fn update_campaign_config(
     _env: Env,
     info: MessageInfo,
     reward_withdraw_burn_rate: Option<Decimal>,
-    campaign_deactivate_period: Option<Uint64>,
+    campaign_deactivate_period: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_governance(deps.storage, &info.sender) {
@@ -90,16 +91,20 @@ pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
 
 pub fn create_campaign(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     sender: String,
     amount: Uint128,
-    campaign_init_msg: Binary,
-    //todo: campaign 생성 메시지를 직접 받도록 구현했는데, 이때 주소 파라미터들을 위변조하여 취약점이 발생할 수 있는지 확인.
+    title: String,
+    url: String,
+    description: String,
+    parameter_key: String,
+    distribution_denom: Denom,
+    distribution_amounts: Vec<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
     let factory_config = FactoryConfig::load(deps.storage)?;
 
-    if amount.u128() < factory_config.creation_fee_amount {
+    if amount < factory_config.creation_fee_amount {
         return Err(ContractError::Std(StdError::generic_err(
             format!("Insufficient creation fee (Fee = {})", factory_config.creation_fee_amount),
         )));
@@ -111,13 +116,28 @@ pub fn create_campaign(
         creator: deps.api.addr_validate(sender.as_str())?,
     }.save(deps.storage)?;
 
+    //TODO: CW20 과 같은 형태로 변경
     let create_campaign_msg = message_factories::wasm_instantiate(
         factory_config.campaign_code_id,
         Some(factory_config.governance.clone()),
-        campaign_init_msg,
+        to_binary(&valkyrie::campaign::execute_msgs::InstantiateMsg {
+            governance: factory_config.governance.to_string(),
+            distributor: factory_config.distributor.to_string(),
+            token_contract: factory_config.token_contract.to_string(),
+            factory: env.contract.address.to_string(),
+            title,
+            url,
+            description,
+            parameter_key,
+            distribution_denom,
+            distribution_amounts,
+        })?,
     );
 
     //TODO: 별도의 msg 를 함께 보낼 필요는 없으려나?
+
+    //TODO: 수수료 받은게 바로 반영이 안되서 transfer 를 못하는 것 같음
+    //TODO: InvalidArgument desc = failed to execute message; message index: 0: Overflow: Cannot Sub with 0 and 100000000: execute wasm contract failed: invalid request
     let fee_send_msg = message_factories::cw20_transfer(
         &factory_config.token_contract,
         &factory_config.governance,
