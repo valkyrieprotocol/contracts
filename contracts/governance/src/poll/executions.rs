@@ -337,7 +337,7 @@ pub fn execute_poll(
     // Response
     PollExecutionContext {
         poll_id: poll.id,
-        execution_count: executions.len(),
+        execution_count: executions.len() as u64,
     }.save(deps.storage)?;
 
     Ok(
@@ -373,52 +373,11 @@ pub fn reply_execution(
 
     if poll_execution_context.execution_count == 0 {
         PollExecutionContext::clear(deps.storage);
+    } else {
+        poll_execution_context.save(deps.storage)?;
     }
 
     Ok(Response::default())
-}
-
-#[cfg(feature = "expire")]
-pub fn expire_poll(
-    deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
-    poll_id: u64,
-) -> ContractResult<Response> {
-    // Validate
-    let poll_config = PollConfig::load(deps.storage)?;
-    let mut poll = Poll::load(deps.storage, &poll_id)?;
-
-    if poll.status != PollStatus::Passed {
-        return Err(ContractError::Std(StdError::generic_err("Poll is not in passed status")));
-    }
-
-    if poll.executions.is_none() {
-        return Err(ContractError::Std(StdError::generic_err(
-            "Cannot make a text proposal to expired state",
-        )));
-    }
-
-    if poll.end_height + poll_config.expiration_period > env.block.height {
-        return Err(ContractError::Std(StdError::generic_err("Expire height has not been reached")));
-    }
-
-    // Execute
-    poll.status = PollStatus::Expired;
-    poll.save_with_index(deps.storage)?;
-
-    // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages: vec![],
-            attributes: vec![
-                attr("action", "expire_poll"),
-                attr("poll_id", poll_id.to_string()),
-            ],
-            data: None,
-        }
-    )
 }
 
 pub fn snapshot_poll(

@@ -314,7 +314,7 @@ const POLL_EXECUTION_TEMP: Item<PollExecutionContext> = Item::new("poll-executio
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PollExecutionContext {
     pub poll_id: u64,
-    pub execution_count: usize,
+    pub execution_count: u64,
 }
 
 impl PollExecutionContext {
