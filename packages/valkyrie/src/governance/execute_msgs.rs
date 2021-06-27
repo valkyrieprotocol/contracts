@@ -71,3 +71,6 @@ pub enum Cw20HookMsg {
         execution: Option<Vec<ExecutionMsg>>,
     },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}

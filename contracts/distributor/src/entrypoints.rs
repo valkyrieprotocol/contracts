@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
-use valkyrie::distributor::execute_msgs::{ExecuteMsg, InstantiateMsg};
+use valkyrie::distributor::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::distributor::query_msgs::QueryMsg;
 
 use crate::{
@@ -52,6 +52,11 @@ pub fn execute(
             update_booster_config(deps, env, info, booster_config)
         }
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

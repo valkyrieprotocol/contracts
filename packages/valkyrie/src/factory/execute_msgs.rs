@@ -41,3 +41,6 @@ pub enum Cw20HookMsg {
         distribution_amounts: Vec<Uint128>,
     },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}

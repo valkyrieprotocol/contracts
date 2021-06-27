@@ -72,3 +72,6 @@ pub struct Distribution {
     pub distance: u64,
     pub rewards: Vec<(Denom, Uint128)>,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}

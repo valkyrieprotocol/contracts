@@ -2,7 +2,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw20::Cw20ReceiveMsg;
 
-use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg};
+use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::campaign::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 
@@ -72,6 +72,11 @@ pub fn receive_cw20(
     _info: MessageInfo,
     _cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     Ok(Response::default())
 }
 
