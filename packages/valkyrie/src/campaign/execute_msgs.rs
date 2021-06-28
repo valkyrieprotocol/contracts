@@ -69,5 +69,5 @@ pub struct DistributeResult {
 pub struct Distribution {
     pub address: String,
     pub distance: Uint64,
-    pub amount: Uint128,
+    pub rewards: Vec<(Denom, Uint128)>,
 }

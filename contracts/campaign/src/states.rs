@@ -135,7 +135,7 @@ impl CampaignState {
 
     pub fn locked_balance(&self, denom: Denom) -> Uint128 {
         for (locked_denom, balance) in self.locked_balance.iter() {
-            if denom.eq(locked_denom) {
+            if denom == *locked_denom {
                 return *balance;
             }
         }
@@ -214,6 +214,10 @@ impl BoosterState {
     }
 
     pub fn compute_drop_booster(&self) -> Uint128 {
+        if self.drop_booster_participations == 0u64 {
+            return Uint128::zero();
+        }
+
         std::cmp::min(
             self.drop_booster_left_amount,
             Uint128::from(
@@ -230,7 +234,7 @@ impl BoosterState {
     pub fn compute_activity_booster(&self) -> Uint128 {
         std::cmp::min(
             self.activity_booster_left_amount,
-            Uint128::from(self.compute_drop_booster().u128() * 5u128 / 4u128),
+            Uint128::from(self.compute_drop_booster().u128() * 4u128 / 5u128),
         )
     }
 
@@ -313,8 +317,8 @@ impl Participation {
         PARTICIPATION.load(storage, actor_address)
     }
 
-    pub fn query<'a>(
-        storage: &'a dyn Storage,
+    pub fn query(
+        storage: &dyn Storage,
         start_after: Option<Addr>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,

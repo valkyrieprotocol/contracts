@@ -27,7 +27,7 @@ pub enum QueryMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignInfoResponse {
     pub title: String,
     pub description: String,
@@ -38,13 +38,13 @@ pub struct CampaignInfoResponse {
     pub created_block: Uint64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct DistributionConfigResponse {
     pub denom: Denom,
     pub amounts: Vec<Uint128>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignStateResponse {
     pub participation_count: Uint64,
     pub cumulative_distribution_amount: Uint128,
@@ -53,26 +53,26 @@ pub struct CampaignStateResponse {
     pub is_active: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ShareUrlResponse {
     pub address: String,
     pub compressed: String,
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct GetAddressFromReferrerResponse {
     pub address: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ParticipationResponse {
     pub actor_address: String,
     pub referrer_address: Option<String>,
     pub rewards: Vec<(Denom, Uint128)>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ParticipationsResponse {
     pub participations: Vec<ParticipationResponse>,
 }

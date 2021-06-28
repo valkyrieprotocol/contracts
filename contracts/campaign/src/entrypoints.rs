@@ -15,7 +15,7 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     let mut deps_mut = deps;
 
-    crate::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg)?;
+    crate::executions::instantiate(deps_mut.branch(), env, info, msg)?;
 
     Ok(Response::default())
 }
@@ -33,7 +33,7 @@ pub fn execute(
             title,
             url,
             description,
-        } => crate::executions::update_info(deps, env, info, title, url, description),
+        } => crate::executions::update_campaign_info(deps, env, info, title, url, description),
         ExecuteMsg::UpdateDistributionConfig { denom, amounts } => {
             crate::executions::update_distribution_config(deps, env, info, denom, amounts)
         }

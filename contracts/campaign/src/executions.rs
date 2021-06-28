@@ -1,17 +1,17 @@
 use cosmwasm_std::{
-    attr, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
-    Uint128, Uint64, WasmMsg
+    attr, to_binary, Addr, Attribute, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper,
+    Response, StdError, StdResult, Uint128, Uint64, WasmMsg,
 };
-use cw20::Denom;
+use cw20::Denom as Cw20Denom;
 
-use valkyrie::campaign::enumerations::Referrer;
+use valkyrie::campaign::enumerations::{Denom, Referrer};
 use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, InstantiateMsg};
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::query_balance;
+use valkyrie::distributor::execute_msgs::ExecuteMsg as DistributorExecuteMsg;
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
-use valkyrie::utils::{calc_ratio_amount, find, map_u128};
-use valkyrie::distributor::execute_msgs::ExecuteMsg as DistributorExecuteMsg;
+use valkyrie::utils::{calc_ratio_amount, map_u128};
 
 use crate::states::{
     is_admin, is_pending, load_valkyrie_config, BoosterState, CampaignInfo, CampaignState,
@@ -50,7 +50,7 @@ pub fn instantiate(
         description: msg.description,
         url: msg.url,
         parameter_key: msg.parameter_key,
-        creator: info.sender.clone(),
+        creator: info.sender,
         created_at: env.block.time,
         created_block: env.block.height,
     }
@@ -75,12 +75,12 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-pub fn update_info(
+pub fn update_campaign_info(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    url: Option<String>,
     title: Option<String>,
+    url: Option<String>,
     description: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
@@ -90,6 +90,11 @@ pub fn update_info(
 
     // Execute
     let mut campaign_info = CampaignInfo::load(deps.storage)?;
+
+    if let Some(title) = title {
+        validate_title(&title)?;
+        campaign_info.title = title;
+    }
 
     if let Some(url) = url {
         if !is_pending(deps.storage)? {
@@ -101,11 +106,6 @@ pub fn update_info(
         campaign_info.url = url;
     }
 
-    if let Some(title) = title {
-        validate_title(&title)?;
-        campaign_info.title = title;
-    }
-
     if let Some(description) = description {
         validate_description(&description)?;
         campaign_info.description = description;
@@ -114,14 +114,19 @@ pub fn update_info(
     campaign_info.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![attr("action", "update_campaign_info")],
+        data: None,
+    })
 }
 
 pub fn update_distribution_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    denom: valkyrie::campaign::enumerations::Denom,
+    denom: Denom,
     amounts: Vec<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
@@ -144,7 +149,12 @@ pub fn update_distribution_config(
     distribution_config.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![attr("action", "update_distribution_config")],
+        data: None,
+    })
 }
 
 pub fn update_admin(
@@ -166,7 +176,12 @@ pub fn update_admin(
     contract_config.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![attr("action", "update_admin")],
+        data: None,
+    })
 }
 
 pub fn update_activation(
@@ -192,14 +207,19 @@ pub fn update_activation(
     campaign_state.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![attr("action", "update_activation")],
+        data: None,
+    })
 }
 
 pub fn withdraw_reward(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    denom: valkyrie::campaign::enumerations::Denom,
+    denom: Denom,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
@@ -211,10 +231,9 @@ pub fn withdraw_reward(
     let campaign_state = CampaignState::load(deps.storage)?;
 
     let campaign_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
-    let free_balance = campaign_balance
-        - campaign_state
-            .locked_balance(denom.to_cw20(deps.api))
-            .u128();
+    let denom_cw20 = denom.to_cw20(deps.api);
+
+    let free_balance = campaign_balance - campaign_state.locked_balance(denom_cw20.clone()).u128();
     let withdraw_amount = amount.map_or_else(|| free_balance, |v| v.u128());
 
     if withdraw_amount > free_balance {
@@ -231,19 +250,34 @@ pub fn withdraw_reward(
         calc_ratio_amount(withdraw_amount, valkyrie_config.reward_withdraw_burn_rate)
     };
 
-    let denom_cw20 = denom.to_cw20(deps.api);
-    let burn_msg = make_send_msg(
-        denom_cw20.clone(),
-        burn_amount,
-        &Addr::unchecked(valkyrie_config.burn_contract), //valkyrie_config 에 저장할 때 유효성 검사하므로 여기서는 하지 않음.
-    );
-    let send_msg = make_send_msg(denom_cw20, receive_amount, &info.sender);
+    let mut messages: Vec<CosmosMsg> = vec![];
+    if burn_amount != 0u128 {
+        messages.push(make_send_msg(
+            &deps.querier,
+            denom_cw20.clone(),
+            burn_amount,
+            &Addr::unchecked(valkyrie_config.burn_contract),
+        )?);
+    }
+
+    if receive_amount != 0u128 {
+        messages.push(make_send_msg(
+            &deps.querier,
+            denom_cw20,
+            receive_amount,
+            &info.sender,
+        )?);
+    }
 
     // Response
     Ok(Response {
         submessages: vec![],
-        messages: vec![burn_msg, send_msg],
-        attributes: vec![],
+        messages,
+        attributes: vec![
+            attr("action", "withdraw_reward"),
+            attr("receive_amount", format!("{}{}", receive_amount, denom)),
+            attr("burn_amount", format!("{}{}", burn_amount, denom)),
+        ],
         data: None,
     })
 }
@@ -258,9 +292,21 @@ pub fn claim_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResu
     let mut participation = Participation::load(deps.storage, &info.sender)?;
 
     // normal rewards
+    let mut rewards_attrs: Vec<Attribute> = vec![];
     for (denom, amount) in participation.rewards {
         campaign_state.unlock_balance(denom.clone(), amount)?;
-        messages.push(make_send_msg(denom, amount.u128(), &info.sender));
+        messages.push(make_send_msg(
+            &deps.querier,
+            denom.clone(),
+            amount.u128(),
+            &info.sender,
+        )?);
+
+        let cw20_denom = Denom::from_cw20(denom);
+        rewards_attrs.push(attr(
+            format!("reward[{}]", cw20_denom),
+            format!("{}{}", amount, cw20_denom),
+        ));
     }
 
     participation.rewards = vec![];
@@ -287,12 +333,23 @@ pub fn claim_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResu
 
     participation.booster_rewards = Uint128::zero();
     participation.save(deps.storage)?;
+    campaign_state.save(deps.storage)?;
 
     // Response
     Ok(Response {
         submessages: vec![],
         messages,
-        attributes: vec![],
+        attributes: vec![
+            vec![
+                attr("action", "claim_reward"),
+                attr(
+                    "booster_rewards",
+                    format!("{}{}", booster_claim_amount, contract_config.token_contract),
+                ),
+            ],
+            rewards_attrs,
+        ]
+        .concat(),
         data: None,
     })
 }
@@ -329,11 +386,7 @@ pub fn participate(
             &info.sender,
         )?;
 
-    let mut referrer = if referrer.is_some() {
-        referrer.unwrap().to_address(deps.api).ok() // Ignore wrong referrer
-    } else {
-        None
-    };
+    let mut referrer = referrer.and_then(|v| v.to_address(deps.api).ok());
 
     let my_participation = Participation {
         actor_address: info.sender.clone(),
@@ -353,17 +406,26 @@ pub fn participate(
         remain_distance -= 1;
     }
 
+    let distribution_denom = Denom::from_cw20(distribution_config.denom.clone());
     let reward_amount_sum: Uint128 = distribution_config.amounts_sum();
-    let mut distributions: Vec<(Addr, Vec<(Denom, u128)>)> = vec![];
-    for (participation, reward_amount) in participations
+
+    let mut distribution_amount = Uint128::zero();
+    let mut distributions_response: Vec<Distribution> = vec![];
+    for (distance, (participation, reward_amount)) in participations
         .iter_mut()
         .zip(distribution_config.amounts.clone())
+        .enumerate()
     {
-        // activity booster is distributed 
+        // activity booster is distributed
         // in the same ratio with normal rewards scheme
-        let booster_rewards = Uint128::from(
+        let mut booster_rewards = Uint128::from(
             activity_booster.u128() * reward_amount.u128() / reward_amount_sum.u128(),
         );
+
+        // add plus booster only when the distance is zero (== actor)
+        if distance == 0usize {
+            booster_rewards += plus_booster;
+        }
 
         participation.plus_reward(distribution_config.denom.clone(), reward_amount);
         participation.booster_rewards += booster_rewards;
@@ -371,21 +433,23 @@ pub fn participate(
 
         campaign_state.plus_distribution(distribution_config.denom.clone(), reward_amount);
 
-        distributions.push((
-            participation.actor_address.clone(),
-            vec![
-                vec![(distribution_config.denom.clone(), reward_amount.u128())],
+        distribution_amount += reward_amount;
+        distributions_response.push(Distribution {
+            address: participation.actor_address.to_string(),
+            distance: Uint64::from(distance as u64),
+            rewards: vec![
+                vec![(distribution_denom.clone(), reward_amount)],
                 if booster_rewards.is_zero() {
                     vec![]
                 } else {
                     vec![(
-                        cw20::Denom::Cw20(contract_config.token_contract.clone()),
-                        booster_rewards.u128(),
+                        Denom::Token(contract_config.token_contract.to_string()),
+                        booster_rewards,
                     )]
                 },
             ]
             .concat(),
-        ))
+        });
     }
 
     campaign_state.participation_count += 1;
@@ -410,26 +474,9 @@ pub fn participate(
     }
 
     // Response
-    let mut distribution_amount = Uint128::zero();
-    let mut distributions_response: Vec<Distribution> = vec![];
-
-    for (index, (address, rewards)) in distributions.iter().enumerate() {
-        let amount = find(rewards, |(denom, _)| distribution_config.denom.eq(denom))
-            .map_or(Uint128::zero(), |(_, amount)| Uint128::from(*amount));
-
-        distribution_amount += amount;
-        distributions_response.push(Distribution {
-            address: address.to_string(),
-            distance: Uint64::from(index as u64),
-            amount,
-        });
-    }
-
     let result = DistributeResult {
         actor_address: info.sender.to_string(),
-        reward_denom: valkyrie::campaign::enumerations::Denom::from_cw20(
-            distribution_config.denom.clone(),
-        ),
+        reward_denom: Denom::from_cw20(distribution_config.denom.clone()),
         configured_reward_amount: Uint128::new(map_u128(distribution_config.amounts).iter().sum()),
         distributed_reward_amount: distribution_amount,
         distributions: distributions_response,
@@ -438,7 +485,18 @@ pub fn participate(
     Ok(Response {
         submessages: vec![],
         messages: vec![],
-        attributes: vec![],
+        attributes: vec![
+            attr("action", "participate"),
+            attr("actor", info.sender),
+            attr(
+                "activity_booster",
+                format!("{}{}", activity_booster, contract_config.token_contract),
+            ),
+            attr(
+                "plus_booster",
+                format!("{}{}", plus_booster, contract_config.token_contract),
+            ),
+        ],
         data: Some(to_binary(&result)?),
     })
 }
@@ -452,7 +510,7 @@ pub fn register_booster(
     plus_booster_amount: Uint128,
 ) -> ContractResult<Response> {
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if contract_config.is_distributor(&info.sender) {
+    if !contract_config.is_distributor(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -492,7 +550,7 @@ pub fn register_booster(
 
 pub fn deregister_booster(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if contract_config.is_distributor(&info.sender) {
+    if !contract_config.is_distributor(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -552,15 +610,107 @@ fn validate_description(description: &str) -> StdResult<()> {
     }
 }
 
-fn make_send_msg(denom: Denom, amount_with_tax: u128, recipient: &Addr) -> CosmosMsg {
+fn make_send_msg(
+    querier: &QuerierWrapper,
+    denom: Cw20Denom,
+    amount_with_tax: u128,
+    recipient: &Addr,
+) -> StdResult<CosmosMsg> {
     match denom {
-        Denom::Native(denom) => {
-            message_factories::native_send(denom, recipient, Uint128::from(amount_with_tax))
-        }
-        Denom::Cw20(contract_address) => message_factories::cw20_transfer(
+        Cw20Denom::Native(denom) => Ok(message_factories::native_send(
+            querier,
+            denom,
+            recipient,
+            amount_with_tax,
+        )?),
+        Cw20Denom::Cw20(contract_address) => Ok(message_factories::cw20_transfer(
             &contract_address,
             recipient,
             Uint128::from(amount_with_tax),
-        ),
+        )),
     }
+}
+
+#[test]
+fn test_validate_title() {
+    assert_eq!(
+        validate_title(
+            &std::iter::repeat("X")
+                .take(MIN_TITLE_LENGTH - 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Title too short"))
+    );
+    assert_eq!(
+        validate_title(
+            &std::iter::repeat("X")
+                .take(MIN_TITLE_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_title(
+            &std::iter::repeat("X")
+                .take(MAX_TITLE_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Title too long"))
+    );
+}
+
+#[test]
+fn test_validate_description() {
+    assert_eq!(
+        validate_description(
+            &std::iter::repeat("X")
+                .take(MIN_DESC_LENGTH - 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Description too short"))
+    );
+    assert_eq!(
+        validate_description(
+            &std::iter::repeat("X")
+                .take(MIN_DESC_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_description(
+            &std::iter::repeat("X")
+                .take(MAX_DESC_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Description too long"))
+    );
+}
+
+#[test]
+fn test_validate_url() {
+    assert_eq!(
+        validate_url(
+            &std::iter::repeat("X")
+                .take(MIN_LINK_LENGTH - 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Url too short"))
+    );
+    assert_eq!(
+        validate_url(
+            &std::iter::repeat("X")
+                .take(MIN_LINK_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_url(
+            &std::iter::repeat("X")
+                .take(MAX_LINK_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Url too long"))
+    );
 }

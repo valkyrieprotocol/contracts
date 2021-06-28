@@ -1,14 +1,24 @@
-use cosmwasm_std::{Addr, CosmosMsg, to_binary, Uint128, WasmMsg, BankMsg, Coin, Binary};
+use crate::terra::extract_tax;
+use cosmwasm_std::{
+    to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128, WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 
-pub fn native_send(denom: String, recipient: &Addr, amount: Uint128) -> CosmosMsg {
-    CosmosMsg::Bank(BankMsg::Send {
+pub fn native_send(
+    querier: &QuerierWrapper,
+    denom: String,
+    recipient: &Addr,
+    amount_with_tax: u128,
+) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Bank(BankMsg::Send {
         to_address: recipient.to_string(),
         amount: vec![Coin {
+            amount: Uint128::from(
+                amount_with_tax - extract_tax(querier, denom.to_string(), amount_with_tax)?,
+            ),
             denom,
-            amount,
         }],
-    })
+    }))
 }
 
 pub fn cw20_transfer(token: &Addr, recipient: &Addr, amount: Uint128) -> CosmosMsg {
@@ -18,15 +28,12 @@ pub fn cw20_transfer(token: &Addr, recipient: &Addr, amount: Uint128) -> CosmosM
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: recipient.to_string(),
             amount,
-        }).unwrap(),
+        })
+        .unwrap(),
     })
 }
 
-pub fn wasm_instantiate(
-    code_id: u64,
-    admin: Option<Addr>,
-    msg: Binary,
-) -> CosmosMsg {
+pub fn wasm_instantiate(code_id: u64, admin: Option<Addr>, msg: Binary) -> CosmosMsg {
     CosmosMsg::Wasm(WasmMsg::Instantiate {
         admin: admin.map(|v| v.to_string()),
         code_id,

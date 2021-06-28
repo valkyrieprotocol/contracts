@@ -44,13 +44,13 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
 
     let cumulative_distribution_amount =
         find(&state.cumulative_distribution_amount, |(denom, _)| {
-            distribution_config.denom.eq(denom)
+            distribution_config.denom == *denom
         })
         .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
         .1;
 
     let locked_balance = find(&state.locked_balance, |(denom, _)| {
-        distribution_config.denom.eq(denom)
+        distribution_config.denom == *denom
     })
     .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
     .1;
@@ -64,8 +64,8 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
 
     Ok(CampaignStateResponse {
         participation_count: Uint64::from(state.participation_count),
-        cumulative_distribution_amount: Uint128::from(cumulative_distribution_amount),
-        locked_balance: Uint128::from(locked_balance),
+        cumulative_distribution_amount,
+        locked_balance,
         balance: Uint128::from(balance),
         is_active: state.is_active(deps.storage, &deps.querier, env.block.height)?,
     })
@@ -109,12 +109,7 @@ pub fn get_participation(
     let rewards: Vec<(Denom, Uint128)> = participation
         .rewards
         .iter()
-        .map(|(denom, amount)| {
-            (
-                Denom::from_cw20(denom.clone()),
-                Uint128::from(amount.clone()),
-            )
-        })
+        .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), *amount))
         .collect();
 
     Ok(ParticipationResponse {
@@ -138,12 +133,7 @@ pub fn query_participations(
             let rewards: Vec<(Denom, Uint128)> = v
                 .rewards
                 .iter()
-                .map(|(denom, amount)| {
-                    (
-                        Denom::from_cw20(denom.clone()),
-                        Uint128::from(amount.clone()),
-                    )
-                })
+                .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), *amount))
                 .collect();
 
             ParticipationResponse {

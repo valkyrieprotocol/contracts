@@ -41,7 +41,7 @@ cosmwasm-std = { version = "0.14.1" }
 cosmwasm-storage = { version = "0.14.1" }
 cw-storage-plus = { version = "0.6.2" }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "0.1.0" }
-terra-cosmwasm = { version = "2.0.0" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.14.1" }
+terra-cosmwasm = { version = "2.0.0" }
