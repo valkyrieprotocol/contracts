@@ -1,8 +1,9 @@
 {
-  "governance": "terra1u0662ktrfn3lkj9lekawmexhznwj5gywefxvwa",
+  "governance": "terra1wr05lmm3upklws9akqhma3gwxnnr9jgvhw82h9",
   "token_contract": "terra1qxxlalvsdjd07p07y3rc5fu6ll8k4tme7cye8y",
-  "distributor": "terra1lnsu9vt8cyqqcmyclpvs668jfmscp3vsrkxchf",
-  "campaign_code_id": 13,
+  "distributor": "terra1zlxr4c9tug72h7ptgwuuxhc9vee8fluq20sqke",
+  "burn_contract": "terra1zlxr4c9tug72h7ptgwuuxhc9vee8fluq20sqke",
+  "campaign_code_id": 21,
   "creation_fee_amount": "100000000",
   "reward_withdraw_burn_rate": "0.1",
   "campaign_deactivate_period": 403290

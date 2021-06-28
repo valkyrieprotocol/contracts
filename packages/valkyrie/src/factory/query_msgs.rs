@@ -17,6 +17,7 @@ pub struct FactoryConfigResponse {
     pub governance: String,
     pub token_contract: String,
     pub distributor: String,
+    pub burn_contract: String,
     pub campaign_code_id: u64,
     pub creation_fee_amount: Uint128,
 }

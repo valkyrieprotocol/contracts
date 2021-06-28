@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, to_binary, Addr, Attribute, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper,
-    Response, StdError, StdResult, Uint128, Uint64, WasmMsg,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::Denom as Cw20Denom;
 
@@ -43,6 +43,7 @@ pub fn instantiate(
         distributor: deps.api.addr_validate(&msg.distributor)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
         factory: deps.api.addr_validate(&msg.factory)?,
+        burn_contract: deps.api.addr_validate(&msg.burn_contract)?,
     }
         .save(deps.storage)?;
 
@@ -251,16 +252,16 @@ pub fn withdraw_reward(
     };
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    if burn_amount != 0u128 {
+    if !burn_amount.is_zero() {
         messages.push(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
             burn_amount,
-            &Addr::unchecked(valkyrie_config.burn_contract),
+            &Addr::unchecked(contract_config.burn_contract),
         )?);
     }
 
-    if receive_amount != 0u128 {
+    if !receive_amount.is_zero() {
         messages.push(make_send_msg(
             &deps.querier,
             denom_cw20,
@@ -419,7 +420,7 @@ pub fn participate(
     {
         // activity booster is distributed
         // in the same ratio with normal rewards scheme
-        let booster_rewards = activity_booster.checked_mul(reward_amount)?
+        let mut booster_rewards = activity_booster.checked_mul(reward_amount)?
             .checked_div(reward_amount_sum).unwrap();
 
         // add plus booster only when the distance is zero (== actor)
@@ -436,7 +437,7 @@ pub fn participate(
         distribution_amount += reward_amount;
         distributions_response.push(Distribution {
             address: participation.actor_address.to_string(),
-            distance: Uint64::from(distance as u64),
+            distance: distance as u64,
             rewards: vec![
                 vec![(distribution_denom.clone(), reward_amount)],
                 if booster_rewards.is_zero() {
@@ -473,21 +474,6 @@ pub fn participate(
     }
 
     // Response
-    let mut distribution_amount = Uint128::zero();
-    let mut distributions_response: Vec<Distribution> = vec![];
-
-    for (index, (address, rewards)) in distributions.iter().enumerate() {
-        let amount = find(rewards, |(denom, _)| distribution_config.denom.eq(denom))
-            .map_or(Uint128::zero(), |(_, amount)| Uint128::from(*amount));
-
-        distribution_amount += amount;
-        distributions_response.push(Distribution {
-            address: address.to_string(),
-            distance: Uint64::from(index as u64),
-            amount,
-        });
-    }
-
     let result = DistributeResult {
         actor_address: info.sender.to_string(),
         reward_denom: Denom::from_cw20(distribution_config.denom.clone()),

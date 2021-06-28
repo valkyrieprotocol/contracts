@@ -1,5 +1,6 @@
-use cosmwasm_std::{QuerierWrapper, StdResult};
+use cosmwasm_std::{QuerierWrapper, StdResult, Uint128};
 use terra_cosmwasm::TerraQuerier;
+
 use crate::utils::calc_ratio_amount;
 
 // amount = tax + send_amount

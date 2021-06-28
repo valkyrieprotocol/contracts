@@ -35,7 +35,7 @@ impl Denom {
         querier: &QuerierWrapper,
         api: &dyn Api,
         address: Addr,
-    ) -> StdResult<u128> {
+    ) -> StdResult<Uint128> {
         query_balance(querier, api, self.to_cw20(api), address)
     }
 }

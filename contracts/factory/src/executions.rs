@@ -17,6 +17,7 @@ pub fn instantiate(
         governance: deps.api.addr_validate(msg.governance.as_str())?,
         token_contract: deps.api.addr_validate(msg.token_contract.as_str())?,
         distributor: deps.api.addr_validate(msg.distributor.as_str())?,
+        burn_contract: deps.api.addr_validate(msg.burn_contract.as_str())?,
         campaign_code_id: msg.campaign_code_id,
         creation_fee_amount: msg.creation_fee_amount,
     }.save(deps.storage)?;
@@ -125,6 +126,7 @@ pub fn create_campaign(
             distributor: factory_config.distributor.to_string(),
             token_contract: factory_config.token_contract.to_string(),
             factory: env.contract.address.to_string(),
+            burn_contract: factory_config.burn_contract.to_string(),
             title,
             url,
             description,

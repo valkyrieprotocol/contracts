@@ -83,6 +83,7 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Re
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let result = match msg {
+        QueryMsg::ContractConfig {} => to_binary(&crate::queries::get_contract_config(deps, env)?),
         QueryMsg::CampaignInfo {} => to_binary(&crate::queries::get_campaign_info(deps, env)?),
         QueryMsg::DistributionConfig {} => {
             to_binary(&crate::queries::get_distribution_config(deps, env)?)

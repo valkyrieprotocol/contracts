@@ -21,6 +21,7 @@ pub struct ContractConfig {
     pub distributor: Addr,
     pub token_contract: Addr,
     pub factory: Addr,
+    pub burn_contract: Addr,
 }
 
 impl ContractConfig {

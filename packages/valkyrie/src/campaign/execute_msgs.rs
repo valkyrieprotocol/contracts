@@ -10,6 +10,7 @@ pub struct InstantiateMsg {
     pub distributor: String,
     pub token_contract: String,
     pub factory: String,
+    pub burn_contract: String,
     pub title: String,
     pub url: String,
     pub description: String,

@@ -10,6 +10,7 @@ pub struct FactoryConfig {
     pub governance: Addr,
     pub token_contract: Addr,
     pub distributor: Addr,
+    pub burn_contract: Addr,
     pub campaign_code_id: u64,
     pub creation_fee_amount: Uint128,
 }

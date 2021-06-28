@@ -8,6 +8,7 @@ use crate::common::OrderBy;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    ContractConfig {},
     CampaignInfo {},
     DistributionConfig {},
     CampaignState {},
@@ -26,6 +27,16 @@ pub enum QueryMsg {
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct ContractConfigResponse {
+    pub admin: String,
+    pub governance: String,
+    pub distributor: String,
+    pub token_contract: String,
+    pub factory: String,
+    pub burn_contract: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

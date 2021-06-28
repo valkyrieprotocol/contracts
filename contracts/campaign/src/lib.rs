@@ -8,4 +8,4 @@ mod states;
 mod mock_querier;
 
 #[cfg(test)]
-mod testing;
+mod tests;

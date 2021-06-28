@@ -105,7 +105,7 @@ pub fn receive_cw20(
 ) -> ContractResult<Response> {
     // only asset contract can execute this message
     let config = ContractConfig::load(deps.storage)?;
-    if config.is_token_contract(&info.sender) {
+    if !config.is_token_contract(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 

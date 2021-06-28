@@ -8,14 +8,14 @@ pub fn native_send(
     querier: &QuerierWrapper,
     denom: String,
     recipient: &Addr,
-    amount_with_tax: u128,
+    amount_with_tax: Uint128,
 ) -> StdResult<CosmosMsg> {
+    let tax = extract_tax(querier, denom.to_string(), amount_with_tax)?;
+
     Ok(CosmosMsg::Bank(BankMsg::Send {
         to_address: recipient.to_string(),
         amount: vec![Coin {
-            amount: Uint128::from(
-                amount_with_tax - extract_tax(querier, denom.to_string(), amount_with_tax)?,
-            ),
+            amount: amount_with_tax.checked_sub(tax)?,
             denom,
         }],
     }))

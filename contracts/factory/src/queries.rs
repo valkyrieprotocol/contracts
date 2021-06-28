@@ -15,6 +15,7 @@ pub fn get_factory_config(
         governance: factory_config.governance.to_string(),
         token_contract: factory_config.token_contract.to_string(),
         distributor: factory_config.distributor.to_string(),
+        burn_contract: factory_config.burn_contract.to_string(),
         campaign_code_id: factory_config.campaign_code_id,
         creation_fee_amount: Uint128::from(factory_config.creation_fee_amount),
     })

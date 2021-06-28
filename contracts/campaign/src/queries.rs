@@ -1,12 +1,25 @@
 use cosmwasm_std::{Deps, Env, Uint128, Timestamp};
 
 use valkyrie::campaign::enumerations::{Denom, Referrer};
-use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterStateResponse, BoosterResponse};
+use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterStateResponse, BoosterResponse, ContractConfigResponse};
 use valkyrie::common::{ContractResult, OrderBy};
 use valkyrie::utils::{compress_addr, find, put_query_parameter};
 
-use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation, BoosterState};
+use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation, BoosterState, ContractConfig};
 use valkyrie::cw20::query_balance;
+
+pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigResponse> {
+    let config = ContractConfig::load(deps.storage)?;
+
+    Ok(ContractConfigResponse {
+        admin: config.admin.to_string(),
+        governance: config.governance.to_string(),
+        distributor: config.distributor.to_string(),
+        token_contract: config.token_contract.to_string(),
+        factory: config.factory.to_string(),
+        burn_contract: config.burn_contract.to_string(),
+    })
+}
 
 pub fn get_campaign_info(deps: Deps, _env: Env) -> ContractResult<CampaignInfoResponse> {
     let campaign_info = CampaignInfo::load(deps.storage)?;

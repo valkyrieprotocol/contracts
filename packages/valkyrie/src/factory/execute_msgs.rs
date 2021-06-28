@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Binary, Decimal};
+use cosmwasm_std::{Uint128, Decimal};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     pub governance: String,
     pub token_contract: String,
     pub distributor: String,
+    pub burn_contract: String,
     pub campaign_code_id: u64,
     pub creation_fee_amount: Uint128,
     pub reward_withdraw_burn_rate: Decimal,
