@@ -196,6 +196,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
+        QueryMsg::Unstaking { address } => to_binary(
+            &crate::staking::queries::get_unstaking(deps, env, address)?
+        )
     }?;
 
     Ok(result)

@@ -35,6 +35,9 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
+    Unstaking {
+        address: String,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -57,6 +60,16 @@ pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
     pub votes: Vec<(u64, VoteInfoMsg)>,
+}
+
+impl Default for StakerStateResponse {
+    fn default() -> Self {
+        StakerStateResponse {
+            balance: Uint128::zero(),
+            share: Uint128::zero(),
+            votes: vec![],
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -118,4 +131,15 @@ pub struct VotersResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotingPowerResponse {
     pub voting_power: Decimal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct UnstakingResponse {
+    pub items: Vec<UnstakingItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct UnstakingItem {
+    pub unlock_block: u64,
+    pub amount: Uint128,
 }
