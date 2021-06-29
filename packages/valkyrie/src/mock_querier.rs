@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
+pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
+
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
-pub fn mock_dependencies(
-    contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+pub fn custom_deps(contract_balance: &[Coin]) -> CustomDeps {
     let custom_querier = WasmMockQuerier::new(
         MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]),
     );
@@ -195,6 +195,8 @@ impl WasmMockQuerier {
     }
 }
 
+const ZERO: Uint128 = Uint128::zero();
+
 impl WasmMockQuerier {
     pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
         WasmMockQuerier {
@@ -207,6 +209,42 @@ impl WasmMockQuerier {
     // configure the mint whitelist mock querier
     pub fn with_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
         self.token_querier = TokenQuerier::new(balances);
+    }
+
+    pub fn plus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
+        for (token_contract, balances) in balances.iter() {
+            let token_contract = token_contract.to_string();
+
+            if !self.token_querier.balances.contains_key(&token_contract) {
+                self.token_querier.balances.insert(token_contract.clone(), HashMap::new());
+            }
+            let token_balances = self.token_querier.balances.get_mut(&token_contract).unwrap();
+
+            for (account, balance) in balances.iter() {
+                let account = account.to_string();
+                let account_balance = token_balances.get(&account).unwrap_or(&ZERO);
+                let new_balance = *account_balance + *balance;
+                token_balances.insert(account, new_balance);
+            }
+        }
+    }
+
+    pub fn minus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
+        for (token_contract, balances) in balances.iter() {
+            let token_contract = token_contract.to_string();
+
+            if !self.token_querier.balances.contains_key(&token_contract) {
+                self.token_querier.balances.insert(token_contract.clone(), HashMap::new());
+            }
+            let token_balances = self.token_querier.balances.get_mut(&token_contract).unwrap();
+
+            for (account, balance) in balances.iter() {
+                let account = account.to_string();
+                let account_balance = token_balances.get(&account).unwrap_or(&ZERO);
+                let new_balance = account_balance.checked_sub(**balance).unwrap();
+                token_balances.insert(account, new_balance);
+            }
+        }
     }
 
     // configure the token owner mock querier

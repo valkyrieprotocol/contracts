@@ -13,6 +13,7 @@ documentation = "https://docs.valkyrieprotocol.com"
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+mock_querier = []
 
 [profile.release]
 opt-level = 3

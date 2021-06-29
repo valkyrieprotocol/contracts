@@ -3,4 +3,4 @@ pub mod executions;
 pub mod queries;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

@@ -1,5 +1,6 @@
 use cosmwasm_std::{Uint128, Decimal, Binary};
 use bigint::U256;
+use std::num::ParseIntError;
 
 pub fn map_u128(value: Vec<Uint128>) -> Vec<u128> {
     value.iter().map(|v| v.u128()).collect()
@@ -7,6 +8,10 @@ pub fn map_u128(value: Vec<Uint128>) -> Vec<u128> {
 
 pub fn map_uint128(value: Vec<u128>) -> Vec<Uint128> {
     value.iter().map(|&v| Uint128::from(v)).collect()
+}
+
+pub fn parse_uint128(value: &str) -> Result<Uint128, ParseIntError> {
+    value.parse::<u128>().map(|v| Uint128(v))
 }
 
 pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T)>(

@@ -11,7 +11,7 @@ pub mod terra;
 pub mod utils;
 pub mod message_factories;
 
-#[cfg(test)]
+#[cfg(feature = "mock_querier")]
 pub mod mock_querier;
 
 #[cfg(test)]
