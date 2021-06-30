@@ -28,7 +28,7 @@ const MAX_LINK_LENGTH: usize = 128;
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
     // Validate
@@ -38,7 +38,7 @@ pub fn instantiate(
 
     // Execute
     ContractConfig {
-        admin: info.sender.clone(),
+        admin: deps.api.addr_validate(&msg.admin)?,
         governance: deps.api.addr_validate(&msg.governance)?,
         distributor: deps.api.addr_validate(&msg.distributor)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
@@ -52,7 +52,7 @@ pub fn instantiate(
         description: msg.description,
         url: msg.url,
         parameter_key: msg.parameter_key,
-        creator: info.sender,
+        creator: deps.api.addr_validate(&msg.creator)?,
         created_at: env.block.time,
         created_block: env.block.height,
     }

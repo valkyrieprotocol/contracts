@@ -17,6 +17,8 @@ pub struct InstantiateMsg {
     pub parameter_key: String,
     pub distribution_denom: Denom,
     pub distribution_amounts: Vec<Uint128>,
+    pub admin: String,
+    pub creator: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

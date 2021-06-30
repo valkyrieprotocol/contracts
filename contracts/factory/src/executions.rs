@@ -133,6 +133,8 @@ pub fn create_campaign(
             parameter_key,
             distribution_denom,
             distribution_amounts,
+            admin: sender.to_string(),
+            creator: sender.to_string(),
         })?,
     );
 
