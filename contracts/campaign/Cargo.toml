@@ -38,7 +38,6 @@ serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
 cw20 = { version = "0.6.2" }
 cosmwasm-std = { version = "0.14.1" }
-cosmwasm-storage = { version = "0.14.1" }
 cw-storage-plus = { version = "0.6.2" }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "0.1.0" }
 

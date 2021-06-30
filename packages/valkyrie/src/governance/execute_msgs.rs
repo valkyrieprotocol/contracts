@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,6 @@ pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
     pub staking_config: StakingConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
-    pub valkyrie_config: ValkyrieConfigInitMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -21,7 +20,7 @@ pub struct ContractConfigInitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingConfigInitMsg {
-    pub withdraw_delay: Uint64,
+    pub withdraw_delay: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,18 +34,11 @@ pub struct PollConfigInitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigInitMsg {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     UpdateStakingConfig {
-        withdraw_delay: Option<Uint64>,
+        withdraw_delay: Option<u64>,
     },
     UnstakeVotingToken { amount: Option<Uint128> },
     WithdrawVotingToken {},
@@ -66,11 +58,6 @@ pub enum ExecuteMsg {
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
     SnapshotPoll { poll_id: u64 },
-    UpdateValkyrieConfig {
-        burn_contract: Option<String>,
-        reward_withdraw_burn_rate: Option<Decimal>,
-        campaign_deactivate_period: Option<Uint64>,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -84,3 +71,6 @@ pub enum Cw20HookMsg {
         execution: Option<Vec<ExecutionMsg>>,
     },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}

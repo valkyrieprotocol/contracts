@@ -1,4 +1,4 @@
-use cosmwasm_std::{Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,9 +8,11 @@ use crate::common::OrderBy;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    ContractConfig {},
     CampaignInfo {},
     DistributionConfig {},
     CampaignState {},
+    BoosterState {},
     ShareUrl {
         address: String,
     },
@@ -28,6 +30,16 @@ pub enum QueryMsg {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct ContractConfigResponse {
+    pub admin: String,
+    pub governance: String,
+    pub distributor: String,
+    pub token_contract: String,
+    pub factory: String,
+    pub burn_contract: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignInfoResponse {
     pub title: String,
     pub description: String,
@@ -35,7 +47,6 @@ pub struct CampaignInfoResponse {
     pub parameter_key: String,
     pub creator: String,
     pub created_at: Timestamp,
-    pub created_block: Uint64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -46,11 +57,28 @@ pub struct DistributionConfigResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignStateResponse {
-    pub participation_count: Uint64,
+    pub participation_count: u64,
     pub cumulative_distribution_amount: Uint128,
     pub locked_balance: Uint128,
     pub balance: Uint128,
     pub is_active: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct BoosterStateResponse {
+    pub is_boosting: bool,
+    pub assigned_total_amount: Uint128,
+    pub snapped_participation_count: u64,
+    pub drop_booster: Option<BoosterResponse>,
+    pub activity_booster: Option<BoosterResponse>,
+    pub plus_booster: Option<BoosterResponse>,
+    pub boosted_at: Option<Timestamp>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct BoosterResponse {
+    pub assigned_amount: Uint128,
+    pub distributed_amount: Uint128,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -70,6 +98,7 @@ pub struct ParticipationResponse {
     pub actor_address: String,
     pub referrer_address: Option<String>,
     pub rewards: Vec<(Denom, Uint128)>,
+    pub participated_at: Timestamp,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

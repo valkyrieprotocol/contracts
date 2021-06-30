@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128, Uint64};
+use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::create_send_msg_response;
@@ -20,11 +20,12 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     // Execute
     StakingConfig {
-        withdraw_delay: msg.withdraw_delay.u64(),
+        withdraw_delay: msg.withdraw_delay,
     }.save(deps.storage)?;
 
     StakingState {
         total_share: Uint128::zero(),
+        unstaking_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
     // Response
@@ -35,7 +36,7 @@ pub fn update_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    withdraw_delay: Option<Uint64>,
+    withdraw_delay: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, env, &info.sender) {
@@ -46,7 +47,7 @@ pub fn update_config(
     let mut config = StakingConfig::load(deps.storage)?;
 
     if let Some(withdraw_delay) = withdraw_delay {
-        config.withdraw_delay = withdraw_delay.u64();
+        config.withdraw_delay = withdraw_delay;
     }
 
     config.save(deps.storage)?;
@@ -58,11 +59,16 @@ pub fn update_config(
 pub fn stake_voting_token(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     sender: Addr,
     amount: Uint128,
 ) -> ContractResult<Response> {
     // Validate
+    let config = ContractConfig::load(deps.storage)?;
+    if !config.is_token_contract(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     if amount.is_zero() {
         return Err(ContractError::Std(StdError::generic_err("Insufficient funds sent")));
     }
@@ -81,7 +87,7 @@ pub fn stake_voting_token(
     };
 
     staking_state.total_share += share;
-    staker_state.save(deps.storage)?;
+    staking_state.save(deps.storage)?;
 
     staker_state.share += share;
     staker_state.save(deps.storage)?;
@@ -92,7 +98,7 @@ pub fn stake_voting_token(
             submessages: vec![],
             messages: vec![],
             attributes: vec![
-                attr("action", "staking"),
+                attr("action", "stake_voting_token"),
                 attr("sender", sender.as_str()),
                 attr("share", share.to_string()),
                 attr("amount", amount.to_string()),
@@ -140,19 +146,29 @@ pub fn unstake_voting_token(
 
     if locked_share + withdraw_share > user_share {
         return Err(ContractError::Std(StdError::generic_err(
-            "User is trying to withdraw too many tokens.",
+            "User is trying to unstake too many tokens.",
         )));
     }
 
     staker_state.share = user_share.checked_sub(withdraw_share)?;
-    staker_state.withdraw_unstaked_amounts.push((env.block.height, withdraw_amount));
+    staker_state.unstaking_amounts.push((env.block.height, withdraw_amount));
     staker_state.save(deps.storage)?;
 
     staking_state.total_share = total_share.checked_sub(withdraw_share)?;
+    staking_state.unstaking_amount += withdraw_amount;
     staking_state.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "unstake_voting_token"),
+            attr("unstake_amount", withdraw_amount),
+            attr("unstake_share", withdraw_share),
+        ],
+        data: None,
+    })
 }
 
 pub fn withdraw_voting_token(
@@ -169,6 +185,10 @@ pub fn withdraw_voting_token(
         .sum();
 
     staker_state.save(deps.storage)?;
+
+    let mut staking_state = StakingState::load(deps.storage)?;
+    staking_state.unstaking_amount = staking_state.unstaking_amount.checked_sub(withdraw_amount)?;
+    staking_state.save(deps.storage)?;
 
     // Response
     let contract_config = ContractConfig::load(deps.storage)?;

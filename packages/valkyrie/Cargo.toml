@@ -13,6 +13,7 @@ documentation = "https://docs.valkyrieprotocol.com"
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+mock_querier = []
 
 [profile.release]
 opt-level = 3
@@ -30,7 +31,6 @@ serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
 cw20 = { version = "0.6.2" }
 cosmwasm-std = { version = "0.14.1", features = ["iterator"] }
-cosmwasm-storage = { version = "0.14.1", features = ["iterator"] }
 cw-storage-plus = { version = "0.6.2", features = ["iterator"] }
 terra-cosmwasm = { version = "2.0.0"}
 thiserror = { version = "1.0.25" }
@@ -38,3 +38,4 @@ bigint = { version = "4.4.3"}
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.14.1" }
+#cosmwasm-storage = { version = "0.14.1", features = ["iterator"] }

@@ -1,0 +1,7 @@
+{
+  "send": {
+    "contract": "terra1dqrzwx9trx3uhx5k6cm7dxm3dfgmsy58epswlc",
+    "amount": "100000000",
+    "msg": "eyJjcmVhdGVfY2FtcGFpZ24iOnsidGl0bGUiOiJUZXN0Q2FtcGFpZ24iLCJ1cmwiOiJodHRwczovL2RvY3MudmFsa3lyaWVwcm90b2NvbC5jb20iLCJkZXNjcmlwdGlvbiI6IlRlc3RDYW1wYWlnbkRlc2NyaXB0aW9uIiwicGFyYW1ldGVyX2tleSI6InZrciIsImRpc3RyaWJ1dGlvbl9kZW5vbSI6eyJ0b2tlbiI6InRlcnJhMXF4eGxhbHZzZGpkMDdwMDd5M3JjNWZ1NmxsOGs0dG1lN2N5ZTh5In0sImRpc3RyaWJ1dGlvbl9hbW91bnRzIjpbIjEwMDAwMDAwIiwiMzAwMDAwMDAiLCI1MDAwMDAwIl19fQ=="
+  }
+}

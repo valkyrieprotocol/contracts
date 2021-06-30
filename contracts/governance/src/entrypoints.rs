@@ -8,10 +8,8 @@ use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::governance::query_msgs::QueryMsg;
-
-use crate::common::states::ContractConfig;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -39,12 +37,6 @@ pub fn instantiate(
         env.clone(),
         info.clone(),
         msg.poll_config,
-    )?;
-    crate::valkyrie::executions::instantiate(
-        deps_mut.branch(),
-        env.clone(),
-        info.clone(),
-        msg.valkyrie_config,
     )?;
 
     Ok(Response::default())
@@ -100,18 +92,6 @@ pub fn execute(
         ExecuteMsg::SnapshotPoll { poll_id } => {
             crate::poll::executions::snapshot_poll(deps, env, info, poll_id)
         }
-        ExecuteMsg::UpdateValkyrieConfig {
-            burn_contract,
-            reward_withdraw_burn_rate,
-            campaign_deactivate_period,
-        } => crate::valkyrie::executions::update_config(
-            deps,
-            env,
-            info,
-            burn_contract,
-            reward_withdraw_burn_rate,
-            campaign_deactivate_period,
-        ),
     }
 }
 
@@ -121,12 +101,6 @@ pub fn receive_cw20(
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
-    // only asset contract can execute this message
-    let config = ContractConfig::load(deps.storage)?;
-    if config.is_token_contract(&info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::StakeVotingToken {}) => crate::staking::executions::stake_voting_token(
             deps,
@@ -163,6 +137,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
         }
         _ => Err(ContractError::Std(StdError::not_found("reply_id"))),
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -214,9 +193,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
-        QueryMsg::ValkyrieConfig {} => {
-            to_binary(&crate::valkyrie::queries::get_valkyrie_config(deps, env)?)
-        }
+        QueryMsg::Unstaking { address } => to_binary(
+            &crate::staking::queries::get_unstaking(deps, env, address)?
+        )
     }?;
 
     Ok(result)

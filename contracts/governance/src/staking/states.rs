@@ -30,6 +30,7 @@ const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingState {
     pub total_share: Uint128,
+    pub unstaking_amount: Uint128,
 }
 
 impl StakingState {
@@ -51,7 +52,7 @@ pub struct StakerState {
     pub share: Uint128,
     // total staked balance
     pub votes: Vec<(u64, VoteInfo)>, // maps poll_id to weight voted
-    pub withdraw_unstaked_amounts: Vec<(u64, Uint128)>,
+    pub unstaking_amounts: Vec<(u64, Uint128)>,
 }
 
 impl StakerState {
@@ -60,7 +61,7 @@ impl StakerState {
             address: address.clone(),
             share: Uint128::zero(),
             votes: vec![],
-            withdraw_unstaked_amounts: vec![],
+            unstaking_amounts: vec![],
         }
     }
 
@@ -135,7 +136,7 @@ impl StakerState {
         let mut pending: Vec<(u64, Uint128)> = vec![];
         let mut withdrawable: Vec<(u64, Uint128)> = vec![];
 
-        for each in self.withdraw_unstaked_amounts.iter() {
+        for each in self.unstaking_amounts.iter() {
             if block_height > each.0 + config.withdraw_delay {
                 withdrawable.push(*each)
             } else {
@@ -143,7 +144,7 @@ impl StakerState {
             }
         }
 
-        self.withdraw_unstaked_amounts = pending;
+        self.unstaking_amounts = pending;
 
         withdrawable
     }

@@ -1,23 +1,20 @@
-use crate::message_factories;
-use cosmwasm_std::{
-    attr, Addr, Api, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128,
-    WasmQuery,
-};
-use cosmwasm_storage::to_length_prefixed;
+use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery};
 use cw20::Denom;
+
+use crate::message_factories;
 
 pub fn query_balance(
     querier: &QuerierWrapper,
     api: &dyn Api,
     denom: Denom,
     address: Addr,
-) -> StdResult<u128> {
+) -> StdResult<Uint128> {
     match denom {
         Denom::Native(denom) => querier
             .query_balance(address, denom)
-            .map(|v| v.amount.u128()),
+            .map(|v| v.amount),
         Denom::Cw20(contract_addr) => {
-            query_cw20_balance(querier, api, &contract_addr, &address).map(|v| v.u128())
+            query_cw20_balance(querier, api, &contract_addr, &address)
         }
     }
 }
@@ -67,4 +64,21 @@ fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
     let mut k = namespace.to_vec();
     k.extend_from_slice(key);
     k
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn to_length_prefixed(namespace: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(namespace.len() + 2);
+    out.extend_from_slice(&encode_length(namespace));
+    out.extend_from_slice(namespace);
+    out
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn encode_length(namespace: &[u8]) -> [u8; 2] {
+    if namespace.len() > 0xFFFF {
+        panic!("only supports namespaces up to length 0xFFFF")
+    }
+    let length_bytes = (namespace.len() as u32).to_be_bytes();
+    [length_bytes[2], length_bytes[3]]
 }

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, to_binary, Addr, Attribute, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper,
-    Response, StdError, StdResult, Uint128, Uint64, WasmMsg,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::Denom as Cw20Denom;
 
@@ -14,8 +14,8 @@ use valkyrie::message_factories;
 use valkyrie::utils::{calc_ratio_amount, map_u128};
 
 use crate::states::{
-    is_admin, is_pending, load_valkyrie_config, BoosterState, CampaignInfo, CampaignState,
-    ContractConfig, DistributionConfig, Participation,
+    BoosterState, CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin,
+    is_pending, load_valkyrie_config, Participation,
 };
 
 const MIN_TITLE_LENGTH: usize = 4;
@@ -42,8 +42,10 @@ pub fn instantiate(
         governance: deps.api.addr_validate(&msg.governance)?,
         distributor: deps.api.addr_validate(&msg.distributor)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
+        factory: deps.api.addr_validate(&msg.factory)?,
+        burn_contract: deps.api.addr_validate(&msg.burn_contract)?,
     }
-    .save(deps.storage)?;
+        .save(deps.storage)?;
 
     CampaignInfo {
         title: msg.title,
@@ -54,7 +56,7 @@ pub fn instantiate(
         created_at: env.block.time,
         created_block: env.block.height,
     }
-    .save(deps.storage)?;
+        .save(deps.storage)?;
 
     CampaignState {
         participation_count: 0,
@@ -63,13 +65,13 @@ pub fn instantiate(
         active_flag: false,
         last_active_block: None,
     }
-    .save(deps.storage)?;
+        .save(deps.storage)?;
 
     DistributionConfig {
         denom: msg.distribution_denom.to_cw20(deps.api),
         amounts: msg.distribution_amounts,
     }
-    .save(deps.storage)?;
+        .save(deps.storage)?;
 
     // Response
     Ok(Response::default())
@@ -232,9 +234,8 @@ pub fn withdraw_reward(
 
     let campaign_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
     let denom_cw20 = denom.to_cw20(deps.api);
-
-    let free_balance = campaign_balance - campaign_state.locked_balance(denom_cw20.clone()).u128();
-    let withdraw_amount = amount.map_or_else(|| free_balance, |v| v.u128());
+    let free_balance = campaign_balance.checked_sub(campaign_state.locked_balance(denom_cw20.clone()))?;
+    let withdraw_amount = amount.unwrap_or(free_balance);
 
     if withdraw_amount > free_balance {
         return Err(ContractError::Std(StdError::generic_err(
@@ -243,24 +244,24 @@ pub fn withdraw_reward(
     }
 
     // Execute
-    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.governance)?;
+    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.factory)?;
     let (burn_amount, receive_amount) = if campaign_state.is_pending() {
-        (0u128, withdraw_amount)
+        (Uint128::zero(), withdraw_amount)
     } else {
         calc_ratio_amount(withdraw_amount, valkyrie_config.reward_withdraw_burn_rate)
     };
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    if burn_amount != 0u128 {
+    if !burn_amount.is_zero() {
         messages.push(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
             burn_amount,
-            &Addr::unchecked(valkyrie_config.burn_contract),
+            &Addr::unchecked(contract_config.burn_contract),
         )?);
     }
 
-    if receive_amount != 0u128 {
+    if !receive_amount.is_zero() {
         messages.push(make_send_msg(
             &deps.querier,
             denom_cw20,
@@ -298,7 +299,7 @@ pub fn claim_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResu
         messages.push(make_send_msg(
             &deps.querier,
             denom.clone(),
-            amount.u128(),
+            amount.clone(),
             &info.sender,
         )?);
 
@@ -394,6 +395,7 @@ pub fn participate(
         rewards: vec![],
         booster_rewards: plus_booster,
         drop_booster_claimable,
+        participated_at: env.block.time.clone(),
     };
 
     let mut participations = vec![my_participation];
@@ -418,9 +420,8 @@ pub fn participate(
     {
         // activity booster is distributed
         // in the same ratio with normal rewards scheme
-        let mut booster_rewards = Uint128::from(
-            activity_booster.u128() * reward_amount.u128() / reward_amount_sum.u128(),
-        );
+        let mut booster_rewards = activity_booster.checked_mul(reward_amount)?
+            .checked_div(reward_amount_sum).unwrap();
 
         // add plus booster only when the distance is zero (== actor)
         if distance == 0usize {
@@ -436,7 +437,7 @@ pub fn participate(
         distribution_amount += reward_amount;
         distributions_response.push(Distribution {
             address: participation.actor_address.to_string(),
-            distance: Uint64::from(distance as u64),
+            distance: distance as u64,
             rewards: vec![
                 vec![(distribution_denom.clone(), reward_amount)],
                 if booster_rewards.is_zero() {
@@ -465,7 +466,6 @@ pub fn participate(
 
     if campaign_state
         .locked_balance(distribution_config.denom.clone())
-        .u128()
         > campaign_balance
     {
         return Err(ContractError::Std(StdError::generic_err(
@@ -503,7 +503,7 @@ pub fn participate(
 
 pub fn register_booster(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     drop_booster_amount: Uint128,
     activity_booster_amount: Uint128,
@@ -527,6 +527,7 @@ pub fn register_booster(
         activity_booster_left_amount: activity_booster_amount,
         plus_booster_amount,
         plus_booster_left_amount: plus_booster_amount,
+        boosted_at: env.block.time,
     };
 
     booster_state.save(deps.storage)?;
@@ -613,7 +614,7 @@ fn validate_description(description: &str) -> StdResult<()> {
 fn make_send_msg(
     querier: &QuerierWrapper,
     denom: Cw20Denom,
-    amount_with_tax: u128,
+    amount_with_tax: Uint128,
     recipient: &Addr,
 ) -> StdResult<CosmosMsg> {
     match denom {
@@ -626,7 +627,7 @@ fn make_send_msg(
         Cw20Denom::Cw20(contract_address) => Ok(message_factories::cw20_transfer(
             &contract_address,
             recipient,
-            Uint128::from(amount_with_tax),
+            amount_with_tax,
         )),
     }
 }

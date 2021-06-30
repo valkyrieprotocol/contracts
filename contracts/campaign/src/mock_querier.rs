@@ -1,13 +1,14 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, ContractResult, Decimal, OwnedDeps, Querier,
-    QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, Uint64, WasmQuery,
+    QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use std::collections::HashMap;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 use valkyrie::governance::query_msgs::{
-    QueryMsg as GovQueryMsg, ValkyrieConfigResponse, VotingPowerResponse,
+    QueryMsg as GovQueryMsg, VotingPowerResponse,
 };
+use valkyrie::factory::query_msgs::{QueryMsg as FactoryQueryMsg, CampaignConfigResponse};
 
 pub fn mock_dependencies(
     contract_balance: &[Coin],
@@ -76,21 +77,18 @@ pub(crate) fn caps_to_map(caps: &[(&String, &Uint128)]) -> HashMap<String, Uint1
 
 #[derive(Clone, Default)]
 pub struct ValkyrieConfigQuerier {
-    campaign_deactivate_period: Uint64,
+    campaign_deactivate_period: u64,
     reward_withdraw_burn_rate: Decimal,
-    burn_contract: String,
 }
 
 impl ValkyrieConfigQuerier {
     pub fn new(
-        campaign_deactivate_period: Uint64,
+        campaign_deactivate_period: u64,
         reward_withdraw_burn_rate: Decimal,
-        burn_contract: &str,
     ) -> Self {
         ValkyrieConfigQuerier {
             campaign_deactivate_period,
             reward_withdraw_burn_rate,
-            burn_contract: burn_contract.to_string(),
         }
     }
 }
@@ -115,14 +113,12 @@ impl WasmMockQuerier {
 
     pub fn with_valkyrie_config(
         &mut self,
-        campaign_deactivate_period: Uint64,
+        campaign_deactivate_period: u64,
         reward_withdraw_burn_rate: Decimal,
-        burn_contract: &str,
     ) {
         self.valkyrie_config_querier = ValkyrieConfigQuerier::new(
             campaign_deactivate_period,
             reward_withdraw_burn_rate,
-            burn_contract,
         );
     }
 }
@@ -174,37 +170,37 @@ impl WasmMockQuerier {
             QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: _,
                 msg,
-            }) => match from_binary(&msg) {
-                Ok(GovQueryMsg::ValkyrieConfig {}) => {
-                    let res = ValkyrieConfigResponse {
-                        burn_contract: self.valkyrie_config_querier.burn_contract.to_string(),
-                        reward_withdraw_burn_rate: self
-                            .valkyrie_config_querier
-                            .reward_withdraw_burn_rate,
-                        campaign_deactivate_period: self
-                            .valkyrie_config_querier
-                            .campaign_deactivate_period,
-                    };
+            }) => {
+                match from_binary(&msg) {
+                    Ok(FactoryQueryMsg::CampaignConfig {}) => {
+                        let res = CampaignConfigResponse {
+                            reward_withdraw_burn_rate: self.valkyrie_config_querier.reward_withdraw_burn_rate,
+                            campaign_deactivate_period: self.valkyrie_config_querier.campaign_deactivate_period,
+                        };
+                        SystemResult::Ok(ContractResult::from(to_binary(&res)))
+                    },
+                    _ => {
+                        match from_binary(&msg) {
+                            Ok(GovQueryMsg::VotingPower { address }) => {
+                                let voting_power = match self.voting_powers_querier.powers.get(&address) {
+                                    Some(v) => v.clone(),
+                                    None => {
+                                        return SystemResult::Err(SystemError::InvalidRequest {
+                                            error: format!("VotingPower is not found for {}", address),
+                                            request: msg.clone(),
+                                        })
+                                    }
+                                };
 
-                    SystemResult::Ok(ContractResult::from(to_binary(&res)))
-                }
-                Ok(GovQueryMsg::VotingPower { address }) => {
-                    let voting_power = match self.voting_powers_querier.powers.get(&address) {
-                        Some(v) => v.clone(),
-                        None => {
-                            return SystemResult::Err(SystemError::InvalidRequest {
-                                error: format!("VotingPower is not found for {}", address),
-                                request: msg.clone(),
+                                let res = VotingPowerResponse { voting_power };
+                                SystemResult::Ok(ContractResult::from(to_binary(&res)))
+                            },
+                            _ => SystemResult::Err(SystemError::UnsupportedRequest {
+                                kind: msg.to_string(),
                             })
                         }
-                    };
-
-                    let res = VotingPowerResponse { voting_power };
-                    SystemResult::Ok(ContractResult::from(to_binary(&res)))
+                    },
                 }
-                _ => SystemResult::Err(SystemError::UnsupportedRequest {
-                    kind: msg.to_string(),
-                }),
             },
             _ => self.base.handle_query(request),
         }

@@ -2,7 +2,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw20::Cw20ReceiveMsg;
 
-use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg};
+use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::campaign::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 
@@ -76,13 +76,20 @@ pub fn receive_cw20(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let result = match msg {
+        QueryMsg::ContractConfig {} => to_binary(&crate::queries::get_contract_config(deps, env)?),
         QueryMsg::CampaignInfo {} => to_binary(&crate::queries::get_campaign_info(deps, env)?),
         QueryMsg::DistributionConfig {} => {
             to_binary(&crate::queries::get_distribution_config(deps, env)?)
         }
         QueryMsg::CampaignState {} => to_binary(&crate::queries::get_campaign_state(deps, env)?),
+        QueryMsg::BoosterState {} => to_binary(&crate::queries::get_booster_state(deps, env)?),
         QueryMsg::ShareUrl { address } => {
             to_binary(&crate::queries::get_share_url(deps, env, address)?)
         }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
+use cosmwasm_std::{Addr, StdResult, Storage, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,8 +9,10 @@ const FACTORY_CONFIG: Item<FactoryConfig> = Item::new("factory_config");
 pub struct FactoryConfig {
     pub governance: Addr,
     pub token_contract: Addr,
+    pub distributor: Addr,
+    pub burn_contract: Addr,
     pub campaign_code_id: u64,
-    pub creation_fee_amount: u128,
+    pub creation_fee_amount: Uint128,
 }
 
 impl FactoryConfig {
@@ -37,6 +39,24 @@ pub fn is_governance(storage: &dyn Storage, address: &Addr) -> bool {
 
 pub fn is_token_contract(storage: &dyn Storage, address: &Addr) -> bool {
     FactoryConfig::load(storage).unwrap().is_token_contract(address)
+}
+
+const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign-config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct CampaignConfig {
+    pub reward_withdraw_burn_rate: Decimal,
+    pub campaign_deactivate_period: u64,
+}
+
+impl CampaignConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        CAMPAIGN_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<CampaignConfig> {
+        CAMPAIGN_CONFIG.load(storage)
+    }
 }
 
 const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignContext> = Item::new("create-campaign-context");

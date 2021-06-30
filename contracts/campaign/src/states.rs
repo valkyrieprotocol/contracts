@@ -5,8 +5,9 @@ use cosmwasm_std::{Addr, QuerierWrapper, StdError, StdResult, Storage, Timestamp
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use valkyrie::common::OrderBy;
-use valkyrie::governance::query_msgs::{ValkyrieConfigResponse, VotingPowerResponse};
+use valkyrie::governance::query_msgs::VotingPowerResponse;
 use valkyrie::utils::find_mut_or_push;
+use valkyrie::factory::query_msgs::CampaignConfigResponse;
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -19,6 +20,8 @@ pub struct ContractConfig {
     pub governance: Addr,
     pub distributor: Addr,
     pub token_contract: Addr,
+    pub factory: Addr,
+    pub burn_contract: Addr,
 }
 
 impl ContractConfig {
@@ -105,12 +108,10 @@ impl CampaignState {
         }
 
         let config = ContractConfig::load(storage)?;
-        let valkyrie_config = load_valkyrie_config(querier, &config.governance)?;
+        let valkyrie_config = load_valkyrie_config(querier, &config.factory)?;
 
         //TODO: deactivate_period 를 그냥 campaign 에서 관리할까?
-        Ok(valkyrie_config.campaign_deactivate_period.u64()
-            + self.last_active_block.unwrap_or_default()
-            >= block_height)
+        Ok(valkyrie_config.campaign_deactivate_period + self.last_active_block.unwrap_or_default() >= block_height)
     }
 
     pub fn is_pending(&self) -> bool {
@@ -198,6 +199,7 @@ pub struct BoosterState {
     pub activity_booster_left_amount: Uint128,
     pub plus_booster_amount: Uint128,
     pub plus_booster_left_amount: Uint128,
+    pub boosted_at: Timestamp,
 }
 
 impl BoosterState {
@@ -207,6 +209,10 @@ impl BoosterState {
 
     pub fn load(storage: &dyn Storage) -> StdResult<BoosterState> {
         BOOSTER_STATE.load(storage)
+    }
+
+    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<BoosterState>> {
+        BOOSTER_STATE.may_load(storage)
     }
 
     pub fn remove(storage: &mut dyn Storage) {
@@ -302,6 +308,7 @@ pub struct Participation {
     pub actor_address: Addr,
     pub referrer_address: Option<Addr>,
     pub rewards: Vec<(Denom, Uint128)>,
+    pub participated_at: Timestamp,
 
     // booster state
     pub booster_rewards: Uint128,
@@ -352,11 +359,11 @@ impl Participation {
 
 pub fn load_valkyrie_config(
     querier: &QuerierWrapper,
-    governance: &Addr,
-) -> StdResult<ValkyrieConfigResponse> {
+    factory: &Addr,
+) -> StdResult<CampaignConfigResponse> {
     querier.query_wasm_smart(
-        governance,
-        &valkyrie::governance::query_msgs::QueryMsg::ValkyrieConfig {},
+        factory,
+        &valkyrie::factory::query_msgs::QueryMsg::CampaignConfig {},
     )
 }
 

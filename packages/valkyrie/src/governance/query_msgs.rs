@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +35,9 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
-    ValkyrieConfig {},
+    Unstaking {
+        address: String,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -45,7 +47,7 @@ pub struct ContractConfigResponse {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct StakingConfigResponse {
-    pub withdraw_delay: Uint64,
+    pub withdraw_delay: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -58,6 +60,16 @@ pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
     pub votes: Vec<(u64, VoteInfoMsg)>,
+}
+
+impl Default for StakerStateResponse {
+    fn default() -> Self {
+        StakerStateResponse {
+            balance: Uint128::zero(),
+            share: Uint128::zero(),
+            votes: vec![],
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -87,6 +99,7 @@ pub struct PollResponse {
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
     pub no_votes: Uint128,
+    pub abstain_votes: Uint128,
     pub end_height: u64,
     pub status: PollStatus,
     pub staked_amount: Option<Uint128>,
@@ -116,13 +129,17 @@ pub struct VotersResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigResponse {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
+pub struct VotingPowerResponse {
+    pub voting_power: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct VotingPowerResponse {
-    pub voting_power: Decimal,
+pub struct UnstakingResponse {
+    pub items: Vec<UnstakingItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct UnstakingItem {
+    pub unlock_block: u64,
+    pub amount: Uint128,
 }

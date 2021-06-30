@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
-use valkyrie::distributor::execute_msgs::{ExecuteMsg, InstantiateMsg};
+use valkyrie::distributor::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::distributor::query_msgs::QueryMsg;
 
 use crate::{
@@ -31,6 +31,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
+//TODO: 받은 token 중 token contract 가 아닌건들은 terraswap을 통해서 token contract 로 전환 필요
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
@@ -51,6 +52,11 @@ pub fn execute(
             update_booster_config(deps, env, info, booster_config)
         }
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

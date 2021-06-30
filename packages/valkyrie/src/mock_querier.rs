@@ -3,17 +3,16 @@ use cosmwasm_std::{
     from_slice, to_binary, Api, CanonicalAddr, Coin, ContractResult, Decimal,
     OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
-use cosmwasm_storage::to_length_prefixed;
 use std::collections::HashMap;
 
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
+pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
+
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
-pub fn mock_dependencies(
-    contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+pub fn custom_deps(contract_balance: &[Coin]) -> CustomDeps {
     let custom_querier = WasmMockQuerier::new(
         MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]),
     );
@@ -196,6 +195,8 @@ impl WasmMockQuerier {
     }
 }
 
+const ZERO: Uint128 = Uint128::zero();
+
 impl WasmMockQuerier {
     pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
         WasmMockQuerier {
@@ -210,6 +211,42 @@ impl WasmMockQuerier {
         self.token_querier = TokenQuerier::new(balances);
     }
 
+    pub fn plus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
+        for (token_contract, balances) in balances.iter() {
+            let token_contract = token_contract.to_string();
+
+            if !self.token_querier.balances.contains_key(&token_contract) {
+                self.token_querier.balances.insert(token_contract.clone(), HashMap::new());
+            }
+            let token_balances = self.token_querier.balances.get_mut(&token_contract).unwrap();
+
+            for (account, balance) in balances.iter() {
+                let account = account.to_string();
+                let account_balance = token_balances.get(&account).unwrap_or(&ZERO);
+                let new_balance = *account_balance + *balance;
+                token_balances.insert(account, new_balance);
+            }
+        }
+    }
+
+    pub fn minus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
+        for (token_contract, balances) in balances.iter() {
+            let token_contract = token_contract.to_string();
+
+            if !self.token_querier.balances.contains_key(&token_contract) {
+                self.token_querier.balances.insert(token_contract.clone(), HashMap::new());
+            }
+            let token_balances = self.token_querier.balances.get_mut(&token_contract).unwrap();
+
+            for (account, balance) in balances.iter() {
+                let account = account.to_string();
+                let account_balance = token_balances.get(&account).unwrap_or(&ZERO);
+                let new_balance = account_balance.checked_sub(**balance).unwrap();
+                token_balances.insert(account, new_balance);
+            }
+        }
+    }
+
     // configure the token owner mock querier
     pub fn with_tax(&mut self, rate: Decimal, caps: &[(&str, &Uint128)]) {
         self.tax_querier = TaxQuerier::new(rate, caps);
@@ -220,4 +257,21 @@ impl WasmMockQuerier {
     //         self.base.update_balance(addr, balance.to_vec());
     //     }
     // }
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn to_length_prefixed(namespace: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(namespace.len() + 2);
+    out.extend_from_slice(&encode_length(namespace));
+    out.extend_from_slice(namespace);
+    out
+}
+
+// Copy from cosmwasm-storage v0.14.1
+fn encode_length(namespace: &[u8]) -> [u8; 2] {
+    if namespace.len() > 0xFFFF {
+        panic!("only supports namespaces up to length 0xFFFF")
+    }
+    let length_bytes = (namespace.len() as u32).to_be_bytes();
+    [length_bytes[2], length_bytes[3]]
 }

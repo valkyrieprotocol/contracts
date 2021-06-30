@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, QuerierWrapper, StdResult};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -35,7 +35,7 @@ impl Denom {
         querier: &QuerierWrapper,
         api: &dyn Api,
         address: Addr,
-    ) -> StdResult<u128> {
+    ) -> StdResult<Uint128> {
         query_balance(querier, api, self.to_cw20(api), address)
     }
 }

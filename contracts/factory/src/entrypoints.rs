@@ -4,7 +4,7 @@ use cw20::Cw20ReceiveMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
-use valkyrie::factory::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
+use valkyrie::factory::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::factory::query_msgs::QueryMsg;
 
 use crate::states::is_token_contract;
@@ -32,10 +32,20 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateConfig {
+        ExecuteMsg::UpdateFactoryConfig {
             campaign_code_id,
             creation_fee_amount,
-        } => crate::executions::update_config(deps, env, info, campaign_code_id, creation_fee_amount),
+        } => crate::executions::update_factory_config(deps, env, info, campaign_code_id, creation_fee_amount),
+        ExecuteMsg::UpdateCampaignConfig {
+            reward_withdraw_burn_rate,
+            campaign_deactivate_period,
+        } => crate::executions::update_campaign_config(
+            deps,
+            env,
+            info,
+            reward_withdraw_burn_rate,
+            campaign_deactivate_period,
+        )
     }
 }
 
@@ -50,12 +60,24 @@ pub fn receive_cw20(
     }
 
     match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::CreateCampaign { init_msg }) => crate::executions::create_campaign(
+        Ok(Cw20HookMsg::CreateCampaign {
+               title,
+               url,
+               description,
+               parameter_key,
+               distribution_denom,
+               distribution_amounts,
+           }) => crate::executions::create_campaign(
             deps,
             env,
             cw20_msg.sender,
             cw20_msg.amount,
-            init_msg,
+            title,
+            url,
+            description,
+            parameter_key,
+            distribution_denom,
+            distribution_amounts,
         ),
         Err(err) => Err(ContractError::Std(err)),
     }
@@ -70,18 +92,26 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(
     deps: Deps,
     env: Env,
     msg: QueryMsg,
 ) -> ContractResult<Binary> {
     let result = match msg {
-        QueryMsg::Config {} => to_binary(
-            &crate::queries::get_config(deps, env)?
+        QueryMsg::FactoryConfig {} => to_binary(
+            &crate::queries::get_factory_config(deps, env)?
+        ),
+        QueryMsg::CampaignConfig {} => to_binary(
+            &crate::queries::get_campaign_config(deps, env)?
         ),
         QueryMsg::Campaign { address } => to_binary(
             &crate::queries::get_campaign(deps, env, address)?
-        )
+        ),
     }?;
 
     Ok(result)

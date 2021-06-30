@@ -5,7 +5,7 @@ use crate::states::{BoosterState, CampaignState, ContractConfig, Participation};
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{
     attr, from_binary, to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, StdError,
-    Uint128, Uint64, WasmMsg,
+    Uint128, WasmMsg,
 };
 
 use cw20::Denom as Cw20Denom;
@@ -23,6 +23,8 @@ const MOCK_CREATOR: &str = "creator";
 const MOCK_GOVERNANCE: &str = "governance";
 const MOCK_DISTRIBUTOR: &str = "distributor";
 const MOCK_TOKEN_CONTRACT: &str = "valkyrie";
+const MOCK_FACTORY: &str = "factory";
+const MOCK_BURN_CONTRACT: &str = "burn";
 const MOCK_TITLE: &str = "campaign_title";
 const MOCK_URL: &str = "campaign_url";
 const MOCK_DESCRIPTION: &str = "campaign_description";
@@ -35,6 +37,8 @@ fn init(deps: DepsMut) {
         governance: MOCK_GOVERNANCE.to_string(),
         distributor: MOCK_DISTRIBUTOR.to_string(),
         token_contract: MOCK_TOKEN_CONTRACT.to_string(),
+        factory: MOCK_FACTORY.to_string(),
+        burn_contract: MOCK_BURN_CONTRACT.to_string(),
         title: MOCK_TITLE.to_string(),
         url: MOCK_URL.to_string(),
         description: MOCK_DESCRIPTION.to_string(),
@@ -65,7 +69,7 @@ fn proper_initialization() {
     let campaign_state: CampaignStateResponse = from_binary(&query_res).unwrap();
     assert_eq!(
         CampaignStateResponse {
-            participation_count: Uint64::zero(),
+            participation_count: 0u64,
             cumulative_distribution_amount: Uint128::zero(),
             locked_balance: Uint128::zero(),
             balance: Uint128::zero(),
@@ -85,7 +89,6 @@ fn proper_initialization() {
             parameter_key: MOCK_PARAMETER_KEY.to_string(),
             creator: MOCK_CREATOR.to_string(),
             created_at: env.block.time,
-            created_block: Uint64::from(env.block.height),
         },
         campaign_info
     );
@@ -134,7 +137,6 @@ fn update_campaign_info() {
     assert_eq!(MOCK_PARAMETER_KEY, campaign_info.parameter_key);
     assert_eq!(MOCK_CREATOR, campaign_info.creator);
     assert_eq!(env.block.time, campaign_info.created_at);
-    assert_eq!(env.block.height, campaign_info.created_block.u64());
 }
 
 #[test]
@@ -228,7 +230,7 @@ fn withdraw_reward_at_pending() {
     );
 
     deps.querier
-        .with_valkyrie_config(Uint64::from(100u64), Decimal::percent(10), "burn");
+        .with_valkyrie_config(100u64, Decimal::percent(10));
 
     // unauthorized
     let msg = ExecuteMsg::WithdrawReward {
@@ -306,7 +308,7 @@ fn withdraw_reward_at_active() {
     );
 
     deps.querier
-        .with_valkyrie_config(Uint64::from(100u64), Decimal::percent(10), "burn");
+        .with_valkyrie_config(100u64, Decimal::percent(10));
 
     // unauthorized
     let msg = ExecuteMsg::WithdrawReward {
@@ -351,7 +353,7 @@ fn withdraw_reward_at_active() {
     assert_eq!(
         vec![
             CosmosMsg::Bank(BankMsg::Send {
-                to_address: "burn".to_string(),
+                to_address: MOCK_BURN_CONTRACT.to_string(),
                 amount: vec![Coin {
                     amount: Uint128::from(908090910u128),
                     denom: "uusd".to_string()
@@ -375,6 +377,7 @@ fn claim_reward() {
         denom: "uusd".to_string(),
         amount: Uint128::from(10000000000u128),
     }]);
+    let env = mock_env();
 
     init(deps.as_mut());
     activate(deps.as_mut());
@@ -397,13 +400,13 @@ fn claim_reward() {
         actor_address: Addr::unchecked("addr0000"),
         referrer_address: None,
         rewards: vec![(denom, Uint128::from(10000000u128))],
+        participated_at: env.block.time.clone(),
         booster_rewards: Uint128::from(1000000u128),
         drop_booster_claimable: false,
     };
 
     participation.save(&mut deps.storage).unwrap();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::ClaimReward {};
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
@@ -453,6 +456,7 @@ fn claim_reward_with_drop_booster() {
         denom: "uusd".to_string(),
         amount: Uint128::from(10000000000u128),
     }]);
+    let env = mock_env();
 
     init(deps.as_mut());
     activate(deps.as_mut());
@@ -479,6 +483,7 @@ fn claim_reward_with_drop_booster() {
         activity_booster_left_amount: Uint128::zero(),
         plus_booster_amount: Uint128::zero(),
         plus_booster_left_amount: Uint128::zero(),
+        boosted_at: env.block.time.clone().minus_seconds(60),
     };
     booster_state.save(&mut deps.storage).unwrap();
 
@@ -486,13 +491,13 @@ fn claim_reward_with_drop_booster() {
         actor_address: Addr::unchecked("addr0000"),
         referrer_address: None,
         rewards: vec![(denom, Uint128::from(10000000u128))],
+        participated_at: env.block.time.clone(),
         booster_rewards: Uint128::from(1000000u128),
         drop_booster_claimable: true,
     };
 
     participation.save(&mut deps.storage).unwrap();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::ClaimReward {};
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
@@ -549,6 +554,7 @@ fn participate() {
         denom: "uusd".to_string(),
         amount: Uint128::from(10000000000u128),
     }]);
+    let env = mock_env();
 
     init(deps.as_mut());
 
@@ -573,6 +579,7 @@ fn participate() {
         actor_address: Addr::unchecked("addr0000"),
         referrer_address: None,
         rewards: vec![(denom, Uint128::from(10000000u128))],
+        participated_at: env.block.time.clone(),
         booster_rewards: Uint128::from(1000000u128),
         drop_booster_claimable: false,
     };
@@ -581,7 +588,7 @@ fn participate() {
     assert_eq!(
         execute(
             deps.as_mut(),
-            mock_env(),
+            env.clone(),
             mock_info("addr0000", &[]),
             ExecuteMsg::Participate {
                 referrer: Some(Referrer::Address("addr0001".to_string())),
@@ -598,7 +605,7 @@ fn participate() {
 
     let res = execute(
         deps.as_mut(),
-        mock_env(),
+        env.clone(),
         mock_info("addr0001", &[]),
         ExecuteMsg::Participate {
             referrer: Some(Referrer::Address("addr0000".to_string())),
@@ -624,7 +631,7 @@ fn participate() {
             distributions: vec![
                 Distribution {
                     address: "addr0001".to_string(),
-                    distance: Uint64::from(0u64),
+                    distance: 0u64,
                     rewards: vec![(
                         Denom::Native("uusd".to_string()),
                         Uint128::from(100000000u128)
@@ -632,7 +639,7 @@ fn participate() {
                 },
                 Distribution {
                     address: "addr0000".to_string(),
-                    distance: Uint64::from(1u64),
+                    distance: 1u64,
                     rewards: vec![(
                         Denom::Native("uusd".to_string()),
                         Uint128::from(80000000u128)
@@ -663,6 +670,7 @@ fn participate_with_booster() {
         denom: "uusd".to_string(),
         amount: Uint128::from(10000000000u128),
     }]);
+    let env = mock_env();
 
     init(deps.as_mut());
 
@@ -687,6 +695,7 @@ fn participate_with_booster() {
         actor_address: Addr::unchecked("addr0000"),
         referrer_address: None,
         rewards: vec![(denom, Uint128::from(10000000u128))],
+        participated_at: env.block.time.clone(),
         booster_rewards: Uint128::from(1000000u128),
         drop_booster_claimable: false,
     };
@@ -695,7 +704,7 @@ fn participate_with_booster() {
     assert_eq!(
         execute(
             deps.as_mut(),
-            mock_env(),
+            env.clone(),
             mock_info("addr0000", &[]),
             ExecuteMsg::Participate {
                 referrer: Some(Referrer::Address("addr0001".to_string())),
@@ -715,6 +724,7 @@ fn participate_with_booster() {
         activity_booster_left_amount: Uint128::from(800000000u128),
         plus_booster_amount: Uint128::from(100000000u128),
         plus_booster_left_amount: Uint128::from(100000000u128),
+        boosted_at: env.block.time.clone().minus_seconds(60),
     };
     booster_state.save(&mut deps.storage).unwrap();
 
@@ -750,7 +760,7 @@ fn participate_with_booster() {
             distributions: vec![
                 Distribution {
                     address: "addr0001".to_string(),
-                    distance: Uint64::from(0u64),
+                    distance: 0u64,
                     rewards: vec![
                         (
                             Denom::Native("uusd".to_string()),
@@ -764,7 +774,7 @@ fn participate_with_booster() {
                 },
                 Distribution {
                     address: "addr0000".to_string(),
-                    distance: Uint64::from(1u64),
+                    distance: 1u64,
                     rewards: vec![
                         (
                             Denom::Native("uusd".to_string()),
@@ -798,6 +808,7 @@ fn participate_with_booster() {
             activity_booster_left_amount: Uint128::from(799200000u128),
             plus_booster_amount: Uint128::from(100000000u128),
             plus_booster_left_amount: Uint128::from(99000000u128),
+            boosted_at: env.block.time.clone().minus_seconds(60),
         }
     );
 }
@@ -808,6 +819,7 @@ fn register_booster() {
         denom: "uusd".to_string(),
         amount: Uint128::from(10000000000u128),
     }]);
+    let env = mock_env();
 
     init(deps.as_mut());
 
@@ -828,7 +840,7 @@ fn register_booster() {
 
     let res = execute(
         deps.as_mut(),
-        mock_env(),
+        env.clone(),
         mock_info(MOCK_DISTRIBUTOR, &[]),
         msg,
     )
@@ -854,6 +866,7 @@ fn register_booster() {
             activity_booster_left_amount: Uint128::from(2000000u128),
             plus_booster_amount: Uint128::from(3000000u128),
             plus_booster_left_amount: Uint128::from(3000000u128),
+            boosted_at: env.block.time,
         }
     )
 }

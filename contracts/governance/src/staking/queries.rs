@@ -1,10 +1,8 @@
-use cosmwasm_std::{Decimal, Deps, Env, Uint64};
+use cosmwasm_std::{Decimal, Deps, Env};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
-use valkyrie::governance::query_msgs::{
-    StakerStateResponse, StakingConfigResponse, StakingStateResponse, VotingPowerResponse,
-};
+use valkyrie::governance::query_msgs::{StakerStateResponse, StakingConfigResponse, StakingStateResponse, VotingPowerResponse, UnstakingResponse, UnstakingItem};
 
 use crate::common::states::load_contract_available_balance;
 use crate::staking::states::StakingConfig;
@@ -15,7 +13,7 @@ pub fn get_staking_config(deps: Deps, _env: Env) -> ContractResult<StakingConfig
     let staking_config = StakingConfig::load(deps.storage)?;
 
     Ok(StakingConfigResponse {
-        withdraw_delay: Uint64::from(staking_config.withdraw_delay),
+        withdraw_delay: staking_config.withdraw_delay,
     })
 }
 
@@ -33,7 +31,13 @@ pub fn get_staker_state(
     address: String,
 ) -> ContractResult<StakerStateResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let mut staker_state = StakerState::load(deps.storage, &address)?;
+    let staker_state = StakerState::may_load(deps.storage, &address)?;
+
+    if staker_state.is_none() {
+        return Ok(StakerStateResponse::default())
+    }
+
+    let mut staker_state = staker_state.unwrap();
 
     let contract_available_balance = load_contract_available_balance(deps.clone())?;
     let balance = staker_state.load_balance(deps.storage, contract_available_balance)?;
@@ -72,5 +76,31 @@ pub fn get_voting_power(
 
     Ok(VotingPowerResponse {
         voting_power: Decimal::from_ratio(staker_state.share, staking_state.total_share),
+    })
+}
+
+pub fn get_unstaking(
+    deps: Deps,
+    _env: Env,
+    address: String,
+) -> ContractResult<UnstakingResponse> {
+    let address = deps.api.addr_validate(address.as_str())?;
+
+    let mut unstaking_items: Vec<UnstakingItem> = vec![];
+
+    let staker_state = StakerState::may_load(deps.storage, &address)?;
+    if let Some(staker_state) = staker_state {
+        for (unlock_block, amount) in staker_state.unstaking_amounts {
+            unstaking_items.push(
+                UnstakingItem {
+                    unlock_block,
+                    amount,
+                }
+            )
+        }
+    }
+
+    Ok(UnstakingResponse {
+        items: unstaking_items,
     })
 }
