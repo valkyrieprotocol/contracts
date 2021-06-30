@@ -10,6 +10,7 @@ pub mod cw20;
 pub mod terra;
 pub mod utils;
 pub mod message_factories;
+pub mod message_matchers;
 
 #[cfg(feature = "mock_querier")]
 pub mod mock_querier;

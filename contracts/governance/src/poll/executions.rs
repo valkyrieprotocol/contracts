@@ -73,10 +73,12 @@ pub fn update_poll_config(
     let mut poll_config = PollConfig::load(deps.storage)?;
 
     if let Some(quorum) = quorum {
+        validate_quorum(quorum)?;
         poll_config.quorum = quorum;
     }
 
     if let Some(threshold) = threshold {
+        validate_threshold(threshold)?;
         poll_config.threshold = threshold;
     }
 
@@ -119,6 +121,11 @@ pub fn create_poll(
     validate_description(&description)?;
     validate_link(&link)?;
 
+    let config = ContractConfig::load(deps.storage)?;
+    if !config.is_token_contract(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let poll_config = PollConfig::load(deps.storage)?;
     if deposit_amount < poll_config.proposal_deposit {
         return Err(ContractError::Std(StdError::generic_err(
@@ -135,7 +142,7 @@ pub fn create_poll(
 
     let mut poll = Poll {
         id: get_poll_id(deps.storage, &deposit_amount)?,
-        creator: proposer,
+        creator: proposer.clone(),
         status: PollStatus::InProgress,
         yes_votes: Uint128::zero(),
         no_votes: Uint128::zero(),
@@ -160,7 +167,7 @@ pub fn create_poll(
             messages: vec![],
             attributes: vec![
                 attr("action", "create_poll"),
-                attr("creator", info.sender.as_str()),
+                attr("creator", proposer.as_str()),
                 attr("poll_id", poll.id.to_string()),
                 attr("end_height", poll.end_height),
             ],
@@ -198,7 +205,7 @@ pub fn cast_vote(
     let contract_available_balance = load_contract_available_balance(deps.as_ref())?;
     let mut staker_state = StakerState::load_safe(deps.storage, &info.sender)?;
 
-    if staker_state.can_vote(deps.storage, contract_available_balance, amount)? {
+    if !staker_state.can_vote(deps.storage, contract_available_balance, amount)? {
         return Err(ContractError::Std(StdError::generic_err("User does not have enough staked tokens.")));
     }
 
@@ -315,7 +322,7 @@ pub fn execute_poll(
 
     let mut executions = poll.executions.unwrap_or(vec![]);
     if executions.is_empty() {
-        return Err(ContractError::Std(StdError::generic_err("The poll does now have executions")));
+        return Err(ContractError::Std(StdError::generic_err("The poll does not have executions")));
     }
 
     // Execute
@@ -361,7 +368,7 @@ pub fn reply_execution(
     let mut poll_execution_context = PollExecutionContext::load(deps.storage)?;
     let mut poll = Poll::load(deps.storage, &poll_execution_context.poll_id)?;
 
-    poll.status = if msg.result.is_ok() {
+    poll.status = if poll.status != PollStatus::Failed && msg.result.is_ok() {
         PollStatus::Executed
     } else {
         PollStatus::Failed
@@ -398,7 +405,7 @@ pub fn snapshot_poll(
     let staked_amount = poll.snapshot_staked_amount(
         deps.storage,
         env.block.height,
-        contract_available_balance
+        contract_available_balance,
     )?;
     poll.save(deps.storage)?;
 

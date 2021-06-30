@@ -218,8 +218,8 @@ impl Poll {
     pub fn snapshot_staked_amount(&mut self, storage: &dyn Storage, block_height: u64, contract_available_balance: Uint128) -> StdResult<Uint128> {
         let poll_config = PollConfig::load(storage)?;
 
-        let remain_to_end = self.end_height - block_height;
-        if remain_to_end >= poll_config.snapshot_period {
+        let remain_to_end: i128 = self.end_height as i128 - block_height as i128;
+        if remain_to_end >= poll_config.snapshot_period as i128 {
             return Err(StdError::generic_err("Cannot snapshot at this height"));
         }
 
@@ -324,6 +324,10 @@ impl PollExecutionContext {
 
     pub fn load(storage: &dyn Storage) -> StdResult<PollExecutionContext> {
         POLL_EXECUTION_TEMP.load(storage)
+    }
+
+    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<PollExecutionContext>> {
+        POLL_EXECUTION_TEMP.may_load(storage)
     }
 
     pub fn clear(storage: &mut dyn Storage) {

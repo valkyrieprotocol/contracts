@@ -68,6 +68,10 @@ pub fn env_plus_height(env: &mut Env, amount: i64) {
     }
 }
 
+pub fn env_set_height(env: &mut Env, height: u64) {
+    env_plus_height(env, (height - env.block.height) as i64)
+}
+
 pub fn default_info() -> MessageInfo {
     mock_info(DEFAULT_SENDER, &[])
 }
