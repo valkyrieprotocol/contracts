@@ -11,8 +11,6 @@ use valkyrie::errors::ContractError;
 use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::governance::query_msgs::QueryMsg;
 
-use crate::common::states::ContractConfig;
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -103,12 +101,6 @@ pub fn receive_cw20(
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
-    // only asset contract can execute this message
-    let config = ContractConfig::load(deps.storage)?;
-    if !config.is_token_contract(&info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::StakeVotingToken {}) => crate::staking::executions::stake_voting_token(
             deps,

@@ -90,7 +90,7 @@ pub fn get_unstaking(
 
     let staker_state = StakerState::may_load(deps.storage, &address)?;
     if let Some(staker_state) = staker_state {
-        for (unlock_block, amount) in staker_state.withdraw_unstaked_amounts {
+        for (unlock_block, amount) in staker_state.unstaking_amounts {
             unstaking_items.push(
                 UnstakingItem {
                     unlock_block,
