@@ -61,6 +61,15 @@ impl CampaignInfo {
         })
     }
 
+    pub fn may_load(storage: &dyn Storage, address: &Addr) -> StdResult<Option<CampaignInfo>> {
+        Ok(CAMPAIGN.may_load(storage, address)?.map(|spend_limit| {
+            CampaignInfo {
+                campaign: address.clone(),
+                spend_limit,
+            }
+        }))
+    }
+
     pub fn query(
         storage: &dyn Storage,
         start_after: Option<String>,

@@ -69,3 +69,33 @@ pub fn expect_unauthorized_err(result: &ContractResult<Response>) {
         Err(e) => panic!("Unexpected error: {:?}", e),
     }
 }
+
+pub fn expect_already_exists_err(result: &ContractResult<Response>) {
+    match result {
+        Ok(_) => panic!("Must return error"),
+        Err(ContractError::AlreadyExists {}) => {
+            // do nothing
+        },
+        Err(e) => panic!("Unexpected error: {:?}", e),
+    }
+}
+
+pub fn expect_not_found_err(result: &ContractResult<Response>) {
+    match result {
+        Ok(_) => panic!("Must return error"),
+        Err(ContractError::NotFound {}) => {
+            // do nothing
+        },
+        Err(e) => panic!("Unexpected error: {:?}", e),
+    }
+}
+
+pub fn expect_exceed_limit_err(result: &ContractResult<Response>) {
+    match result {
+        Ok(_) => panic!("Must return error"),
+        Err(ContractError::ExceedLimit {}) => {
+            // do nothing
+        },
+        Err(e) => panic!("Unexpected error: {:?}", e),
+    }
+}

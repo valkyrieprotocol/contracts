@@ -5,10 +5,28 @@ use cw20::Cw20ExecuteMsg;
 
 use valkyrie::campaign::execute_msgs::ExecuteMsg as CampaignExecuteMsg;
 use valkyrie::common::ContractResult;
-use valkyrie::distributor::execute_msgs::BoosterConfig;
+use valkyrie::distributor::execute_msgs::{BoosterConfig, InstantiateMsg};
 use valkyrie::errors::ContractError;
 
 use crate::states::{CampaignInfo, ContractConfig};
+
+pub fn instantiate(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> ContractResult<Response> {
+    let config = ContractConfig {
+        governance: deps.api.addr_validate(&msg.governance)?,
+        token_contract: deps.api.addr_validate(&msg.token_contract)?,
+        booster_config: msg.booster_config,
+    };
+
+    config.booster_config.validate()?;
+    config.save(deps.storage)?;
+
+    Ok(Response::default())
+}
 
 pub fn update_booster_config(
     deps: DepsMut,
