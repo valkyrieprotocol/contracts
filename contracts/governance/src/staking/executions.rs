@@ -121,6 +121,7 @@ pub fn unstake_voting_token(
         return Err(ContractError::Std(StdError::generic_err("Nothing staked")));
     }
 
+    let staking_config = StakingConfig::load(deps.storage)?;
     let mut staker_state = staker_state.unwrap();
     let mut staking_state = StakingState::load(deps.storage)?;
 
@@ -150,8 +151,10 @@ pub fn unstake_voting_token(
         )));
     }
 
+    let unlock_block = env.block.height + staking_config.withdraw_delay;
+
     staker_state.share = user_share.checked_sub(withdraw_share)?;
-    staker_state.unstaking_amounts.push((env.block.height, withdraw_amount));
+    staker_state.unstaking_amounts.push((unlock_block, withdraw_amount));
     staker_state.save(deps.storage)?;
 
     staking_state.total_share = total_share.checked_sub(withdraw_share)?;

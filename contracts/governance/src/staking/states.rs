@@ -131,13 +131,11 @@ impl StakerState {
     }
 
     pub fn withdraw_unstaked(&mut self, storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
-        let config = StakingConfig::load(storage).unwrap();
-
         let mut pending: Vec<(u64, Uint128)> = vec![];
         let mut withdrawable: Vec<(u64, Uint128)> = vec![];
 
         for each in self.unstaking_amounts.iter() {
-            if block_height > each.0 + config.withdraw_delay {
+            if block_height > each.0 {
                 withdrawable.push(*each)
             } else {
                 pending.push(*each)
