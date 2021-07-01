@@ -8,14 +8,15 @@ use valkyrie::utils::parse_uint128;
 use crate::staking::executions::unstake_voting_token;
 use crate::staking::states::{StakerState, StakingState};
 use crate::staking::tests::stake::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
-use crate::tests::{default_env, default_info, expect_generic_err, init_default, TOKEN_CONTRACT};
+use crate::tests::{init_default, TOKEN_CONTRACT};
+use valkyrie::test_utils::{contract_env, expect_generic_err, default_sender};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, amount: Option<Uint128>) -> ContractResult<Response> {
     unstake_voting_token(deps.as_mut(), env, info, amount)
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Option<Uint128>) -> (Env, MessageInfo, Response) {
-    let env = default_env();
+    let env = contract_env();
     let info = mock_info(staker, &[]);
 
     let response = exec(
@@ -88,7 +89,7 @@ fn failed_overflow() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(STAKER1, &[]),
         Some(STAKER1_STAKE_AMOUNT + Uint128(1)),
     );
@@ -104,8 +105,8 @@ fn failed_no_staked() {
 
     let result = exec(
         &mut deps,
-        default_env(),
-        default_info(),
+        contract_env(),
+        default_sender(),
         None,
     );
 

@@ -1,12 +1,14 @@
 use cosmwasm_std::{Env, MessageInfo, Response};
+use cosmwasm_std::testing::mock_env;
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::execute_msgs::ContractConfigInitMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_utils::default_sender;
 
 use crate::common::executions;
 use crate::common::states::ContractConfig;
-use crate::tests::{default_env, default_info, TOKEN_CONTRACT};
+use crate::tests::TOKEN_CONTRACT;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, token_contract: String) -> ContractResult<Response> {
     let msg = ContractConfigInitMsg {
@@ -18,8 +20,8 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, token_contract: 
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = default_env();
-    let info = default_info();
+    let env = mock_env();
+    let info = default_sender();
 
     let response = exec(
         deps,

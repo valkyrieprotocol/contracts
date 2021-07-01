@@ -36,3 +36,5 @@ target/
 artifacts/
 **/*.rs.bk
 *.pdb
+
+bin/

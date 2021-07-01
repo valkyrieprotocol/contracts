@@ -1,12 +1,14 @@
 use cosmwasm_std::{Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::testing::mock_env;
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::execute_msgs::StakingConfigInitMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_utils::default_sender;
 
 use crate::staking::executions::instantiate;
 use crate::staking::states::{StakingConfig, StakingState};
-use crate::tests::{default_env, default_info, WITHDRAW_DELAY};
+use crate::tests::WITHDRAW_DELAY;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, withdraw_delay: u64) -> ContractResult<Response> {
     let msg = StakingConfigInitMsg {
@@ -17,8 +19,8 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, withdraw_delay: 
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = default_env();
-    let info = default_info();
+    let env = mock_env();
+    let info = default_sender();
 
     let response = exec(
         deps,

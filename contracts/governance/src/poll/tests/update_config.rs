@@ -2,9 +2,10 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Decimal, Uint128, Response};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::update_poll_config;
-use crate::tests::{default_env, init_default, POLL_QUORUM_PERCENT, POLL_THRESHOLD_PERCENT, POLL_VOTING_PERIOD, POLL_EXECUTION_DELAY_PERIOD, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD, expect_generic_err, expect_unauthorized_err, default_info};
+use crate::tests::{init_default, POLL_QUORUM_PERCENT, POLL_THRESHOLD_PERCENT, POLL_VOTING_PERIOD, POLL_EXECUTION_DELAY_PERIOD, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
 use crate::poll::states::PollConfig;
 use cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
+use valkyrie::test_utils::{contract_env, expect_generic_err, default_sender, expect_unauthorized_err};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -39,7 +40,7 @@ pub fn will_success(
     proposal_deposit: Option<Uint128>,
     snapshot_period: Option<u64>,
 ) -> (Env, MessageInfo, Response) {
-    let env = default_env();
+    let env = contract_env();
     let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
 
     let response = exec(
@@ -103,7 +104,7 @@ fn failed_invalid_threshold() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(MOCK_CONTRACT_ADDR, &[]),
         Some(Decimal::percent(101)),
         Some(Decimal::percent(POLL_THRESHOLD_PERCENT)),
@@ -124,7 +125,7 @@ fn failed_invalid_quorum() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(MOCK_CONTRACT_ADDR, &[]),
         Some(Decimal::percent(POLL_QUORUM_PERCENT)),
         Some(Decimal::percent(101)),
@@ -145,8 +146,8 @@ fn failed_invalid_permission() {
 
     let result = exec(
         &mut deps,
-        default_env(),
-        default_info(),
+        contract_env(),
+        default_sender(),
         None,
         None,
         None,

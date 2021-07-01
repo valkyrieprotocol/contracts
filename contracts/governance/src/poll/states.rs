@@ -326,6 +326,7 @@ impl PollExecutionContext {
         POLL_EXECUTION_TEMP.load(storage)
     }
 
+    #[cfg(test)]
     pub fn may_load(storage: &dyn Storage) -> StdResult<Option<PollExecutionContext>> {
         POLL_EXECUTION_TEMP.may_load(storage)
     }

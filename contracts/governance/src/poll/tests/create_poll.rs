@@ -9,7 +9,8 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
 use crate::poll::executions::create_poll;
 use crate::poll::states::{Execution, Poll};
-use crate::tests::{default_env, default_info, expect_generic_err, expect_unauthorized_err, init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, TOKEN_CONTRACT};
+use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, TOKEN_CONTRACT};
+use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
 
 pub const PROPOSER1: &str = "Proposer1";
 
@@ -55,7 +56,7 @@ pub fn will_success(
     link: Option<&str>,
     execution_msgs: Option<Vec<ExecutionMsg>>,
 ) -> (Env, MessageInfo, Response) {
-    let env = default_env();
+    let env = contract_env();
     let info = mock_info(TOKEN_CONTRACT, &[]);
 
     let response = exec(
@@ -155,8 +156,8 @@ fn failed_invalid_permission() {
 
     let result = exec(
         &mut deps,
-        default_env(),
-        default_info(),
+        contract_env(),
+        default_sender(),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         POLL_TITLE.to_string(),
@@ -176,7 +177,7 @@ fn failed_create_poll_invalid_deposit() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT.checked_sub(Uint128(1)).unwrap(),
@@ -200,7 +201,7 @@ fn failed_create_poll_invalid_title() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -213,7 +214,7 @@ fn failed_create_poll_invalid_title() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -233,7 +234,7 @@ fn failed_create_poll_invalid_description() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -246,7 +247,7 @@ fn failed_create_poll_invalid_description() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -266,7 +267,7 @@ fn failed_create_poll_invalid_link() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -279,7 +280,7 @@ fn failed_create_poll_invalid_link() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,

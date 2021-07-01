@@ -2,11 +2,12 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, ReplyOn};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::{execute_poll, REPLY_EXECUTION};
-use crate::tests::{default_env, env_set_height, POLL_EXECUTION_DELAY_PERIOD, default_info, init_default, POLL_PROPOSAL_DEPOSIT, expect_generic_err};
+use crate::tests::{ POLL_EXECUTION_DELAY_PERIOD, init_default, POLL_PROPOSAL_DEPOSIT};
 use crate::poll::states::{Poll, PollExecutionContext};
 use crate::poll::tests::cast_vote::VOTER1;
 use valkyrie::governance::enumerations::VoteOption;
 use crate::poll::tests::create_poll::{PROPOSER1, POLL_TITLE, POLL_DESCRIPTION, POLL_LINK, mock_exec_msg};
+use valkyrie::test_utils::{default_sender, expect_generic_err, contract_env_height};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) -> ContractResult<Response> {
     execute_poll(deps.as_mut(), env, info, poll_id)
@@ -14,10 +15,9 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) ->
 
 pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, Response) {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
+    let env = contract_env_height(poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
 
-    let info = default_info();
+    let info = default_sender();
 
     let response = exec(deps, env.clone(), info.clone(), poll_id).unwrap();
 
@@ -110,13 +110,12 @@ fn failed_not_passed() {
     super::end_poll::will_success(&mut deps, poll_id);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
+    let env = contract_env_height(poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
 
     let result = exec(
         &mut deps,
         env,
-        default_info(),
+        default_sender(),
         poll_id,
     );
 
@@ -154,7 +153,7 @@ fn failed_in_execution_delay() {
     let result = exec(
         &mut deps,
         env,
-        default_info(),
+        default_sender(),
         poll_id,
     );
 
@@ -176,13 +175,12 @@ fn failed_empty_execution() {
     super::end_poll::will_success(&mut deps, poll_id);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
+    let env = contract_env_height(poll.end_height + POLL_EXECUTION_DELAY_PERIOD);
 
     let result = exec(
         &mut deps,
         env,
-        default_info(),
+        default_sender(),
         poll_id,
     );
 

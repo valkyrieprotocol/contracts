@@ -2,7 +2,7 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg, Uint128, attr, to_binary};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::end_poll;
-use crate::tests::{default_env, default_info, init_default, env_set_height, TOKEN_CONTRACT, POLL_PROPOSAL_DEPOSIT, expect_generic_err, POLL_SNAPSHOT_PERIOD};
+use crate::tests::{init_default, TOKEN_CONTRACT, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
 use cw20::Cw20ExecuteMsg;
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
 use crate::poll::states::{Poll, PollResult};
@@ -10,6 +10,7 @@ use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use crate::poll::tests::cast_vote::{VOTER1, VOTER2, VOTER3};
 use valkyrie::message_matchers;
 use crate::poll::tests::create_poll::PROPOSER1;
+use valkyrie::test_utils::{expect_generic_err, default_sender, contract_env_height, contract_env};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) -> ContractResult<Response> {
     let response = end_poll(deps.as_mut(), env, info, poll_id)?;
@@ -30,10 +31,9 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) ->
 
 pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, Response) {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height + 1);
+    let env = contract_env_height(poll.end_height + 1);
 
-    let info = default_info();
+    let info = default_sender();
 
     let response = exec(deps, env.clone(), info.clone(), poll_id).unwrap();
 
@@ -207,8 +207,8 @@ fn failed_before_end_height() {
 
     let result = exec(
         &mut deps,
-        default_env(),
-        default_info(),
+        contract_env(),
+        default_sender(),
         poll_id,
     );
 
@@ -231,8 +231,8 @@ fn failed_quorum_inflation_without_snapshot_poll() {
     crate::staking::tests::stake::will_success(&mut deps, VOTER2, Uint128(1000));
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
+    let env = contract_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
+
     super::cast_vote::exec(
         &mut deps,
         env,

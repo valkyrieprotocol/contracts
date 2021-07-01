@@ -8,18 +8,17 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use crate::staking::executions::withdraw_voting_token;
 use crate::staking::states::StakerState;
 use crate::staking::tests::stake::STAKER1;
-use crate::tests::{default_env, env_plus_height, init_default, WITHDRAW_DELAY};
+use crate::tests::{init_default, WITHDRAW_DELAY};
+use valkyrie::test_utils::{plus_height, contract_env_height};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResult<Response> {
     withdraw_voting_token(deps.as_mut(), env, info)
 }
 
 pub fn will_success(deps: &mut CustomDeps, block_height: u64, staker: &str) -> (Env, MessageInfo, Response) {
-    let mut env = default_env();
+    let env = contract_env_height(block_height);
     let info = mock_info(staker, &[]);
 
-    let height_diff = (block_height - env.block.height) as i64;
-    env_plus_height(&mut env, height_diff);
     let response = exec(deps, env.clone(), info.clone()).unwrap();
 
     (env, info, response)
@@ -40,16 +39,16 @@ fn succeed() {
     let mut env = env.clone();
     let info = mock_info(STAKER1, &[]);
 
-    env_plus_height(&mut env, 2);
+    plus_height(&mut env, 2);
     super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
-    env_plus_height(&mut env, 2);
+    plus_height(&mut env, 2);
     super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
-    env_plus_height(&mut env, 2);
+    plus_height(&mut env, 2);
     super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
-    env_plus_height(&mut env, (WITHDRAW_DELAY - 2) as i64);
+    plus_height(&mut env, WITHDRAW_DELAY - 2);
 
     let mut withdrawable_amount = Uint128::zero();
     let staker_state = StakerState::load(&deps.storage, &Addr::unchecked(STAKER1)).unwrap();

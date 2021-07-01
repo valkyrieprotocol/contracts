@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use crate::tests::{init_default, default_env, POLL_SNAPSHOT_PERIOD, default_info, expect_generic_err, env_set_height};
+use crate::tests::{init_default, POLL_SNAPSHOT_PERIOD};
 use cosmwasm_std::{Uint128, Env, MessageInfo, Response, attr};
 use crate::poll::tests::cast_vote::{VOTER1, VOTER2, VOTER3};
 use valkyrie::governance::enumerations::VoteOption;
@@ -7,6 +7,7 @@ use crate::poll::states::Poll;
 use cosmwasm_std::testing::mock_info;
 use valkyrie::common::ContractResult;
 use crate::poll::executions::snapshot_poll;
+use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, contract_env_height};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -19,10 +20,9 @@ pub fn exec(
 
 pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, Response) {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height - 1);
+    let env = contract_env_height(poll.end_height - 1);
 
-    let info = default_info();
+    let info = default_sender();
 
     let response = exec(deps, env.clone(), info.clone(), poll_id).unwrap();
 
@@ -44,7 +44,7 @@ fn succeed() {
 
     let poll_id = 1;
 
-    let result = exec(&mut deps, default_env(), default_info(), poll_id);
+    let result = exec(&mut deps, contract_env(), default_sender(), poll_id);
     expect_generic_err(&result, "Cannot snapshot at this height");
 
     let (_, _, response) = will_success(&mut deps, poll_id);
@@ -74,8 +74,7 @@ fn succeed_within_cast_vote() {
     super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, voter1_staked_amount);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
+    let env = contract_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
 
     super::cast_vote::exec(
         &mut deps,
@@ -89,7 +88,7 @@ fn succeed_within_cast_vote() {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     assert_eq!(poll.snapped_staked_amount, Some(voter1_staked_amount + voter2_staked_amount));
 
-    let result = exec(&mut deps, env.clone(), default_info(), poll_id);
+    let result = exec(&mut deps, env.clone(), default_sender(), poll_id);
     expect_generic_err(&result, "Snapshot has already occurred");
 
     crate::staking::tests::stake::will_success(&mut deps, VOTER3, voter3_staked_amount);
@@ -122,16 +121,15 @@ fn failed_twice() {
 
     let poll_id = 1;
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let mut env = default_env();
-    env_set_height(&mut env, poll.end_height - 1);
+    let env = contract_env_height(poll.end_height - 1);
 
-    let response = exec(&mut deps, env.clone(), default_info(), poll_id).unwrap();
+    let response = exec(&mut deps, env.clone(), default_sender(), poll_id).unwrap();
     assert_eq!(response.attributes, vec![
         attr("action", "snapshot_poll"),
         attr("poll_id", poll_id.to_string()),
         attr("staked_amount", (voter1_staked_amount + voter2_staked_amount).to_string()),
     ]);
 
-    let result = exec(&mut deps, env, default_info(), poll_id);
+    let result = exec(&mut deps, env, default_sender(), poll_id);
     expect_generic_err(&result, "Snapshot has already occurred");
 }

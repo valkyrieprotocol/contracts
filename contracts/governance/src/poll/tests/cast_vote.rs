@@ -1,12 +1,15 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, Addr};
-use valkyrie::governance::enumerations::VoteOption;
-use valkyrie::common::ContractResult;
-use crate::poll::executions::cast_vote;
-use crate::tests::{default_env, init_default, expect_generic_err};
+use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128};
 use cosmwasm_std::testing::mock_info;
+
+use valkyrie::common::ContractResult;
+use valkyrie::governance::enumerations::VoteOption;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_utils::{contract_env, expect_generic_err};
+
+use crate::poll::executions::cast_vote;
+use crate::poll::states::{Poll, VoteInfo};
 use crate::staking::states::StakerState;
-use crate::poll::states::{VoteInfo, Poll};
+use crate::tests::init_default;
 
 pub const VOTER1: &str = "Voter1";
 pub const VOTER2: &str = "Voter2";
@@ -37,7 +40,7 @@ pub fn will_success(
     option: VoteOption,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
-    let env = default_env();
+    let env = contract_env();
     let info = mock_info(voter, &[]);
 
     let response = exec(
@@ -74,7 +77,7 @@ fn succeed() {
         amount: vote_amount,
     };
 
-        let staker_state = StakerState::load(&deps.storage, &voter_addr).unwrap();
+    let staker_state = StakerState::load(&deps.storage, &voter_addr).unwrap();
     assert_eq!(staker_state.votes, vec![(poll_id, vote_info.clone())]);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
@@ -97,7 +100,7 @@ fn failed_cast_vote_not_enough_staked() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(VOTER1, &[]),
         1,
         VoteOption::Yes,
@@ -120,7 +123,7 @@ fn failed_cast_vote_without_poll() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(VOTER1, &[]),
         0,
         VoteOption::Yes,
@@ -151,7 +154,7 @@ fn failed_cast_vote_twice() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(VOTER1, &[]),
         poll_id,
         VoteOption::Yes,

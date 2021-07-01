@@ -1,10 +1,7 @@
-use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{
-    from_slice, to_binary, Api, CanonicalAddr, Coin, ContractResult, Decimal,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
-};
 use std::collections::HashMap;
 
+use cosmwasm_std::{Api, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery};
+use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
@@ -92,7 +89,7 @@ impl Querier for WasmMockQuerier {
                 return SystemResult::Err(SystemError::InvalidRequest {
                     error: format!("Parsing query request: {}", e),
                     request: bin_request.into(),
-                })
+                });
             }
         };
         self.handle_query(&request)
@@ -126,7 +123,7 @@ impl WasmMockQuerier {
                 } else {
                     panic!("DO NOT ENTER HERE")
                 }
-            },
+            }
             QueryRequest::Wasm(WasmQuery::Raw { contract_addr, key }) => {
                 let key: &[u8] = key.as_slice();
 
@@ -143,7 +140,7 @@ impl WasmMockQuerier {
                                     contract_addr
                                 ),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
 
@@ -173,7 +170,7 @@ impl WasmMockQuerier {
                             return SystemResult::Err(SystemError::InvalidRequest {
                                 error: format!("Parsing query request: {}", e),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
                     let balance = match balances.get(&address) {
@@ -182,14 +179,14 @@ impl WasmMockQuerier {
                             return SystemResult::Err(SystemError::InvalidRequest {
                                 error: "Balance not found".to_string(),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
                     SystemResult::Ok(ContractResult::Ok(to_binary(&balance).unwrap()))
                 } else {
                     panic!("DO NOT ENTER HERE")
                 }
-            },
+            }
             _ => self.base.handle_query(request),
         }
     }

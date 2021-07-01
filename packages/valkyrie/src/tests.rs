@@ -1,11 +1,16 @@
+#[cfg(feature = "testutils")]
 use cosmwasm_std::{Addr, Uint128};
+
+#[cfg(feature = "testutils")]
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 
-use crate::mock_querier::mock_dependencies;
+#[cfg(feature = "testutils")]
+use crate::mock_querier::custom_deps;
 
 #[test]
+#[cfg(feature = "testutils")]
 fn query_cw20_balance() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = custom_deps(&[]);
 
     deps.querier.with_token_balances(&[(
         &"liquidity0000".to_string(),

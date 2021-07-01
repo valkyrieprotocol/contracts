@@ -6,7 +6,8 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
 use crate::staking::executions::stake_voting_token;
 use crate::staking::states::{StakerState, StakingState};
-use crate::tests::{default_env, expect_generic_err, expect_unauthorized_err, init_default, TOKEN_CONTRACT};
+use crate::tests::{init_default, TOKEN_CONTRACT};
+use valkyrie::test_utils::{contract_env, expect_generic_err, expect_unauthorized_err};
 
 pub const STAKER1: &str = "Staker1";
 pub const STAKER1_STAKE_AMOUNT: Uint128 = Uint128(10u128);
@@ -24,7 +25,7 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, sender: Addr, am
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Uint128) -> (Env, MessageInfo, Response) {
-    let env = default_env();
+    let env = contract_env();
     let info = mock_info(TOKEN_CONTRACT, &[]);
 
     let response = exec(
@@ -61,7 +62,7 @@ fn failed_insufficient_funds() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         Addr::unchecked(STAKER1),
         Uint128::zero(),
@@ -78,7 +79,7 @@ fn failed_wrong_token() {
 
     let result = exec(
         &mut deps,
-        default_env(),
+        contract_env(),
         mock_info("Another Token", &[]),
         Addr::unchecked(STAKER1),
         STAKER1_STAKE_AMOUNT,
