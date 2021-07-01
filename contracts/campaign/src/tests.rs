@@ -18,6 +18,7 @@ use valkyrie::campaign::{
 };
 use valkyrie::distributor::execute_msgs::ExecuteMsg as DistributorExecuteMsg;
 use valkyrie::errors::ContractError;
+use valkyrie::test_utils::DEFAULT_SENDER;
 
 const MOCK_CREATOR: &str = "creator";
 const MOCK_GOVERNANCE: &str = "governance";
@@ -48,6 +49,8 @@ fn init(deps: DepsMut) {
             .iter()
             .map(|v| Uint128(*v))
             .collect(),
+        admin: DEFAULT_SENDER.to_string(),
+        creator: DEFAULT_SENDER.to_string(),
     };
 
     let _res = instantiate(deps, mock_env(), mock_info(MOCK_CREATOR, &[]), msg).unwrap();

@@ -93,6 +93,7 @@ pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
 pub fn create_campaign(
     deps: DepsMut,
     env: Env,
+    _info: MessageInfo,
     sender: String,
     amount: Uint128,
     title: String,
@@ -138,13 +139,9 @@ pub fn create_campaign(
         })?,
     );
 
-    //TODO: 별도의 msg 를 함께 보낼 필요는 없으려나?
-
-    //TODO: 수수료 받은게 바로 반영이 안되서 transfer 를 못하는 것 같음
-    //TODO: InvalidArgument desc = failed to execute message; message index: 0: Overflow: Cannot Sub with 0 and 100000000: execute wasm contract failed: invalid request
     let fee_send_msg = message_factories::cw20_transfer(
         &factory_config.token_contract,
-        &factory_config.governance,
+        &factory_config.distributor,
         amount,
     );
 
@@ -155,7 +152,7 @@ pub fn create_campaign(
                 id: REPLY_CREATE_CAMPAIGN,
                 msg: create_campaign_msg,
                 gas_limit: None,
-                reply_on: ReplyOn::Success, //TODO: Fail 이면 reply 가 호출되지 않더라도 트랜잭션은 실패하겠지?
+                reply_on: ReplyOn::Success,
             }
         ],
         messages: vec![fee_send_msg],

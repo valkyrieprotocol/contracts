@@ -28,6 +28,10 @@ pub fn default_sender() -> MessageInfo {
     mock_info(DEFAULT_SENDER, &[])
 }
 
+pub fn contract_sender() -> MessageInfo {
+    mock_info(MOCK_CONTRACT_ADDR, &[])
+}
+
 pub fn plus_height(env: &mut Env, amount: u64) {
     env.block.height += amount;
     env.block.time = env.block.time.plus_seconds(amount * BLOCK_TIME_INTERVAL);

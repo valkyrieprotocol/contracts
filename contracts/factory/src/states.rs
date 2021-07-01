@@ -76,6 +76,11 @@ impl CreateCampaignContext {
         CREATE_CAMPAIGN_CONTEXT.load(storage)
     }
 
+    #[cfg(test)]
+    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<CreateCampaignContext>> {
+        CREATE_CAMPAIGN_CONTEXT.may_load(storage)
+    }
+
     pub fn clear(storage: &mut dyn Storage) {
         CREATE_CAMPAIGN_CONTEXT.remove(storage)
     }

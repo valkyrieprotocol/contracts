@@ -16,9 +16,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    let mut deps_mut = deps;
-
-    crate::executions::instantiate(deps_mut.branch(), env.clone(), info.clone(), msg)?;
+    crate::executions::instantiate(deps, env, info, msg)?;
 
     Ok(Response::default())
 }
@@ -70,6 +68,7 @@ pub fn receive_cw20(
            }) => crate::executions::create_campaign(
             deps,
             env,
+            info,
             cw20_msg.sender,
             cw20_msg.amount,
             title,
