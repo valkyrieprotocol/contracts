@@ -5,7 +5,7 @@ use valkyrie::distributor::execute_msgs::{InstantiateMsg, BoosterConfig};
 use crate::executions::instantiate;
 use cosmwasm_std::testing::mock_env;
 use valkyrie::test_utils::{default_sender, expect_generic_err};
-use crate::tests::{GOVERNANCE, TOKEN_CONTRACT, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT};
+use crate::tests::{GOVERNANCE, TOKEN_CONTRACT, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_MULTIPLIER_PERCENT};
 use crate::states::ContractConfig;
 
 pub fn exec(
@@ -17,6 +17,7 @@ pub fn exec(
     drop_booster_ratio: Decimal,
     activity_booster_ratio: Decimal,
     plus_booster_ratio: Decimal,
+    activity_booster_multiplier: Decimal,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
         governance,
@@ -25,6 +26,7 @@ pub fn exec(
             drop_booster_ratio,
             activity_booster_ratio,
             plus_booster_ratio,
+            activity_booster_multiplier,
         },
     };
 
@@ -63,6 +65,7 @@ fn succeed() {
             drop_booster_ratio: Decimal::percent(DROP_BOOSTER_RATIO_PERCENT),
             activity_booster_ratio: Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
             plus_booster_ratio: Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
+            activity_booster_multiplier: Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
         },
     });
 }

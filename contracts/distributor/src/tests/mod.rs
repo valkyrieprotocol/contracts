@@ -12,6 +12,7 @@ pub const TOKEN_CONTRACT: &str = "TokenContract";
 pub const DROP_BOOSTER_RATIO_PERCENT: u64 = 10;
 pub const ACTIVITY_BOOSTER_RATIO_PERCENT: u64 = 80;
 pub const PLUS_BOOSTER_RATIO_PERCENT: u64 = 10;
+pub const ACTIVITY_BOOSTER_MULTIPLIER_PERCENT: u64 = 80;
 
 pub fn governance_sender() -> MessageInfo {
     mock_info(GOVERNANCE, &[])

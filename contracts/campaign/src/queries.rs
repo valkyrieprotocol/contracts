@@ -76,6 +76,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
         locked_balance: Uint128::from(locked_balance),
         balance,
         is_active: state.is_active(deps.storage, &deps.querier, env.block.height)?,
+        is_pending: state.is_pending(),
     })
 }
 

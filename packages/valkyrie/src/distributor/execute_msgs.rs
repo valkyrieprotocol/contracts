@@ -34,6 +34,7 @@ pub struct BoosterConfig {
     pub drop_booster_ratio: Decimal,
     pub activity_booster_ratio: Decimal,
     pub plus_booster_ratio: Decimal,
+    pub activity_booster_multiplier: Decimal,
 }
 
 impl BoosterConfig {

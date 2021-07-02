@@ -130,7 +130,7 @@ impl StakerState {
         self.votes.push((poll_id, vote));
     }
 
-    pub fn withdraw_unstaked(&mut self, storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
+    pub fn withdraw_unstaked(&mut self, _storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
         let mut pending: Vec<(u64, Uint128)> = vec![];
         let mut withdrawable: Vec<(u64, Uint128)> = vec![];
 

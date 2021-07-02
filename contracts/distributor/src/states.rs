@@ -61,6 +61,7 @@ impl CampaignInfo {
         })
     }
 
+    #[cfg(test)]
     pub fn may_load(storage: &dyn Storage, address: &Addr) -> StdResult<Option<CampaignInfo>> {
         Ok(CAMPAIGN.may_load(storage, address)?.map(|spend_limit| {
             CampaignInfo {

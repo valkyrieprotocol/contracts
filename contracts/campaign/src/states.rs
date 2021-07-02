@@ -8,6 +8,9 @@ use valkyrie::common::OrderBy;
 use valkyrie::governance::query_msgs::VotingPowerResponse;
 use valkyrie::utils::find_mut_or_push;
 use valkyrie::factory::query_msgs::CampaignConfigResponse;
+use valkyrie::distributor::execute_msgs::BoosterConfig;
+use valkyrie::distributor::query_msgs::{QueryMsg, ContractConfigResponse};
+use std::ops::Mul;
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -237,11 +240,12 @@ impl BoosterState {
         Ok(())
     }
 
-    pub fn compute_activity_booster(&self) -> Uint128 {
-        std::cmp::min(
+    pub fn compute_activity_booster(&self, querier: &QuerierWrapper, distributor: &Addr) -> StdResult<Uint128> {
+        let config = load_distributor_config(querier, distributor)?;
+        Ok(std::cmp::min(
             self.activity_booster_left_amount,
-            Uint128::from(self.compute_drop_booster().u128() * 4u128 / 5u128),
-        )
+            config.activity_booster_multiplier * self.compute_drop_booster(),
+        ))
     }
 
     pub fn spend_activity_booster(&mut self, amount: Uint128) -> StdResult<()> {
@@ -272,10 +276,11 @@ impl BoosterState {
         storage: &mut dyn Storage,
         querier: &QuerierWrapper,
         governance: &Addr,
+        distributor: &Addr,
         address: &Addr,
     ) -> StdResult<(Uint128, Uint128, bool)> {
         if let Some(mut booster_state) = BOOSTER_STATE.may_load(storage)? {
-            let activity_booster = booster_state.compute_activity_booster();
+            let activity_booster = booster_state.compute_activity_booster(querier, distributor)?;
             let plus_booster = booster_state.compute_plus_booster(querier, governance, address)?;
 
             booster_state.spend_activity_booster(activity_booster)?;
@@ -378,4 +383,13 @@ pub fn load_voting_power(
             address: staker_address.to_string(),
         },
     )
+}
+
+fn load_distributor_config(querier: &QuerierWrapper, address: &Addr) -> StdResult<BoosterConfig> {
+    let contract_config: ContractConfigResponse = querier.query_wasm_smart(
+        address,
+        &QueryMsg::ContractConfig {},
+    )?;
+
+    Ok(contract_config.booster_config)
 }

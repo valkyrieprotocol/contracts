@@ -62,6 +62,7 @@ pub struct CampaignStateResponse {
     pub locked_balance: Uint128,
     pub balance: Uint128,
     pub is_active: bool,
+    pub is_pending: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

@@ -367,7 +367,7 @@ pub fn participate(
     let mut campaign_state = CampaignState::load(deps.storage)?;
     if !campaign_state.is_active(deps.storage, &deps.querier, env.block.height)? {
         return Err(ContractError::Std(StdError::generic_err(
-            "Deactivated campaign",
+            "Inactive campaign",
         )));
     }
 
@@ -384,6 +384,7 @@ pub fn participate(
             deps.storage,
             &deps.querier,
             &contract_config.governance,
+            &contract_config.distributor,
             &info.sender,
         )?;
 
