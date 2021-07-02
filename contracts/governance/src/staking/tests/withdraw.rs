@@ -52,8 +52,8 @@ fn succeed() {
 
     let mut withdrawable_amount = Uint128::zero();
     let staker_state = StakerState::load(&deps.storage, &Addr::unchecked(STAKER1)).unwrap();
-    for (unstake_block, unstake_amount) in staker_state.unstaking_amounts {
-        if env.block.height > unstake_block + WITHDRAW_DELAY {
+    for (unlock_block, unstake_amount) in staker_state.unstaking_amounts {
+        if env.block.height > unlock_block {
             withdrawable_amount += unstake_amount;
         }
     }

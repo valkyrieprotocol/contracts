@@ -46,6 +46,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         Decimal::percent(DROP_BOOSTER_RATIO_PERCENT),
         Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
         Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
+        Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
     ).unwrap();
 
     (env, info, response)
@@ -83,6 +84,7 @@ fn failed_invalid_boost_config() {
         Decimal::percent(10),
         Decimal::percent(79),
         Decimal::percent(10),
+        Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
     );
 
     expect_generic_err(&result, "invalid boost_config");
