@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
 pub struct BoosterConfig {
     pub drop_booster_ratio: Decimal,
     pub activity_booster_ratio: Decimal,

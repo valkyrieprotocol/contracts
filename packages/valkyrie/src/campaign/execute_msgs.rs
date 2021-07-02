@@ -62,10 +62,6 @@ pub enum Cw20HookMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct DistributeResult {
-    pub actor_address: String,
-    pub reward_denom: Denom,
-    pub configured_reward_amount: Uint128,
-    pub distributed_reward_amount: Uint128,
     pub distributions: Vec<Distribution>,
 }
 

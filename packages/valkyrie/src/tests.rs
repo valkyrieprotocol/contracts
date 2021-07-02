@@ -1,14 +1,8 @@
-#[cfg(feature = "testutils")]
 use cosmwasm_std::{Addr, Uint128};
-
-#[cfg(feature = "testutils")]
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-
-#[cfg(feature = "testutils")]
 use crate::mock_querier::custom_deps;
 
 #[test]
-#[cfg(feature = "testutils")]
 fn query_cw20_balance() {
     let mut deps = custom_deps(&[]);
 

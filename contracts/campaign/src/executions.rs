@@ -11,7 +11,7 @@ use valkyrie::cw20::query_balance;
 use valkyrie::distributor::execute_msgs::ExecuteMsg as DistributorExecuteMsg;
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
-use valkyrie::utils::{calc_ratio_amount, map_u128};
+use valkyrie::utils::calc_ratio_amount;
 
 use crate::states::{
     BoosterState, CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin,
@@ -350,7 +350,7 @@ pub fn claim_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResu
             ],
             rewards_attrs,
         ]
-        .concat(),
+            .concat(),
         data: None,
     })
 }
@@ -388,11 +388,12 @@ pub fn participate(
             &info.sender,
         )?;
 
-    let mut referrer = referrer.and_then(|v| v.to_address(deps.api).ok());
+    let mut referrer = referrer.and_then(|v| v.to_address(deps.api).ok())
+        .and_then(|a| Participation::may_load(deps.storage, &a).unwrap_or_default());
 
     let my_participation = Participation {
         actor_address: info.sender.clone(),
-        referrer_address: referrer.clone(),
+        referrer_address: referrer.clone().map(|r| r.actor_address), //todo: optimize
         rewards: vec![],
         booster_rewards: plus_booster,
         drop_booster_claimable,
@@ -403,9 +404,12 @@ pub fn participate(
     let mut remain_distance = distribution_config.amounts.len() - 1;
 
     while referrer.is_some() && remain_distance > 0 {
-        let participation = Participation::load(deps.storage, &referrer.unwrap())?;
-        referrer = participation.referrer_address.clone();
-        participations.push(participation);
+        let referrer_participation = referrer.unwrap();
+
+        referrer = referrer_participation.referrer_address.clone()
+            .map(|a| Participation::load(deps.storage, &a).unwrap());
+
+        participations.push(referrer_participation);
         remain_distance -= 1;
     }
 
@@ -421,13 +425,8 @@ pub fn participate(
     {
         // activity booster is distributed
         // in the same ratio with normal rewards scheme
-        let mut booster_rewards = activity_booster.checked_mul(reward_amount)?
+        let booster_rewards = activity_booster.checked_mul(reward_amount)?
             .checked_div(reward_amount_sum).unwrap();
-
-        // add plus booster only when the distance is zero (== actor)
-        if distance == 0usize {
-            booster_rewards += plus_booster;
-        }
 
         participation.plus_reward(distribution_config.denom.clone(), reward_amount);
         participation.booster_rewards += booster_rewards;
@@ -450,7 +449,7 @@ pub fn participate(
                     )]
                 },
             ]
-            .concat(),
+                .concat(),
         });
     }
 

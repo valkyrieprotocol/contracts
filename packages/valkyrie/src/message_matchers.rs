@@ -1,5 +1,28 @@
-use cosmwasm_std::{CosmosMsg, WasmMsg, from_binary, Uint128};
+use cosmwasm_std::{BankMsg, Coin, CosmosMsg, from_binary, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
+
+pub struct NativeSend {
+    pub to_address: String,
+    pub amount: Vec<Coin>,
+}
+
+pub fn native_send(msgs: &Vec<CosmosMsg>) -> Vec<NativeSend> {
+    let mut result = vec![];
+
+    for msg in msgs.iter() {
+        match msg {
+            CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
+                result.push(NativeSend {
+                    to_address: to_address.clone(),
+                    amount: amount.clone(),
+                });
+            }
+            _ => {}
+        }
+    }
+
+    result
+}
 
 pub struct Cw20Transfer {
     pub contract_addr: String,
@@ -20,7 +43,7 @@ pub fn cw20_transfer(msgs: &Vec<CosmosMsg>) -> Vec<Cw20Transfer> {
                             recipient,
                             amount,
                         });
-                    },
+                    }
                     _ => {}
                 }
             }

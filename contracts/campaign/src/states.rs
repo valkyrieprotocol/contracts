@@ -1,16 +1,15 @@
+use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult, Storage, Timestamp, Uint128};
+use cw20::Denom;
+use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, QuerierWrapper, StdError, StdResult, Storage, Timestamp, Uint128};
-use cw20::Denom;
-use cw_storage_plus::{Bound, Item, Map};
 use valkyrie::common::OrderBy;
+use valkyrie::distributor::execute_msgs::BoosterConfig;
+use valkyrie::distributor::query_msgs::{ContractConfigResponse};
+use valkyrie::factory::query_msgs::CampaignConfigResponse;
 use valkyrie::governance::query_msgs::VotingPowerResponse;
 use valkyrie::utils::find_mut_or_push;
-use valkyrie::factory::query_msgs::CampaignConfigResponse;
-use valkyrie::distributor::execute_msgs::BoosterConfig;
-use valkyrie::distributor::query_msgs::{QueryMsg, ContractConfigResponse};
-use std::ops::Mul;
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -260,10 +259,12 @@ impl BoosterState {
         governance: &Addr,
         address: &Addr,
     ) -> StdResult<Uint128> {
+        let voting_power = load_voting_power(querier, governance, address).ok()
+            .map_or(Decimal::zero(), |v| v.voting_power);
+
         Ok(std::cmp::min(
             self.plus_booster_left_amount,
-            self.plus_booster_amount
-                * load_voting_power(querier, governance, address)?.voting_power,
+            self.plus_booster_amount * voting_power,
         ))
     }
 
@@ -329,6 +330,10 @@ impl Participation {
         PARTICIPATION.load(storage, actor_address)
     }
 
+    pub fn may_load(storage: &dyn Storage, actor_address: &Addr) -> StdResult<Option<Participation>> {
+        PARTICIPATION.may_load(storage, actor_address)
+    }
+
     pub fn query(
         storage: &dyn Storage,
         start_after: Option<Addr>,
@@ -388,7 +393,7 @@ pub fn load_voting_power(
 fn load_distributor_config(querier: &QuerierWrapper, address: &Addr) -> StdResult<BoosterConfig> {
     let contract_config: ContractConfigResponse = querier.query_wasm_smart(
         address,
-        &QueryMsg::ContractConfig {},
+        &valkyrie::distributor::query_msgs::QueryMsg::ContractConfig {},
     )?;
 
     Ok(contract_config.booster_config)
