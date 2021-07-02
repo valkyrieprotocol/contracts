@@ -475,11 +475,19 @@ pub fn participate(
     }
 
     // Response
+    let configured_reward = format!(
+        "{}{}",
+        distribution_config.amounts.iter().sum::<Uint128>().to_string(),
+        Denom::from_cw20(distribution_config.denom.clone()).to_string()
+    );
+
+    let distributed_reward = format!(
+        "{}{}",
+        distribution_amount.to_string(),
+        Denom::from_cw20(distribution_config.denom.clone()).to_string()
+    );
+
     let result = DistributeResult {
-        actor_address: info.sender.to_string(),
-        reward_denom: Denom::from_cw20(distribution_config.denom.clone()),
-        configured_reward_amount: Uint128::new(map_u128(distribution_config.amounts).iter().sum()),
-        distributed_reward_amount: distribution_amount,
         distributions: distributions_response,
     };
 
@@ -489,6 +497,8 @@ pub fn participate(
         attributes: vec![
             attr("action", "participate"),
             attr("actor", info.sender),
+            attr("configured_reward_amount", configured_reward),
+            attr("distributed_reward_amount", distributed_reward),
             attr(
                 "activity_booster",
                 format!("{}{}", activity_booster, contract_config.token_contract),
