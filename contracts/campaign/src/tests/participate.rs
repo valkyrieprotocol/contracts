@@ -138,18 +138,20 @@ fn succeed_with_booster() {
         coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
     ]);
     let activity_booster_multiplier = Decimal::percent(80);
+    let min_participation_count = 10u64;
     deps.querier.with_booster_config(
         Decimal::percent(10),
         Decimal::percent(80),
         Decimal::percent(10),
         activity_booster_multiplier.clone(),
+        min_participation_count,
     );
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
 
     //minimum participation for boosting
-    for i in 1..10 {
+    for i in 1..min_participation_count {
         will_success(&mut deps, format!("participator{}", i).as_str(), None);
     }
 

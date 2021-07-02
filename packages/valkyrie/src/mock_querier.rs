@@ -470,12 +470,14 @@ impl WasmMockQuerier {
         activity_booster_ratio: Decimal,
         plus_booster_ratio: Decimal,
         activity_booster_multiplier: Decimal,
+        min_participation_count: u64,
     ) {
         self.distributor_config_querier.booster_config = BoosterConfig {
             drop_booster_ratio,
             activity_booster_ratio,
             plus_booster_ratio,
             activity_booster_multiplier,
+            min_participation_count,
         }
     }
 

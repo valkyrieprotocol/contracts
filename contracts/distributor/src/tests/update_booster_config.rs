@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::executions::update_booster_config;
 use valkyrie::distributor::execute_msgs::BoosterConfig;
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
-use crate::tests::{governance_sender, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_MULTIPLIER_PERCENT};
+use crate::tests::{governance_sender, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_MULTIPLIER_PERCENT, MIN_PARTICIPATION_COUNT};
 use crate::states::ContractConfig;
 
 pub fn exec(
@@ -15,12 +15,14 @@ pub fn exec(
     activity_booster_ratio: Decimal,
     plus_booster_ratio: Decimal,
     activity_booster_multiplier: Decimal,
+    min_participation_count: u64,
 ) -> ContractResult<Response> {
     let msg = BoosterConfig {
         drop_booster_ratio,
         activity_booster_ratio,
         plus_booster_ratio,
         activity_booster_multiplier,
+        min_participation_count,
     };
 
     update_booster_config(deps.as_mut(), env, info, msg)
@@ -32,6 +34,7 @@ pub fn will_success(
     activity_booster_ratio: Decimal,
     plus_booster_ratio: Decimal,
     activity_booster_multiplier: Decimal,
+    min_participation_count: u64,
 ) -> (Env, MessageInfo, Response) {
     let env = contract_env();
     let info = governance_sender();
@@ -44,6 +47,7 @@ pub fn will_success(
         activity_booster_ratio,
         plus_booster_ratio,
         activity_booster_multiplier,
+        min_participation_count,
     ).unwrap();
 
     (env, info, response)
@@ -59,6 +63,7 @@ fn succeed() {
     let activity_booster_ratio = Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT - 2);
     let plus_booster_ratio = Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT + 1);
     let activity_booster_multiplier = Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT + 1);
+    let min_participation_count = MIN_PARTICIPATION_COUNT + 1;
 
     will_success(
         &mut deps,
@@ -66,6 +71,7 @@ fn succeed() {
         activity_booster_ratio,
         plus_booster_ratio,
         activity_booster_multiplier,
+        min_participation_count,
     );
 
     let config = ContractConfig::load(&deps.storage).unwrap().booster_config;
@@ -74,6 +80,7 @@ fn succeed() {
         activity_booster_ratio,
         plus_booster_ratio,
         activity_booster_multiplier,
+        min_participation_count,
     });
 }
 
@@ -91,6 +98,7 @@ fn failed_invalid_permission() {
         Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
         Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
         Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
+        MIN_PARTICIPATION_COUNT,
     );
 
     expect_unauthorized_err(&result);

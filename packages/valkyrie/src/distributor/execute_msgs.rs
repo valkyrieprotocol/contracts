@@ -35,6 +35,7 @@ pub struct BoosterConfig {
     pub activity_booster_ratio: Decimal,
     pub plus_booster_ratio: Decimal,
     pub activity_booster_multiplier: Decimal,
+    pub min_participation_count: u64,
 }
 
 impl BoosterConfig {

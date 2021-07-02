@@ -5,7 +5,7 @@ use valkyrie::distributor::execute_msgs::{InstantiateMsg, BoosterConfig};
 use crate::executions::instantiate;
 use cosmwasm_std::testing::mock_env;
 use valkyrie::test_utils::{default_sender, expect_generic_err};
-use crate::tests::{GOVERNANCE, TOKEN_CONTRACT, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_MULTIPLIER_PERCENT};
+use crate::tests::{GOVERNANCE, TOKEN_CONTRACT, DROP_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, PLUS_BOOSTER_RATIO_PERCENT, ACTIVITY_BOOSTER_MULTIPLIER_PERCENT, MIN_PARTICIPATION_COUNT};
 use crate::states::ContractConfig;
 
 pub fn exec(
@@ -18,6 +18,7 @@ pub fn exec(
     activity_booster_ratio: Decimal,
     plus_booster_ratio: Decimal,
     activity_booster_multiplier: Decimal,
+    min_participation_count: u64,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
         governance,
@@ -27,6 +28,7 @@ pub fn exec(
             activity_booster_ratio,
             plus_booster_ratio,
             activity_booster_multiplier,
+            min_participation_count,
         },
     };
 
@@ -47,6 +49,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
         Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
         Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
+        MIN_PARTICIPATION_COUNT,
     ).unwrap();
 
     (env, info, response)
@@ -67,6 +70,7 @@ fn succeed() {
             activity_booster_ratio: Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
             plus_booster_ratio: Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
             activity_booster_multiplier: Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
+            min_participation_count: MIN_PARTICIPATION_COUNT,
         },
     });
 }
@@ -85,6 +89,7 @@ fn failed_invalid_boost_config() {
         Decimal::percent(79),
         Decimal::percent(10),
         Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
+        MIN_PARTICIPATION_COUNT,
     );
 
     expect_generic_err(&result, "invalid boost_config");
