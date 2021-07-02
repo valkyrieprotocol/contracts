@@ -2,10 +2,10 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Uint128, Response, CosmosMsg, WasmMsg, to_binary, Addr};
 use valkyrie::common::ContractResult;
 use crate::executions::spend;
-use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, default_sender, expect_not_found_err, expect_exceed_limit_err};
+use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, default_sender, expect_exceed_limit_err, expect_unauthorized_err};
 use cosmwasm_std::testing::mock_info;
 use crate::tests::add_campaign::CAMPAIGN1;
-use crate::tests::TOKEN_CONTRACT;
+use crate::tests::{TOKEN_CONTRACT, GOVERNANCE};
 use cw20::Cw20ExecuteMsg;
 use crate::states::CampaignInfo;
 
@@ -21,12 +21,12 @@ pub fn exec(
 
 pub fn will_success(
     deps: &mut CustomDeps,
-    campaign: &str,
+    sender: &str,
     recipient: String,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
     let env = contract_env();
-    let info = mock_info(campaign, &[]);
+    let info = mock_info(sender, &[]);
 
     let response = exec(
         deps,
@@ -40,7 +40,7 @@ pub fn will_success(
 }
 
 #[test]
-fn succeed() {
+fn succeed_campaign() {
     let mut deps = custom_deps(&[]);
 
     super::instantiate::default(&mut deps);
@@ -70,7 +70,31 @@ fn succeed() {
 }
 
 #[test]
-fn failed_not_found_campaign() {
+fn succeed_governance() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let (_, _, response) = will_success(
+        &mut deps,
+        GOVERNANCE,
+        DEFAULT_SENDER.to_string(),
+        Uint128(1),
+    );
+    assert_eq!(response.messages, vec![
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: TOKEN_CONTRACT.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: DEFAULT_SENDER.to_string(),
+                amount: Uint128(1),
+            }).unwrap(),
+            send: vec![],
+        }),
+    ]);
+}
+
+#[test]
+fn failed_invalid_permission() {
     let mut deps = custom_deps(&[]);
 
     super::instantiate::default(&mut deps);
@@ -83,7 +107,7 @@ fn failed_not_found_campaign() {
         Uint128(1),
     );
 
-    expect_not_found_err(&result);
+    expect_unauthorized_err(&result);
 }
 
 #[test]

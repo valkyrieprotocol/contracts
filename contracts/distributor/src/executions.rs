@@ -153,16 +153,21 @@ pub fn spend(
     amount: Uint128,
 ) -> ContractResult<Response> {
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    let mut campaign_info: CampaignInfo = CampaignInfo::load(deps.storage, &info.sender)?;
-    if campaign_info.spend_limit < amount {
-        return Err(ContractError::ExceedLimit {});
-    }
 
-    campaign_info.spend_limit = campaign_info.spend_limit.checked_sub(amount)?;
-    if campaign_info.spend_limit.is_zero() {
-        campaign_info.remove(deps.storage);
-    } else {
-        campaign_info.save(deps.storage)?;
+    if !contract_config.is_governance(&info.sender) {
+        let mut campaign_info: CampaignInfo = CampaignInfo::may_load(deps.storage, &info.sender)
+            ?.ok_or(ContractError::Unauthorized {})?;
+
+        if campaign_info.spend_limit < amount {
+            return Err(ContractError::ExceedLimit {});
+        }
+
+        campaign_info.spend_limit = campaign_info.spend_limit.checked_sub(amount)?;
+        if campaign_info.spend_limit.is_zero() {
+            campaign_info.remove(deps.storage);
+        } else {
+            campaign_info.save(deps.storage)?;
+        }
     }
 
     Ok(Response {
@@ -177,7 +182,7 @@ pub fn spend(
         submessages: vec![],
         attributes: vec![
             attr("action", "spend"),
-            attr("campaign_addr", info.sender.as_str()),
+            attr("requester", info.sender.as_str()),
             attr("recipient", recipient),
             attr("amount", amount),
         ],
