@@ -23,6 +23,7 @@ pub enum QueryMsg {
 pub struct ContractConfigResponse {
     pub governance: String,
     pub token_contract: String,
+    pub terraswap_router: String,
     pub booster_config: BoosterConfig,
 }
 

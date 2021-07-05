@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    attr, to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
-};
+use cosmwasm_std::{attr, to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg, StdError, Api, coin};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::campaign::execute_msgs::ExecuteMsg as CampaignExecuteMsg;
@@ -9,6 +7,10 @@ use valkyrie::distributor::execute_msgs::{BoosterConfig, InstantiateMsg};
 use valkyrie::errors::ContractError;
 
 use crate::states::{CampaignInfo, ContractConfig};
+use valkyrie::campaign::enumerations::Denom;
+use terraswap::asset::AssetInfo;
+use terraswap::router::{SwapOperation, ExecuteMsg as TerraswapExecuteMsg};
+use valkyrie::cw20::query_balance;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -19,6 +21,7 @@ pub fn instantiate(
     let config = ContractConfig {
         governance: deps.api.addr_validate(&msg.governance)?,
         token_contract: deps.api.addr_validate(&msg.token_contract)?,
+        terraswap_router: deps.api.addr_validate(&msg.terraswap_router)?,
         booster_config: msg.booster_config,
     };
 
@@ -188,4 +191,110 @@ pub fn spend(
         ],
         data: None,
     })
+}
+
+pub fn swap(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    denom: Denom,
+    amount: Option<Uint128>,
+    route: Option<Vec<Denom>>,
+) -> ContractResult<Response> {
+    let config = ContractConfig::load(deps.storage)?;
+    let token_denom = Denom::Token(config.token_contract.to_string());
+    let route = route.unwrap_or_else(|| vec![denom.clone(), token_denom.clone()]);
+
+    if route.len() < 2 || *route.first().unwrap() != denom || *route.last().unwrap() != token_denom {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!(
+                "route must start with '{}' and end with '{}'",
+                denom.to_string(), token_denom.to_string(),
+            )
+        )));
+    }
+
+    let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
+        pair_to_terraswap_operation(pair, deps.api)
+    }).collect();
+
+    let terraswap_msg_binary = to_binary(&TerraswapExecuteMsg::ExecuteSwapOperations {
+        operations,
+        minimum_receive: None,
+        to: None,
+    })?;
+
+    let balance = query_balance(
+        &deps.querier,
+        deps.api,
+        denom.to_cw20(deps.api),
+        env.contract.address.clone(),
+    )?;
+    let amount = if let Some(amount) = amount {
+        if amount > balance {
+            return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
+        } else {
+            amount
+        }
+    } else {
+        balance
+    };
+
+    let swap_msg = match denom {
+        Denom::Native(denom) => {
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: config.terraswap_router.to_string(),
+                send: vec![coin(amount.u128(), denom)],
+                msg: terraswap_msg_binary,
+            })
+        }
+        Denom::Token(address) => {
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: address,
+                send: vec![],
+                msg: to_binary(&Cw20ExecuteMsg::Send {
+                    contract: config.terraswap_router.to_string(),
+                    msg: Some(terraswap_msg_binary),
+                    amount,
+                }).unwrap(),
+            })
+        }
+    };
+
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![swap_msg],
+        attributes: vec![],
+        data: None,
+    })
+}
+
+fn pair_to_terraswap_operation(pair: &[Denom], api: &dyn Api) -> SwapOperation {
+    let left = pair[0].clone();
+    let right = pair[1].clone();
+
+    if let Denom::Native(left_denom) = left.clone() {
+        if let Denom::Native(right_denom) = right.clone() {
+            return SwapOperation::NativeSwap {
+                offer_denom: left_denom,
+                ask_denom: right_denom,
+            }
+        }
+    }
+
+    SwapOperation::TerraSwap {
+        offer_asset_info: denom_to_asset_info(left, api),
+        ask_asset_info: denom_to_asset_info(right, api),
+    }
+}
+
+fn denom_to_asset_info(denom: Denom, api: &dyn Api) -> AssetInfo {
+    match denom {
+        Denom::Native(denom) => AssetInfo::NativeToken {
+            denom,
+        },
+        Denom::Token(address) => AssetInfo::Token {
+            contract_addr: api.addr_validate(address.as_str()).unwrap(),
+        },
+    }
 }

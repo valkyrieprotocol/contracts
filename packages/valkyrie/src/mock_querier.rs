@@ -94,6 +94,7 @@ impl GovConfigQuerier {
 pub struct DistributorConfigQuerier {
     governance: String,
     token_contract: String,
+    terraswap_router: String,
     booster_config: BoosterConfig,
 }
 
@@ -101,11 +102,13 @@ impl DistributorConfigQuerier {
     pub fn new(
         governance: String,
         token_contract: String,
+        terraswap_router: String,
         booster_config: BoosterConfig,
     ) -> Self {
         DistributorConfigQuerier {
             governance,
             token_contract,
+            terraswap_router,
             booster_config,
         }
     }
@@ -310,6 +313,7 @@ impl WasmMockQuerier {
                 let response = DistributorContractConfigResponse {
                     governance: self.distributor_config_querier.governance.clone(),
                     token_contract: self.distributor_config_querier.token_contract.clone(),
+                    terraswap_router: self.distributor_config_querier.terraswap_router.clone(),
                     booster_config: self.distributor_config_querier.booster_config.clone(),
                 };
 

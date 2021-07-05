@@ -2,11 +2,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Decimal, StdError, StdResult, Uint128};
+use crate::campaign::enumerations::Denom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub governance: String,
     pub token_contract: String,
+    pub terraswap_router: String,
     pub booster_config: BoosterConfig,
 }
 
@@ -26,6 +28,11 @@ pub enum ExecuteMsg {
     },
     UpdateBoosterConfig {
         booster_config: BoosterConfig,
+    },
+    Swap {
+        denom: Denom,
+        amount: Option<Uint128>,
+        route: Option<Vec<Denom>>,
     },
 }
 

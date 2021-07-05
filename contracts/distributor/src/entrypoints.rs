@@ -11,6 +11,7 @@ use crate::{
     executions::{add_campaign, remove_campaign, spend, update_booster_config},
     queries::{get_campaign_info, get_campaign_infos, get_contract_config},
 };
+use crate::executions::swap;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -37,11 +38,16 @@ pub fn execute(
         } => add_campaign(deps, env, info, campaign_addr, spend_limit),
         ExecuteMsg::RemoveCampaign { campaign_addr } => {
             remove_campaign(deps, env, info, campaign_addr)
-        }
+        },
         ExecuteMsg::Spend { recipient, amount } => spend(deps, env, info, recipient, amount),
         ExecuteMsg::UpdateBoosterConfig { booster_config } => {
             update_booster_config(deps, env, info, booster_config)
-        }
+        },
+        ExecuteMsg::Swap {
+            denom,
+            amount,
+            route,
+        } => swap(deps, env, info, denom, amount, route),
     }
 }
 

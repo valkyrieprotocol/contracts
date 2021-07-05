@@ -20,6 +20,7 @@ const CAMPAIGN: Map<&Addr, Uint128> = Map::new("campaign");
 pub struct ContractConfig {
     pub governance: Addr,
     pub token_contract: Addr,
+    pub terraswap_router: Addr,
     pub booster_config: BoosterConfig,
 }
 

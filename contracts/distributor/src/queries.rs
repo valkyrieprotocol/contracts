@@ -12,6 +12,7 @@ pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConf
     Ok(ContractConfigResponse {
         governance: contract_config.governance.to_string(),
         token_contract: contract_config.token_contract.to_string(),
+        terraswap_router: contract_config.terraswap_router.to_string(),
         booster_config: contract_config.booster_config,
     })
 }
