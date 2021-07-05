@@ -11,7 +11,7 @@ use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use valkyrie::governance::models::ExecutionMsg;
 use valkyrie::governance::query_msgs::PollResponse;
 
-use crate::common::states::load_contract_available_balance;
+use crate::common::states::load_available_balance;
 use crate::staking::states::{StakerState, StakingState};
 
 const MAX_LIMIT: u32 = 30;
@@ -239,7 +239,7 @@ impl Poll {
     pub fn calculate_quorum(&self, deps: Deps) -> StdResult<(Decimal, Uint128)> {
         let snapped_staked_amount = self.snapped_staked_amount.unwrap_or(Uint128::zero());
         let staked_amount = if snapped_staked_amount.is_zero() {
-            load_contract_available_balance(deps)?
+            load_available_balance(deps)?
         } else {
             snapped_staked_amount
         };

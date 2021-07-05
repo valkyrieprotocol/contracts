@@ -9,7 +9,7 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
 use crate::poll::executions::create_poll;
 use crate::poll::states::{Execution, Poll};
-use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, TOKEN_CONTRACT};
+use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
 
 pub const PROPOSER1: &str = "Proposer1";
@@ -30,7 +30,7 @@ pub fn exec(
     execution_msgs: Option<Vec<ExecutionMsg>>,
 ) -> ContractResult<Response> {
     deps.querier.plus_token_balances(&[(
-        TOKEN_CONTRACT,
+        GOVERNANCE_TOKEN,
         &[(MOCK_CONTRACT_ADDR, &deposit_amount)],
     )]);
 
@@ -57,7 +57,7 @@ pub fn will_success(
     execution_msgs: Option<Vec<ExecutionMsg>>,
 ) -> (Env, MessageInfo, Response) {
     let env = contract_env();
-    let info = mock_info(TOKEN_CONTRACT, &[]);
+    let info = mock_info(GOVERNANCE_TOKEN, &[]);
 
     let response = exec(
         deps,
@@ -178,7 +178,7 @@ fn failed_create_poll_invalid_deposit() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT.checked_sub(Uint128(1)).unwrap(),
         POLL_TITLE.to_string(),
@@ -202,7 +202,7 @@ fn failed_create_poll_invalid_title() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         "a".to_string(),
@@ -215,7 +215,7 @@ fn failed_create_poll_invalid_title() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         "0123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234".to_string(),
@@ -235,7 +235,7 @@ fn failed_create_poll_invalid_description() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         POLL_TITLE.to_string(),
@@ -248,7 +248,7 @@ fn failed_create_poll_invalid_description() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         POLL_TITLE.to_string(),
@@ -268,7 +268,7 @@ fn failed_create_poll_invalid_link() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         POLL_TITLE.to_string(),
@@ -281,7 +281,7 @@ fn failed_create_poll_invalid_link() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
         POLL_TITLE.to_string(),

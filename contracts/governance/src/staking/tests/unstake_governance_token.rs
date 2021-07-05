@@ -5,14 +5,14 @@ use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::utils::parse_uint128;
 
-use crate::staking::executions::unstake_voting_token;
+use crate::staking::executions::unstake_governance_token;
 use crate::staking::states::{StakerState, StakingState};
-use crate::staking::tests::stake::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
-use crate::tests::{init_default, TOKEN_CONTRACT};
+use crate::staking::tests::stake_governance_token::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
+use crate::tests::{init_default, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{contract_env, expect_generic_err, default_sender};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, amount: Option<Uint128>) -> ContractResult<Response> {
-    unstake_voting_token(deps.as_mut(), env, info, amount)
+    unstake_governance_token(deps.as_mut(), env, info, amount)
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Option<Uint128>) -> (Env, MessageInfo, Response) {
@@ -35,15 +35,15 @@ fn succeed() {
 
     init_default(deps.as_mut());
 
-    super::stake::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
-    super::stake::will_success(&mut deps, STAKER2, STAKER2_STAKE_AMOUNT);
+    super::stake_governance_token::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
+    super::stake_governance_token::will_success(&mut deps, STAKER2, STAKER2_STAKE_AMOUNT);
 
     let increased_balance = (STAKER1_STAKE_AMOUNT + STAKER2_STAKE_AMOUNT)
         .checked_mul(Uint128(2))
         .unwrap();
 
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
+        GOVERNANCE_TOKEN,
         &[(MOCK_CONTRACT_ADDR, &increased_balance)]
     )]);
 
@@ -85,7 +85,7 @@ fn failed_overflow() {
 
     init_default(deps.as_mut());
 
-    super::stake::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
+    super::stake_governance_token::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
 
     let result = exec(
         &mut deps,

@@ -45,7 +45,7 @@ fn succeed() {
         Some(POLL_LINK),
         Some(execution_msgs.clone()),
     );
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
     let poll_id = 1u64;
 
@@ -102,7 +102,7 @@ fn failed_not_passed() {
         Some(POLL_LINK),
         Some(execution_msgs),
     );
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
     let poll_id = 1u64;
 
@@ -143,7 +143,7 @@ fn failed_in_execution_delay() {
         Some(POLL_LINK),
         Some(execution_msgs),
     );
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
     let poll_id = 1u64;
 
@@ -167,7 +167,7 @@ fn failed_empty_execution() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
     let poll_id = 1u64;
 

@@ -5,14 +5,14 @@ use cw20::Cw20ExecuteMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
-use crate::staking::executions::withdraw_voting_token;
+use crate::staking::executions::withdraw_governance_token;
 use crate::staking::states::StakerState;
-use crate::staking::tests::stake::STAKER1;
+use crate::staking::tests::stake_governance_token::STAKER1;
 use crate::tests::{init_default, WITHDRAW_DELAY};
 use valkyrie::test_utils::{plus_height, contract_env_height};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    withdraw_voting_token(deps.as_mut(), env, info)
+    withdraw_governance_token(deps.as_mut(), env, info)
 }
 
 pub fn will_success(deps: &mut CustomDeps, block_height: u64, staker: &str) -> (Env, MessageInfo, Response) {
@@ -30,7 +30,7 @@ fn succeed() {
 
     init_default(deps.as_mut());
 
-    let (env, _, _) = super::stake::will_success(
+    let (env, _, _) = super::stake_governance_token::will_success(
         &mut deps,
         STAKER1,
         Uint128(100),
@@ -40,13 +40,13 @@ fn succeed() {
     let info = mock_info(STAKER1, &[]);
 
     plus_height(&mut env, 2);
-    super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
     plus_height(&mut env, 2);
-    super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
     plus_height(&mut env, 2);
-    super::unstake::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
 
     plus_height(&mut env, WITHDRAW_DELAY - 2);
 

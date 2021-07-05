@@ -280,7 +280,7 @@ impl WasmMockQuerier {
         match from_binary(msg) {
             Ok(GovQueryMsg::ContractConfig {}) => {
                 let response = GovContractConfigResponse {
-                    token_contract: self.gov_config_querier.token_contract.clone(),
+                    governance_token: self.gov_config_querier.token_contract.clone(),
                 };
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))

@@ -8,11 +8,16 @@ use valkyrie::test_utils::default_sender;
 
 use crate::common::executions;
 use crate::common::states::ContractConfig;
-use crate::tests::TOKEN_CONTRACT;
+use crate::tests::GOVERNANCE_TOKEN;
 
-pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, token_contract: String) -> ContractResult<Response> {
+pub fn exec(
+    deps: &mut CustomDeps,
+    env: Env,
+    info: MessageInfo,
+    governance_token: String,
+) -> ContractResult<Response> {
     let msg = ContractConfigInitMsg {
-        token_contract,
+        governance_token,
     };
 
     // Execute
@@ -27,7 +32,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         deps,
         env.clone(),
         info.clone(),
-        TOKEN_CONTRACT.to_string(),
+        GOVERNANCE_TOKEN.to_string(),
     ).unwrap();
 
     (env, info, response)
@@ -43,6 +48,6 @@ fn succeed() {
     // Validate
     let contract_config = ContractConfig::load(&deps.storage).unwrap();
 
-    assert_eq!(TOKEN_CONTRACT, contract_config.token_contract.as_str());
+    assert_eq!(GOVERNANCE_TOKEN, contract_config.governance_token.as_str());
     assert_eq!(env.contract.address, contract_config.address);
 }

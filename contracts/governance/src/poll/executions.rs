@@ -6,7 +6,7 @@ use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use valkyrie::governance::execute_msgs::PollConfigInitMsg;
 use valkyrie::governance::models::ExecutionMsg;
 
-use crate::common::states::{ContractConfig, load_contract_available_balance, is_admin};
+use crate::common::states::{ContractConfig, load_available_balance};
 use crate::staking::states::StakerState;
 
 use super::states::{Execution, get_poll_id, Poll, PollConfig, PollState};
@@ -65,7 +65,7 @@ pub fn update_poll_config(
     snapshot_period: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
-    if !is_admin(deps.storage, env, &info.sender) {
+    if env.contract.address != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -122,7 +122,7 @@ pub fn create_poll(
     validate_link(&link)?;
 
     let config = ContractConfig::load(deps.storage)?;
-    if !config.is_token_contract(&info.sender) {
+    if !config.is_governance_token(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -202,7 +202,7 @@ pub fn cast_vote(
         return Err(ContractError::Std(StdError::generic_err("User has already voted.")));
     }
 
-    let contract_available_balance = load_contract_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref())?;
     let mut staker_state = StakerState::load_safe(deps.storage, &info.sender)?;
 
     if !staker_state.can_vote(deps.storage, contract_available_balance, amount)? {
@@ -268,7 +268,7 @@ pub fn end_poll(
         if poll_result != PollResult::QuorumNotReached && !poll.deposit_amount.is_zero() {
             messages.push(
                 message_factories::cw20_transfer(
-                    &contract_config.token_contract,
+                    &contract_config.governance_token,
                     &poll.creator,
                     poll.deposit_amount,
                 )
@@ -401,7 +401,7 @@ pub fn snapshot_poll(
     }
 
     // Execute
-    let contract_available_balance = load_contract_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref())?;
     let staked_amount = poll.snapshot_staked_amount(
         deps.storage,
         env.block.height,

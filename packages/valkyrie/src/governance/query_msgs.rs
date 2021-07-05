@@ -42,7 +42,7 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
-    pub token_contract: String,
+    pub governance_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -140,6 +140,6 @@ pub struct UnstakingResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct UnstakingItem {
-    pub unlock_block: u64,
+    pub unlock_height: u64,
     pub amount: Uint128,
 }

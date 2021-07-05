@@ -39,8 +39,8 @@ fn succeed() {
     let voter2_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, voter1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, voter2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, voter2_staked_amount);
 
     let poll_id = 1;
 
@@ -66,8 +66,8 @@ fn succeed_within_cast_vote() {
     let voter3_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, voter1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, voter2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, voter2_staked_amount);
 
     let poll_id = 1u64;
 
@@ -91,7 +91,7 @@ fn succeed_within_cast_vote() {
     let result = exec(&mut deps, env.clone(), default_sender(), poll_id);
     expect_generic_err(&result, "Snapshot has already occurred");
 
-    crate::staking::tests::stake::will_success(&mut deps, VOTER3, voter3_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, voter3_staked_amount);
 
     super::cast_vote::exec(
         &mut deps,
@@ -116,8 +116,8 @@ fn failed_twice() {
     let voter2_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, voter1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, voter2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, voter2_staked_amount);
 
     let poll_id = 1;
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();

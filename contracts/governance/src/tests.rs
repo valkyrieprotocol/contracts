@@ -7,7 +7,7 @@ use valkyrie::test_utils::CONTRACT_CREATOR;
 use crate::entrypoints;
 
 // common config
-pub const TOKEN_CONTRACT: &str = "TokenContractAddress";
+pub const GOVERNANCE_TOKEN: &str = "TokenContractAddress";
 
 // staking config
 pub const WITHDRAW_DELAY: u64 = 94097;
@@ -26,7 +26,7 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
 
     let msg = InstantiateMsg {
         contract_config: ContractConfigInitMsg {
-            token_contract: TOKEN_CONTRACT.to_string(),
+            governance_token: GOVERNANCE_TOKEN.to_string(),
         },
         staking_config: StakingConfigInitMsg {
             withdraw_delay: WITHDRAW_DELAY,

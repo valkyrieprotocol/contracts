@@ -15,7 +15,7 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigInitMsg {
-    pub token_contract: String,
+    pub governance_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -40,8 +40,6 @@ pub enum ExecuteMsg {
     UpdateStakingConfig {
         withdraw_delay: Option<u64>,
     },
-    UnstakeVotingToken { amount: Option<Uint128> },
-    WithdrawVotingToken {},
     UpdatePollConfig {
         quorum: Option<Decimal>,
         threshold: Option<Decimal>,
@@ -50,20 +48,22 @@ pub enum ExecuteMsg {
         proposal_deposit: Option<Uint128>,
         snapshot_period: Option<u64>,
     },
+    UnstakeGovernanceToken { amount: Option<Uint128> },
+    WithdrawGovernanceToken {},
     CastVote {
         poll_id: u64,
         vote: VoteOption,
         amount: Uint128,
     },
+    SnapshotPoll { poll_id: u64 },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
-    SnapshotPoll { poll_id: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    StakeVotingToken {},
+    StakeGovernanceToken {},
     CreatePoll {
         title: String,
         description: String,

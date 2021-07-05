@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
 use valkyrie::governance::query_msgs::{StakerStateResponse, StakingConfigResponse, StakingStateResponse, VotingPowerResponse, UnstakingResponse, UnstakingItem};
 
-use crate::common::states::load_contract_available_balance;
+use crate::common::states::load_available_balance;
 use crate::staking::states::StakingConfig;
 
 use super::states::{StakerState, StakingState};
@@ -39,7 +39,7 @@ pub fn get_staker_state(
 
     let mut staker_state = staker_state.unwrap();
 
-    let contract_available_balance = load_contract_available_balance(deps.clone())?;
+    let contract_available_balance = load_available_balance(deps.clone())?;
     let balance = staker_state.load_balance(deps.storage, contract_available_balance)?;
 
     staker_state.clean_votes(deps.storage);
@@ -93,7 +93,7 @@ pub fn get_unstaking(
         for (unlock_block, amount) in staker_state.unstaking_amounts {
             unstaking_items.push(
                 UnstakingItem {
-                    unlock_block,
+                    unlock_height: unlock_block,
                     amount,
                 }
             )

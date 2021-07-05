@@ -7,7 +7,7 @@ use valkyrie::cw20::create_send_msg_response;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::execute_msgs::StakingConfigInitMsg;
 
-use crate::common::states::{ContractConfig, is_admin, load_contract_available_balance};
+use crate::common::states::{ContractConfig, load_available_balance};
 use crate::staking::states::StakingConfig;
 
 use super::states::{StakerState, StakingState};
@@ -39,7 +39,7 @@ pub fn update_config(
     withdraw_delay: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
-    if !is_admin(deps.storage, env, &info.sender) {
+    if env.contract.address != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -56,7 +56,7 @@ pub fn update_config(
     Ok(Response::default())
 }
 
-pub fn stake_voting_token(
+pub fn stake_governance_token(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -65,7 +65,7 @@ pub fn stake_voting_token(
 ) -> ContractResult<Response> {
     // Validate
     let config = ContractConfig::load(deps.storage)?;
-    if !config.is_token_contract(&info.sender) {
+    if !config.is_governance_token(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -77,7 +77,7 @@ pub fn stake_voting_token(
     let mut staking_state = StakingState::load(deps.storage)?;
     let mut staker_state = StakerState::load_safe(deps.storage, &sender)?;
 
-    let contract_available_balance = load_contract_available_balance(deps.as_ref())?
+    let contract_available_balance = load_available_balance(deps.as_ref())?
         .checked_sub(amount)?;
 
     let share = if contract_available_balance.is_zero() || staking_state.total_share.is_zero() {
@@ -98,7 +98,7 @@ pub fn stake_voting_token(
             submessages: vec![],
             messages: vec![],
             attributes: vec![
-                attr("action", "stake_voting_token"),
+                attr("action", "stake_governance_token"),
                 attr("sender", sender.as_str()),
                 attr("share", share.to_string()),
                 attr("amount", amount.to_string()),
@@ -109,7 +109,7 @@ pub fn stake_voting_token(
 }
 
 // Withdraw amount if not staked. By default all funds will be withdrawn.
-pub fn unstake_voting_token(
+pub fn unstake_governance_token(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -127,7 +127,7 @@ pub fn unstake_voting_token(
 
     staker_state.clean_votes(deps.storage);
 
-    let contract_available_balance = load_contract_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref())?;
     let total_share = staking_state.total_share;
     let locked_balance = staker_state.get_locked_balance();
     let locked_share = locked_balance.multiply_ratio(
@@ -166,7 +166,7 @@ pub fn unstake_voting_token(
         submessages: vec![],
         messages: vec![],
         attributes: vec![
-            attr("action", "unstake_voting_token"),
+            attr("action", "unstake_governance_token"),
             attr("unstake_amount", withdraw_amount),
             attr("unstake_share", withdraw_share),
         ],
@@ -174,7 +174,7 @@ pub fn unstake_voting_token(
     })
 }
 
-pub fn withdraw_voting_token(
+pub fn withdraw_governance_token(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -197,10 +197,10 @@ pub fn withdraw_voting_token(
     let contract_config = ContractConfig::load(deps.storage)?;
     Ok(
         create_send_msg_response(
-            &contract_config.token_contract,
+            &contract_config.governance_token,
             &info.sender,
             withdraw_amount,
-            "claim_pending_withdrawal",
+            "withdraw_governance_token",
         )
     )
 }

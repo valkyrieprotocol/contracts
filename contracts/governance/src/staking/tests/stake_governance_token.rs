@@ -4,9 +4,9 @@ use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
-use crate::staking::executions::stake_voting_token;
+use crate::staking::executions::stake_governance_token;
 use crate::staking::states::{StakerState, StakingState};
-use crate::tests::{init_default, TOKEN_CONTRACT};
+use crate::tests::{init_default, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{contract_env, expect_generic_err, expect_unauthorized_err};
 
 pub const STAKER1: &str = "Staker1";
@@ -17,16 +17,16 @@ pub const STAKER2_STAKE_AMOUNT: Uint128 = Uint128(10u128);
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, sender: Addr, amount: Uint128) -> ContractResult<Response> {
     deps.querier.plus_token_balances(&[(
-        TOKEN_CONTRACT,
+        GOVERNANCE_TOKEN,
         &[(MOCK_CONTRACT_ADDR, &amount)],
     )]);
 
-    stake_voting_token(deps.as_mut(), env, info, sender, amount)
+    stake_governance_token(deps.as_mut(), env, info, sender, amount)
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Uint128) -> (Env, MessageInfo, Response) {
     let env = contract_env();
-    let info = mock_info(TOKEN_CONTRACT, &[]);
+    let info = mock_info(GOVERNANCE_TOKEN, &[]);
 
     let response = exec(
         deps,
@@ -63,7 +63,7 @@ fn failed_insufficient_funds() {
     let result = exec(
         &mut deps,
         contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(STAKER1),
         Uint128::zero(),
     );

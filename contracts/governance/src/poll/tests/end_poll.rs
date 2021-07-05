@@ -2,7 +2,7 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg, Uint128, attr, to_binary};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::end_poll;
-use crate::tests::{init_default, TOKEN_CONTRACT, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
+use crate::tests::{init_default, GOVERNANCE_TOKEN, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
 use cw20::Cw20ExecuteMsg;
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
 use crate::poll::states::{Poll, PollResult};
@@ -51,9 +51,9 @@ fn succeed_passed() {
     let staker3_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -78,9 +78,9 @@ fn succeed_rejected_threshold_not_reached() {
     let staker3_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -91,7 +91,7 @@ fn succeed_rejected_threshold_not_reached() {
     let (_, _, response) = will_success(&mut deps, poll_id);
     assert_eq!(response.messages, vec![
         CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: GOVERNANCE_TOKEN.to_string(),
             send: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: PROPOSER1.to_string(),
@@ -121,9 +121,9 @@ fn succeed_rejected_quorum_not_reached() {
     let staker3_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -152,9 +152,9 @@ fn succeed_rejected_zero_quorum() {
     let staker3_staked_amount = Uint128(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -222,13 +222,13 @@ fn failed_quorum_inflation_without_snapshot_poll() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
     let poll_id = 1u64;
 
     super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
 
-    crate::staking::tests::stake::will_success(&mut deps, VOTER2, Uint128(1000));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, Uint128(1000));
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     let env = contract_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
