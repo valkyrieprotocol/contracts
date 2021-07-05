@@ -653,6 +653,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "valkyrie-fund-manager"
+version = "0.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "terraswap",
+ "valkyrie",
+]
+
+[[package]]
 name = "valkyrie-governance"
 version = "0.1.0"
 dependencies = [

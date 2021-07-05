@@ -4,11 +4,13 @@ pub mod governance;
 pub mod campaign;
 pub mod factory;
 pub mod distributor;
+pub mod fund_manager;
 pub mod staking;
 
 pub mod cw20;
 pub mod terra;
 pub mod utils;
+pub mod pagination;
 pub mod message_factories;
 pub mod message_matchers;
 
