@@ -4,7 +4,7 @@ pub mod governance;
 pub mod campaign;
 pub mod fund_manager;
 pub mod campaign_manager;
-pub mod staking;
+pub mod lp_staking;
 
 pub mod cw20;
 pub mod terra;

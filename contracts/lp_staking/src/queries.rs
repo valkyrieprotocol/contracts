@@ -1,17 +1,14 @@
 use cosmwasm_std::{Deps, Env, StdResult};
 
-use valkyrie::staking::{ConfigResponse, StakerInfoResponse, StateResponse};
-
-use crate::staking::states::{
-    compute_reward, compute_staker_reward, read_staker_info, Config, StakerInfo, State, CONFIG,
-    STATE,
-};
+use crate::states::{Config, StakerInfo, State};
+use valkyrie::lp_staking::query_msgs::{ConfigResponse, StateResponse, StakerInfoResponse};
 
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
     let resp = ConfigResponse {
-        valkyrie_token: config.valkyrie_token.to_string(),
-        staking_token: config.liquidity_token.to_string(),
+        token: config.token.to_string(),
+        pair: config.pair.to_string(),
+        lp_token: config.lp_token.to_string(),
         distribution_schedule: config.distribution_schedule,
     };
 
@@ -19,10 +16,10 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 pub fn query_state(deps: Deps, block_height: Option<u64>) -> StdResult<StateResponse> {
-    let mut state: State = STATE.load(deps.storage)?;
+    let mut state: State = State::load(deps.storage)?;
     if let Some(block_height) = block_height {
-        let config: Config = CONFIG.load(deps.storage)?;
-        compute_reward(&config, &mut state, block_height);
+        let config: Config = Config::load(deps.storage)?;
+        state.compute_reward(&config, block_height);
     }
 
     Ok(StateResponse {
@@ -36,13 +33,13 @@ pub fn query_staker_info(deps: Deps, env: Env, staker: String) -> StdResult<Stak
     let block_height = env.block.height;
     let staker_raw = deps.api.addr_validate(&staker.as_str())?;
 
-    let mut staker_info: StakerInfo = read_staker_info(&deps, &staker_raw)?;
+    let mut staker_info: StakerInfo = StakerInfo::load_or_default(deps.storage, &staker_raw)?;
 
-    let config: Config = CONFIG.load(deps.storage)?;
-    let mut state: State = STATE.load(deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
+    let mut state: State = State::load(deps.storage)?;
 
-    compute_reward(&config, &mut state, block_height);
-    compute_staker_reward(&state, &mut staker_info)?;
+    state.compute_reward(&config, block_height);
+    staker_info.compute_staker_reward(&state)?;
 
     Ok(StakerInfoResponse {
         staker,

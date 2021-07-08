@@ -1,5 +1,8 @@
 pub mod entrypoints;
-mod staking;
+
+mod states;
+mod queries;
+mod executions;
 
 #[cfg(test)]
 mod testing;

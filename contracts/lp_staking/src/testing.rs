@@ -7,19 +7,20 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
-use valkyrie::staking::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StakerInfoResponse,
+use valkyrie::lp_staking::query_msgs::{
+    ConfigResponse, QueryMsg, StakerInfoResponse,
     StateResponse,
 };
+use valkyrie::lp_staking::execute_msgs::{InstantiateMsg, ExecuteMsg, Cw20HookMsg};
 
 #[test]
 fn proper_initialization() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
-        valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "lp_token".to_string(),
-        pair_contract: "pair".to_string(),
+        token: "reward0000".to_string(),
+        lp_token: "lp_token".to_string(),
+        pair: "pair".to_string(),
         distribution_schedule: vec![(100, 200, Uint128::from(1000000u128))],
     };
 
@@ -34,8 +35,9 @@ fn proper_initialization() {
     assert_eq!(
         config,
         ConfigResponse {
-            valkyrie_token: "reward0000".to_string(),
-            staking_token: "lp_token".to_string(),
+            token: "reward0000".to_string(),
+            pair: "pair".to_string(),
+            lp_token: "lp_token".to_string(),
             distribution_schedule: vec![(100, 200, Uint128::from(1000000u128))],
         }
     );
@@ -62,9 +64,9 @@ fn test_bond_tokens() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
-        valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "lp_token".to_string(),
-        pair_contract: "pair".to_string(),
+        token: "reward0000".to_string(),
+        pair: "pair".to_string(),
+        lp_token: "lp_token".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
             (12345 + 100, 12345 + 200, Uint128::from(10000000u128)),
@@ -190,9 +192,9 @@ fn test_unbond() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
-        valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "lp_token".to_string(),
-        pair_contract: "pair".to_string(),
+        token: "reward0000".to_string(),
+        lp_token: "lp_token".to_string(),
+        pair: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
             (12345 + 100, 12345 + 200, Uint128::from(10000000u128)),
@@ -255,9 +257,9 @@ fn test_compute_reward() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
-        valkyrie_token: Addr::unchecked("reward0000").to_string(),
-        liquidity_token: Addr::unchecked("lp_token").to_string(),
-        pair_contract: "pair".to_string(),
+        token: "reward0000".to_string(),
+        lp_token: "lp_token".to_string(),
+        pair: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
             (12345 + 100, 12345 + 200, Uint128::from(10000000u128)),
@@ -370,9 +372,9 @@ fn test_withdraw() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
-        valkyrie_token: "reward0000".to_string(),
-        liquidity_token: "lp_token".to_string(),
-        pair_contract: "pair".to_string(),
+        token: "reward0000".to_string(),
+        lp_token: "lp_token".to_string(),
+        pair: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
             (12345 + 100, 12345 + 200, Uint128::from(10000000u128)),
@@ -420,9 +422,9 @@ fn test_auto_stake() {
     let mut deps = mock_dependencies_with_querier(&[]);
 
     let init = InstantiateMsg {
-        valkyrie_token: Addr::unchecked("asset").to_string(),
-        liquidity_token: Addr::unchecked("lp_token").to_string(),
-        pair_contract: Addr::unchecked("pair").to_string(),
+        token: "asset".to_string(),
+        lp_token: "lp_token".to_string(),
+        pair: "pair".to_string(),
         distribution_schedule: vec![
             (12345, 12345 + 100, Uint128::from(1000000u128)),
             (12345 + 100, 12345 + 200, Uint128::from(10000000u128)),

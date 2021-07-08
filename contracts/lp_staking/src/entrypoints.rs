@@ -1,6 +1,6 @@
-use crate::staking::executions::{auto_stake, auto_stake_hook, bond, unbond, withdraw};
-use crate::staking::queries::{query_config, query_staker_info, query_state};
-use crate::staking::states::{Config, State, CONFIG, STATE};
+use crate::executions::{auto_stake, auto_stake_hook, bond, unbond, withdraw};
+use crate::queries::{query_config, query_staker_info, query_state};
+use crate::states::{Config, State};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -8,7 +8,8 @@ use cosmwasm_std::{
     StdResult, Uint128,
 };
 use cw20::Cw20ReceiveMsg;
-use valkyrie::staking::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use valkyrie::lp_staking::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
+use valkyrie::lp_staking::query_msgs::QueryMsg;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -17,22 +18,18 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    let config = Config {
-        valkyrie_token: deps.api.addr_validate(&msg.valkyrie_token.as_str())?,
-        liquidity_token: deps.api.addr_validate(&msg.liquidity_token.as_str())?,
-        pair_contract: deps.api.addr_validate(&msg.pair_contract.as_str())?,
+    Config {
+        token: deps.api.addr_validate(&msg.token.as_str())?,
+        pair: deps.api.addr_validate(&msg.pair.as_str())?,
+        lp_token: deps.api.addr_validate(&msg.lp_token.as_str())?,
         distribution_schedule: msg.distribution_schedule,
-    };
+    }.save(deps.storage)?;
 
-    CONFIG.save(deps.storage, &config)?;
-
-    let state = State {
+    State {
         last_distributed: env.block.height,
         total_bond_amount: Uint128::zero(),
         global_reward_index: Decimal::zero(),
-    };
-
-    STATE.save(deps.storage, &state)?;
+    }.save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -65,12 +62,12 @@ pub fn receive_cw20(
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
 
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::Bond {} => {
             // only staking token contract can execute this message
-            if config.liquidity_token != deps.api.addr_validate(&info.sender.as_str())? {
+            if config.lp_token != deps.api.addr_validate(&info.sender.as_str())? {
                 return Err(StdError::generic_err("unauthorized"));
             }
             bond(deps, env, cw20_msg.sender, cw20_msg.amount)

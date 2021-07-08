@@ -668,7 +668,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "valkyrie-staking"
+name = "valkyrie-lp-staking"
 version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
