@@ -1,11 +1,11 @@
-use cosmwasm_std::{Deps, Env, Uint128, Timestamp};
+use cosmwasm_std::{Deps, Env};
 
-use valkyrie::campaign::enumerations::{Denom, Referrer};
-use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterStateResponse, BoosterResponse, ContractConfigResponse};
-use valkyrie::common::{ContractResult, OrderBy};
-use valkyrie::utils::{compress_addr, find, put_query_parameter};
+use valkyrie::campaign::enumerations::Referrer;
+use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterResponse, ContractConfigResponse, PrevBoostersResponse, ActiveBoosterResponse};
+use valkyrie::common::{ContractResult, OrderBy, ExecutionMsg, Denom};
+use valkyrie::utils::{compress_addr, put_query_parameter};
 
-use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation, BoosterState, ContractConfig};
+use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation, BoosterState, ContractConfig, Booster};
 use valkyrie::cw20::query_balance;
 
 pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigResponse> {
@@ -14,10 +14,9 @@ pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConf
     Ok(ContractConfigResponse {
         admin: config.admin.to_string(),
         governance: config.governance.to_string(),
-        distributor: config.distributor.to_string(),
-        token_contract: config.token_contract.to_string(),
-        factory: config.factory.to_string(),
-        burn_contract: config.burn_contract.to_string(),
+        campaign_manager: config.campaign_manager.to_string(),
+        fund_manager: config.fund_manager.to_string(),
+        proxies: config.proxies.iter().map(|v| v.to_string()).collect(),
     })
 }
 
@@ -29,6 +28,9 @@ pub fn get_campaign_info(deps: Deps, _env: Env) -> ContractResult<CampaignInfoRe
         description: campaign_info.description,
         url: campaign_info.url,
         parameter_key: campaign_info.parameter_key,
+        executions: campaign_info.executions.iter()
+            .map(|v| ExecutionMsg::from(v))
+            .collect(),
         creator: campaign_info.creator.to_string(),
         created_at: campaign_info.created_at,
     })
@@ -49,20 +51,6 @@ pub fn get_distribution_config(
 pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateResponse> {
     let distribution_config = DistributionConfig::load(deps.storage)?;
     let state = CampaignState::load(deps.storage)?;
-
-    let cumulative_distribution_amount =
-        find(&state.cumulative_distribution_amount, |(denom, _)| {
-            distribution_config.denom == *denom
-        })
-        .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
-        .1;
-
-    let locked_balance = find(&state.locked_balance, |(denom, _)| {
-        distribution_config.denom == *denom
-    })
-    .unwrap_or(&(distribution_config.denom.clone(), Uint128::zero()))
-    .1;
-
     let balance = query_balance(
         &deps.querier,
         deps.api,
@@ -72,52 +60,46 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
 
     Ok(CampaignStateResponse {
         participation_count: state.participation_count,
-        cumulative_distribution_amount: Uint128::from(cumulative_distribution_amount),
-        locked_balance: Uint128::from(locked_balance),
+        cumulative_distribution_amount: state.cumulative_distribution_amount,
+        locked_balance: state.locked_balance,
         balance,
         is_active: state.is_active(deps.storage, &deps.querier, env.block.height)?,
         is_pending: state.is_pending(),
     })
 }
 
-pub fn get_booster_state(deps: Deps, _env: Env) -> ContractResult<BoosterStateResponse> {
-    let mut is_boosting = false;
-    let mut assigned_total_amount = Uint128::zero();
-    let mut snapped_participation_count = 0u64;
-    let mut drop_booster: Option<BoosterResponse> = None;
-    let mut activity_booster: Option<BoosterResponse> = None;
-    let mut plus_booster: Option<BoosterResponse> = None;
-    let mut boosted_at: Option<Timestamp> = None;
+pub fn get_active_booster(deps: Deps, _env: Env) -> ContractResult<ActiveBoosterResponse> {
+    let booster = Booster::may_load_active(deps.storage)?
+        .as_ref()
+        .map(Booster::to_response);
 
-    let booster = BoosterState::may_load(deps.storage)?;
+    Ok(ActiveBoosterResponse {
+        active_booster: booster,
+    })
+}
 
-    if let Some(booster) = booster {
-        is_boosting = true;
-        assigned_total_amount = booster.drop_booster_amount + booster.activity_booster_amount + booster.plus_booster_amount;
-        snapped_participation_count = booster.drop_booster_participations;
-        drop_booster = Some(BoosterResponse {
-            assigned_amount: booster.drop_booster_amount,
-            distributed_amount: booster.drop_booster_amount.checked_sub(booster.drop_booster_left_amount)?,
-        });
-        activity_booster = Some(BoosterResponse {
-            assigned_amount: booster.activity_booster_amount,
-            distributed_amount: booster.activity_booster_amount.checked_sub(booster.activity_booster_left_amount)?,
-        });
-        plus_booster = Some(BoosterResponse {
-            assigned_amount: booster.plus_booster_amount,
-            distributed_amount: booster.plus_booster_amount.checked_sub(booster.plus_booster_left_amount)?,
-        });
-        boosted_at = Some(booster.boosted_at);
-    }
+pub fn get_prev_booster(deps: Deps, _env: Env, booster_id: u64) -> ContractResult<BoosterResponse> {
+    let booster = Booster::load_prev(deps.storage, booster_id)?;
 
-    Ok(BoosterStateResponse {
-        is_boosting,
-        assigned_total_amount,
-        snapped_participation_count,
-        drop_booster,
-        activity_booster,
-        plus_booster,
-        boosted_at,
+    Ok(booster.to_response())
+}
+
+pub fn query_prev_boosters(
+    deps: Deps,
+    _env: Env,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+    order_by: Option<OrderBy>,
+) -> ContractResult<PrevBoostersResponse> {
+    let result = Booster::query(
+        deps.storage,
+        start_after,
+        limit,
+        order_by,
+    )?;
+
+    Ok(PrevBoostersResponse {
+        prev_boosters: result,
     })
 }
 
@@ -154,18 +136,22 @@ pub fn get_participation(
     _env: Env,
     address: String,
 ) -> ContractResult<ParticipationResponse> {
-    let actor = deps.api.addr_validate(&address)?;
-    let participation = Participation::load(deps.storage, &actor)?;
-    let rewards: Vec<(Denom, Uint128)> = participation
-        .rewards
-        .iter()
-        .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), *amount))
-        .collect();
+    let booster_state = BoosterState::load(deps.storage)?;
+    let participation = Participation::load(
+        deps.storage,
+        &deps.api.addr_validate(&address)?,
+    )?;
 
     Ok(ParticipationResponse {
         actor_address: participation.actor_address.to_string(),
-        referrer_address: participation.referrer_address.map(|v| v.to_string()),
-        rewards,
+        referrer_address: participation.referrer_address.as_ref().map(|v| v.to_string()),
+        reward_amount: participation.reward_amount,
+        drop_booster_amount: participation.calc_drop_booster_amount(
+            deps.storage,
+            booster_state.recent_booster_id,
+        )?,
+        activity_booster_amount: participation.activity_booster_reward_amount,
+        plus_booster_amount: participation.plus_booster_reward_amount,
         participated_at: participation.participated_at,
     })
 }
@@ -178,19 +164,20 @@ pub fn query_participations(
     order_by: Option<OrderBy>,
 ) -> ContractResult<ParticipationsResponse> {
     let start_after = start_after.map(|v| deps.api.addr_validate(&v).unwrap());
+    let booster_state = BoosterState::load(deps.storage)?;
     let participations = Participation::query(deps.storage, start_after, limit, order_by)?
         .iter()
         .map(|v| {
-            let rewards: Vec<(Denom, Uint128)> = v
-                .rewards
-                .iter()
-                .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), *amount))
-                .collect();
-
             ParticipationResponse {
                 actor_address: v.actor_address.to_string(),
-                referrer_address: v.referrer_address.as_ref().map(|a| a.to_string()),
-                rewards,
+                referrer_address: v.referrer_address.as_ref().map(|v| v.to_string()),
+                reward_amount: v.reward_amount,
+                drop_booster_amount: v.calc_drop_booster_amount(
+                    deps.storage,
+                    booster_state.recent_booster_id,
+                ).unwrap(),
+                activity_booster_amount: v.activity_booster_reward_amount,
+                plus_booster_amount: v.plus_booster_reward_amount,
                 participated_at: v.participated_at,
             }
         })

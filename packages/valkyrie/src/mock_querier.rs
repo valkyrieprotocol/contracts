@@ -4,11 +4,11 @@ use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, fr
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
-use crate::factory::query_msgs::{QueryMsg as FactoryQueryMsg, CampaignConfigResponse};
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse};
-use crate::distributor::execute_msgs::BoosterConfig;
-use crate::distributor::query_msgs::{QueryMsg as DistributorQueryMsg, ContractConfigResponse as DistributorContractConfigResponse};
 use crate::terra::calc_tax_one_plus;
+use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg, BoosterResponse, ActiveBoosterResponse};
+use crate::campaign_manager::query_msgs::{CampaignConfigResponse, BoosterConfigResponse, QueryMsg as CampaignManagerQueryMsg};
+use crate::common::Denom;
 
 pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
 
@@ -31,9 +31,9 @@ pub struct WasmMockQuerier {
     token_querier: TokenQuerier,
     tax_querier: TaxQuerier,
     voting_powers_querier: VotingPowerQuerier,
-    valkyrie_config_querier: ValkyrieConfigQuerier,
-    distributor_config_querier: DistributorConfigQuerier,
+    campaign_manager_config_querier: CampaignManagerConfigQuerier,
     gov_config_querier: GovConfigQuerier,
+    campaign_state_querier: CampaignStateQuerier,
 }
 
 #[derive(Clone, Default)]
@@ -58,19 +58,19 @@ pub(crate) fn powers_to_map(powers: &[(&String, &Decimal)]) -> HashMap<String, D
 }
 
 #[derive(Clone, Default)]
-pub struct ValkyrieConfigQuerier {
-    campaign_deactivate_period: u64,
-    reward_withdraw_burn_rate: Decimal,
+pub struct CampaignManagerConfigQuerier {
+    campaign_config: CampaignConfigResponse,
+    booster_config: BoosterConfigResponse,
 }
 
-impl ValkyrieConfigQuerier {
+impl CampaignManagerConfigQuerier {
     pub fn new(
-        campaign_deactivate_period: u64,
-        reward_withdraw_burn_rate: Decimal,
+        campaign_config: CampaignConfigResponse,
+        booster_config: BoosterConfigResponse,
     ) -> Self {
-        ValkyrieConfigQuerier {
-            campaign_deactivate_period,
-            reward_withdraw_burn_rate,
+        CampaignManagerConfigQuerier {
+            campaign_config,
+            booster_config,
         }
     }
 }
@@ -91,25 +91,16 @@ impl GovConfigQuerier {
 }
 
 #[derive(Clone, Default)]
-pub struct DistributorConfigQuerier {
-    governance: String,
-    token_contract: String,
-    terraswap_router: String,
-    booster_config: BoosterConfig,
+pub struct CampaignStateQuerier {
+    states: HashMap<String, CampaignStateResponse>,
+    active_boosters: HashMap<String, Option<BoosterResponse>>,
 }
 
-impl DistributorConfigQuerier {
-    pub fn new(
-        governance: String,
-        token_contract: String,
-        terraswap_router: String,
-        booster_config: BoosterConfig,
-    ) -> Self {
-        DistributorConfigQuerier {
-            governance,
-            token_contract,
-            terraswap_router,
-            booster_config,
+impl CampaignStateQuerier {
+    pub fn new() -> Self {
+        CampaignStateQuerier {
+            states: HashMap::new(),
+            active_boosters: HashMap::new(),
         }
     }
 }
@@ -236,14 +227,14 @@ impl WasmMockQuerier {
     }
 
     fn handle_wasm_smart(&self, contract_addr: &String, msg: &Binary) -> QuerierResult {
-        let mut result = self.handle_wasm_smart_factory(contract_addr, msg);
+        let mut result = self.handle_wasm_smart_campaign_manager(contract_addr, msg);
 
         if result.is_none() {
             result = self.handle_wasm_smart_governance(contract_addr, msg);
         }
 
         if result.is_none() {
-            result = self.handle_wasm_smart_distributor(contract_addr, msg);
+            result = self.handle_wasm_smart_campaign(contract_addr, msg);
         }
 
         if result.is_none() {
@@ -255,16 +246,18 @@ impl WasmMockQuerier {
         result.unwrap()
     }
 
-    fn handle_wasm_smart_factory(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+    fn handle_wasm_smart_campaign_manager(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
         match from_binary(msg) {
-            Ok(FactoryQueryMsg::CampaignConfig {}) => {
-                let response = CampaignConfigResponse {
-                    reward_withdraw_burn_rate: self.valkyrie_config_querier.reward_withdraw_burn_rate,
-                    campaign_deactivate_period: self.valkyrie_config_querier.campaign_deactivate_period,
-                };
-
-                Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
-            }
+            Ok(CampaignManagerQueryMsg::CampaignConfig {}) => {
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &self.campaign_manager_config_querier.campaign_config,
+                ))))
+            },
+            Ok(CampaignManagerQueryMsg::BoosterConfig {}) => {
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &self.campaign_manager_config_querier.booster_config,
+                ))))
+            },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart".to_string(),
             })),
@@ -307,18 +300,20 @@ impl WasmMockQuerier {
         }
     }
 
-    fn handle_wasm_smart_distributor(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+    fn handle_wasm_smart_campaign(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
         match from_binary(msg) {
-            Ok(DistributorQueryMsg::ContractConfig {}) => {
-                let response = DistributorContractConfigResponse {
-                    governance: self.distributor_config_querier.governance.clone(),
-                    token_contract: self.distributor_config_querier.token_contract.clone(),
-                    terraswap_router: self.distributor_config_querier.terraswap_router.clone(),
-                    booster_config: self.distributor_config_querier.booster_config.clone(),
-                };
-
-                Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
-            }
+            Ok(QueryMsg::CampaignState {}) => {
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &self.campaign_state_querier.states[contract_addr],
+                ))))
+            },
+            Ok(QueryMsg::ActiveBooster {}) => {
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &ActiveBoosterResponse {
+                        active_booster: self.campaign_state_querier.active_boosters[contract_addr].clone()
+                    },
+                ))))
+            },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart".to_string(),
             })),
@@ -434,10 +429,10 @@ impl WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
             tax_querier: TaxQuerier::default(),
-            valkyrie_config_querier: ValkyrieConfigQuerier::default(),
+            campaign_manager_config_querier: CampaignManagerConfigQuerier::default(),
             voting_powers_querier: VotingPowerQuerier::default(),
-            distributor_config_querier: DistributorConfigQuerier::default(),
             gov_config_querier: GovConfigQuerier::default(),
+            campaign_state_querier: CampaignStateQuerier::default(),
         }
     }
 
@@ -446,15 +441,27 @@ impl WasmMockQuerier {
         self.token_querier = TokenQuerier::new(balances);
     }
 
-    pub fn with_valkyrie_config(
+    pub fn with_global_campaign_config(
         &mut self,
-        campaign_deactivate_period: u64,
-        reward_withdraw_burn_rate: Decimal,
+        creation_fee_token: String,
+        creation_fee_amount: Uint128,
+        creation_fee_recipient: String,
+        code_id: u64,
+        distribution_denom_whitelist: Vec<Denom>,
+        withdraw_fee_rate: Decimal,
+        withdraw_fee_recipient: String,
+        deactivate_period: u64,
     ) {
-        self.valkyrie_config_querier = ValkyrieConfigQuerier::new(
-            campaign_deactivate_period,
-            reward_withdraw_burn_rate,
-        );
+        self.campaign_manager_config_querier.campaign_config = CampaignConfigResponse {
+            creation_fee_token,
+            creation_fee_amount,
+            creation_fee_recipient,
+            code_id,
+            distribution_denom_whitelist,
+            withdraw_fee_rate,
+            withdraw_fee_recipient,
+            deactivate_period,
+        };
     }
 
     pub fn with_gov_config(
@@ -470,19 +477,37 @@ impl WasmMockQuerier {
 
     pub fn with_booster_config(
         &mut self,
+        booster_token: String,
         drop_booster_ratio: Decimal,
         activity_booster_ratio: Decimal,
         plus_booster_ratio: Decimal,
         activity_booster_multiplier: Decimal,
         min_participation_count: u64,
     ) {
-        self.distributor_config_querier.booster_config = BoosterConfig {
+        self.campaign_manager_config_querier.booster_config = BoosterConfigResponse {
+            booster_token,
             drop_booster_ratio,
             activity_booster_ratio,
             plus_booster_ratio,
             activity_booster_multiplier,
             min_participation_count,
         }
+    }
+
+    pub fn with_campaign_state(
+        &mut self,
+        campaign: String,
+        state: CampaignStateResponse,
+    ) {
+        self.campaign_state_querier.states.insert(campaign, state);
+    }
+
+    pub fn with_active_booster(
+        &mut self,
+        campaign: String,
+        booster: Option<BoosterResponse>,
+    ) {
+        self.campaign_state_querier.active_boosters.insert(campaign, booster);
     }
 
     pub fn plus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {

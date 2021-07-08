@@ -2,13 +2,12 @@ use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128};
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
 use cw20::Cw20ExecuteMsg;
 
-use valkyrie::common::ContractResult;
+use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::models::ExecutionMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
 use crate::poll::executions::create_poll;
-use crate::poll::states::{Execution, Poll};
+use crate::poll::states::Poll;
 use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
 
@@ -27,7 +26,7 @@ pub fn exec(
     title: String,
     description: String,
     link: Option<String>,
-    execution_msgs: Option<Vec<ExecutionMsg>>,
+    execution_msgs: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     deps.querier.plus_token_balances(&[(
         GOVERNANCE_TOKEN,
@@ -54,7 +53,7 @@ pub fn will_success(
     title: &str,
     description: &str,
     link: Option<&str>,
-    execution_msgs: Option<Vec<ExecutionMsg>>,
+    execution_msgs: Vec<ExecutionMsg>,
 ) -> (Env, MessageInfo, Response) {
     let env = contract_env();
     let info = mock_info(GOVERNANCE_TOKEN, &[]);
@@ -82,7 +81,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         POLL_TITLE,
         POLL_DESCRIPTION,
         None,
-        None,
+        vec![],
     )
 }
 
@@ -105,7 +104,7 @@ fn succeed() {
         POLL_TITLE,
         POLL_DESCRIPTION,
         Some(POLL_LINK),
-        Some(execution_msgs.clone()),
+        execution_msgs.clone(),
     );
 
     assert_eq!(response.attributes, vec![
@@ -130,7 +129,7 @@ fn succeed() {
         title: POLL_TITLE.to_string(),
         description: POLL_DESCRIPTION.to_string(),
         link: Some(POLL_LINK.to_string()),
-        executions: Some(executions),
+        executions,
         deposit_amount: POLL_PROPOSAL_DEPOSIT,
         total_balance_at_end_poll: None,
         snapped_staked_amount: None,
@@ -163,7 +162,7 @@ fn failed_invalid_permission() {
         POLL_TITLE.to_string(),
         POLL_DESCRIPTION.to_string(),
         None,
-        None,
+        vec![],
     );
 
     expect_unauthorized_err(&result);
@@ -184,7 +183,7 @@ fn failed_create_poll_invalid_deposit() {
         POLL_TITLE.to_string(),
         POLL_DESCRIPTION.to_string(),
         None,
-        None,
+        vec![],
     );
 
     expect_generic_err(
@@ -208,7 +207,7 @@ fn failed_create_poll_invalid_title() {
         "a".to_string(),
         POLL_DESCRIPTION.to_string(),
         None,
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Title too short");
 
@@ -221,7 +220,7 @@ fn failed_create_poll_invalid_title() {
         "0123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234".to_string(),
         POLL_DESCRIPTION.to_string(),
         None,
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Title too long");
 }
@@ -241,7 +240,7 @@ fn failed_create_poll_invalid_description() {
         POLL_TITLE.to_string(),
         "a".to_string(),
         None,
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Description too short");
 
@@ -254,7 +253,7 @@ fn failed_create_poll_invalid_description() {
         POLL_TITLE.to_string(),
         "0123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234".to_string(),
         None,
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Description too long");
 }
@@ -274,7 +273,7 @@ fn failed_create_poll_invalid_link() {
         POLL_TITLE.to_string(),
         POLL_DESCRIPTION.to_string(),
         Some("http://".to_string()),
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Link too short");
 
@@ -287,7 +286,7 @@ fn failed_create_poll_invalid_link() {
         POLL_TITLE.to_string(),
         POLL_DESCRIPTION.to_string(),
         Some("0123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234012345678901234567890123456789012345678901234567890123456789012340123456789012345678901234567890123456789012345678901234567890123401234567890123456789012345678901234567890123456789012345678901234".to_string()),
-        None,
+        vec![],
     );
     expect_generic_err(&result, "Link too long");
 }

@@ -1,15 +1,14 @@
 use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg, SubMsg, ReplyOn, Reply};
 
-use valkyrie::common::ContractResult;
+use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use valkyrie::governance::execute_msgs::PollConfigInitMsg;
-use valkyrie::governance::models::ExecutionMsg;
 
 use crate::common::states::{ContractConfig, load_available_balance};
 use crate::staking::states::StakerState;
 
-use super::states::{Execution, get_poll_id, Poll, PollConfig, PollState};
+use super::states::{get_poll_id, Poll, PollConfig, PollState};
 use crate::poll::states::{PollResult, PollExecutionContext};
 use valkyrie::message_factories;
 
@@ -114,7 +113,7 @@ pub fn create_poll(
     title: String,
     description: String,
     link: Option<String>,
-    execution_msgs: Option<Vec<ExecutionMsg>>,
+    executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     // Validate
     validate_title(&title)?;
@@ -134,11 +133,9 @@ pub fn create_poll(
     }
 
     // Execute
-    let executions = execution_msgs.map(|executions| {
-        executions.iter()
-            .map(|execution| Execution::from(deps.api, execution))
-            .collect()
-    });
+    let executions = executions.iter()
+        .map(|execution| Execution::from(deps.api, execution))
+        .collect();
 
     let mut poll = Poll {
         id: get_poll_id(deps.storage, &deposit_amount)?,
@@ -320,7 +317,7 @@ pub fn execute_poll(
         return Err(ContractError::Std(StdError::generic_err("Execution delay period has not expired")));
     }
 
-    let mut executions = poll.executions.unwrap_or(vec![]);
+    let mut executions = poll.executions;
     if executions.is_empty() {
         return Err(ContractError::Std(StdError::generic_err("The poll does not have executions")));
     }

@@ -34,14 +34,14 @@ fn succeed() {
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(campaign_state.active_flag, true);
-    assert_eq!(campaign_state.last_active_block, Some(env.block.height));
+    assert_eq!(campaign_state.last_active_height, Some(env.block.height));
 
     let deactivate_env = contract_env_height(env.block.height + 1);
     exec(&mut deps, deactivate_env, campaign_admin_sender(), false).unwrap();
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(campaign_state.active_flag, false);
-    assert_eq!(campaign_state.last_active_block, Some(env.block.height));
+    assert_eq!(campaign_state.last_active_height, Some(env.block.height));
 }
 
 #[test]

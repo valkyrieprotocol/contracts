@@ -111,7 +111,7 @@ pub fn receive_cw20(
             title,
             description,
             link,
-            execution,
+            executions,
         } => crate::poll::executions::create_poll(
             deps,
             env,
@@ -121,7 +121,7 @@ pub fn receive_cw20(
             title,
             description,
             link,
-            execution,
+            executions,
         ),
     }
 }

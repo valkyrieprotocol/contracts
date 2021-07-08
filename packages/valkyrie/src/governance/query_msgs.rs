@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use super::super::common::OrderBy;
 use super::enumerations::{PollStatus, VoteOption};
-use super::models::{ExecutionMsg, VoteInfoMsg};
+use super::models::VoteInfoMsg;
+use crate::common::ExecutionMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -94,7 +95,7 @@ pub struct PollResponse {
     pub title: String,
     pub description: String,
     pub link: Option<String>,
-    pub executions: Option<Vec<ExecutionMsg>>,
+    pub executions: Vec<ExecutionMsg>,
     pub creator: String,
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,

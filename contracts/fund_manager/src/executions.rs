@@ -1,10 +1,9 @@
 use cosmwasm_std::{attr, to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg, StdError, Api, coin};
 use cw20::Cw20ExecuteMsg;
 
-use valkyrie::common::ContractResult;
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::errors::ContractError;
 
-use valkyrie::campaign::enumerations::Denom;
 use terraswap::asset::AssetInfo;
 use terraswap::router::{SwapOperation, ExecuteMsg as TerraswapExecuteMsg};
 use valkyrie::cw20::query_balance;

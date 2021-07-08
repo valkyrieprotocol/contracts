@@ -1,7 +1,6 @@
 use cosmwasm_std::{Env, MessageInfo, Response, Uint128};
 
-use valkyrie::campaign::enumerations::Denom;
-use valkyrie::common::ContractResult;
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, expect_unauthorized_err};
 

@@ -1,14 +1,12 @@
-use std::cmp::Ordering;
 use std::fmt;
 
-use cosmwasm_std::{Addr, Api, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use valkyrie::common::OrderBy;
+use valkyrie::common::{OrderBy, Execution, ExecutionMsg};
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::models::ExecutionMsg;
 use valkyrie::governance::query_msgs::PollResponse;
 
 use crate::common::states::load_available_balance;
@@ -81,7 +79,7 @@ pub struct Poll {
     pub title: String,
     pub description: String,
     pub link: Option<String>,
-    pub executions: Option<Vec<Execution>>,
+    pub executions: Vec<Execution>,
     pub creator: Addr,
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
@@ -278,23 +276,16 @@ impl Poll {
     }
 
     pub fn to_response(&self) -> PollResponse {
-        let mut executions: Option<Vec<ExecutionMsg>> = None;
-        if let Some(all_executions) = self.executions.clone() {
-            executions = Some(
-                all_executions.iter().map(|v| ExecutionMsg {
-                    order: v.order,
-                    contract: v.contract.to_string(),
-                    msg: v.msg.clone(),
-                }).collect()
-            )
-        }
-
         PollResponse {
             id: self.id,
             title: self.title.to_string(),
             description: self.description.to_string(),
             link: self.link.clone(),
-            executions,
+            executions: self.executions.iter().map(|v| ExecutionMsg {
+                order: v.order,
+                contract: v.contract.to_string(),
+                msg: v.msg.clone(),
+            }).collect(),
             creator: self.creator.to_string(),
             deposit_amount: self.deposit_amount,
             yes_votes: self.yes_votes,
@@ -341,43 +332,6 @@ pub struct VoteInfo {
     pub voter: Addr,
     pub option: VoteOption,
     pub amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct Execution {
-    pub order: u64,
-    pub contract: Addr,
-    pub msg: Binary,
-}
-
-impl PartialEq for Execution {
-    fn eq(&self, other: &Self) -> bool {
-        self.order == other.order
-    }
-}
-
-impl Eq for Execution {}
-
-impl PartialOrd for Execution {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Execution {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order.cmp(&other.order)
-    }
-}
-
-impl Execution {
-    pub fn from(api: &dyn Api, msg: &ExecutionMsg) -> Execution {
-        Execution {
-            order: msg.order,
-            contract: api.addr_validate(&msg.contract).unwrap(),
-            msg: msg.msg.clone(),
-        }
-    }
 }
 
 #[derive(PartialEq)]

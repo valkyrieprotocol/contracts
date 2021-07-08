@@ -1,15 +1,13 @@
-use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdError, StdResult, Storage, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Storage, Timestamp, Uint128};
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use valkyrie::common::OrderBy;
-use valkyrie::distributor::execute_msgs::BoosterConfig;
-use valkyrie::distributor::query_msgs::{ContractConfigResponse};
-use valkyrie::factory::query_msgs::CampaignConfigResponse;
+use valkyrie::common::{OrderBy, Execution};
 use valkyrie::governance::query_msgs::VotingPowerResponse;
-use valkyrie::utils::find_mut_or_push;
+use valkyrie::utils::split_uint128;
+use valkyrie::campaign::query_msgs::{DropBoosterResponse, ActivityBoosterResponse, PlusBoosterResponse, BoosterResponse};
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -20,10 +18,9 @@ const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract_info");
 pub struct ContractConfig {
     pub admin: Addr,
     pub governance: Addr,
-    pub distributor: Addr,
-    pub token_contract: Addr,
-    pub factory: Addr,
-    pub burn_contract: Addr,
+    pub campaign_manager: Addr,
+    pub fund_manager: Addr,
+    pub proxies: Vec<Addr>,
 }
 
 impl ContractConfig {
@@ -36,25 +33,25 @@ impl ContractConfig {
     }
 
     pub fn is_admin(&self, address: &Addr) -> bool {
-        self.admin.eq(address)
+        self.admin == *address
     }
 
-    pub fn is_distributor(&self, address: &Addr) -> bool {
-        self.distributor.eq(address)
+    pub fn is_campaign_manager(&self, address: &Addr) -> bool {
+        self.campaign_manager == *address
     }
 
-    // pub fn is_governance(&self, address: &Addr) -> bool {
-    //     self.governance.eq(address)
-    // }
+    pub fn can_participate_execution(&self, address: &Addr) -> bool {
+        if self.proxies.is_empty() {
+            true
+        } else {
+            self.proxies.contains(address) || self.is_admin(address)
+        }
+    }
 }
 
 pub fn is_admin(storage: &dyn Storage, address: &Addr) -> bool {
     ContractConfig::load(storage).unwrap().is_admin(address)
 }
-
-// pub fn is_governance(storage: &dyn Storage, address: &Addr) -> bool {
-//     ContractConfig::load(storage).unwrap().is_governance(address)
-// }
 
 const CAMPAIGN_INFO: Item<CampaignInfo> = Item::new("campaign_info");
 
@@ -64,9 +61,10 @@ pub struct CampaignInfo {
     pub description: String,
     pub url: String,
     pub parameter_key: String,
+    pub executions: Vec<Execution>,
     pub creator: Addr,
     pub created_at: Timestamp,
-    pub created_block: u64,
+    pub created_height: u64,
 }
 
 impl CampaignInfo {
@@ -84,10 +82,11 @@ const CAMPAIGN_STATE: Item<CampaignState> = Item::new("campaign_state");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CampaignState {
     pub participation_count: u64,
-    pub cumulative_distribution_amount: Vec<(Denom, Uint128)>,
-    pub locked_balance: Vec<(Denom, Uint128)>,
+    pub distance_counts: Vec<u64>,
+    pub cumulative_distribution_amount: Uint128,
+    pub locked_balance: Uint128,
     pub active_flag: bool,
-    pub last_active_block: Option<u64>,
+    pub last_active_height: Option<u64>,
 }
 
 impl CampaignState {
@@ -110,53 +109,28 @@ impl CampaignState {
         }
 
         let config = ContractConfig::load(storage)?;
-        let valkyrie_config = load_valkyrie_config(querier, &config.factory)?;
+        let global_campaign_config = load_global_campaign_config(
+            querier,
+            &config.campaign_manager,
+        )?;
 
-        //TODO: deactivate_period 를 그냥 campaign 에서 관리할까?
-        Ok(valkyrie_config.campaign_deactivate_period + self.last_active_block.unwrap_or_default() >= block_height)
+        Ok(global_campaign_config.deactivate_period + self.last_active_height.unwrap_or_default() >= block_height)
     }
 
     pub fn is_pending(&self) -> bool {
-        self.last_active_block.is_none()
+        self.last_active_height.is_none()
     }
 
-    pub fn plus_distribution(&mut self, denom: Denom, amount: Uint128) {
-        find_mut_or_push(
-            &mut self.cumulative_distribution_amount,
-            |v| v.0 == denom,
-            || (denom.clone(), amount),
-            |v| v.1 += amount,
-        );
-
-        find_mut_or_push(
-            &mut self.locked_balance,
-            |v| v.0 == denom,
-            || (denom.clone(), amount),
-            |v| v.1 += amount,
-        );
+    pub fn increase_distance_count(&mut self, distance: u64) {
+        match self.distance_counts.get_mut(distance as usize) {
+            Some(distance_count) => *distance_count += 1,
+            None => self.distance_counts.insert(distance as usize, 1),
+        };
     }
 
-    pub fn locked_balance(&self, denom: Denom) -> Uint128 {
-        for (locked_denom, balance) in self.locked_balance.iter() {
-            if denom == *locked_denom {
-                return *balance;
-            }
-        }
-
-        Uint128::zero()
-    }
-
-    pub fn unlock_balance(&mut self, denom: Denom, amount: Uint128) -> StdResult<Uint128> {
-        let balance = self.locked_balance.iter_mut().find(|v| v.0 == denom);
-
-        if balance.is_none() {
-            return Err(StdError::generic_err("Insufficient balance"));
-        }
-
-        let balance = balance.unwrap();
-        balance.1 = balance.1.checked_sub(amount)?;
-
-        Ok(balance.1)
+    pub fn plus_distribution(&mut self, amount: Uint128) {
+        self.cumulative_distribution_amount += amount;
+        self.locked_balance += amount;
     }
 }
 
@@ -190,18 +164,12 @@ impl DistributionConfig {
     }
 }
 
+
 const BOOSTER_STATE: Item<BoosterState> = Item::new("booster_state");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BoosterState {
-    pub drop_booster_amount: Uint128,
-    pub drop_booster_left_amount: Uint128,
-    pub drop_booster_participations: u64,
-    pub activity_booster_amount: Uint128,
-    pub activity_booster_left_amount: Uint128,
-    pub plus_booster_amount: Uint128,
-    pub plus_booster_left_amount: Uint128,
-    pub boosted_at: Timestamp,
+    pub recent_booster_id: u64,
 }
 
 impl BoosterState {
@@ -212,97 +180,277 @@ impl BoosterState {
     pub fn load(storage: &dyn Storage) -> StdResult<BoosterState> {
         BOOSTER_STATE.load(storage)
     }
+}
 
-    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<BoosterState>> {
-        BOOSTER_STATE.may_load(storage)
-    }
+pub fn get_booster_id(storage: &mut dyn Storage) -> StdResult<u64> {
+    let mut booster_state = BoosterState::load(storage)?;
+    booster_state.recent_booster_id += 1;
+    booster_state.save(storage)?;
 
-    pub fn remove(storage: &mut dyn Storage) {
-        BOOSTER_STATE.remove(storage)
-    }
+    Ok(booster_state.recent_booster_id)
+}
 
-    pub fn compute_drop_booster(&self) -> Uint128 {
-        if self.drop_booster_participations == 0u64 {
-            return Uint128::zero();
+const ACTIVE_BOOSTER: Item<Booster> = Item::new("active_booster_id");
+const PREV_BOOSTERS: Map<&[u8], Booster> = Map::new("booster");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Booster {
+    pub id: u64,
+    pub drop_booster: DropBooster,
+    pub activity_booster: ActivityBooster,
+    pub plus_booster: PlusBooster,
+    pub boosted_at: Timestamp,
+    pub finished_at: Option<Timestamp>,
+}
+
+impl Booster {
+    pub fn load(storage: &dyn Storage, id: u64) -> StdResult<Booster> {
+        let active_booster = ACTIVE_BOOSTER.may_load(storage)?;
+
+        if let Some(active_booster) = active_booster {
+            if active_booster.id == id {
+                return Ok(active_booster);
+            }
         }
 
-        std::cmp::min(
-            self.drop_booster_left_amount,
-            Uint128::from(
-                self.drop_booster_amount.u128() / self.drop_booster_participations as u128,
-            ),
-        )
+        PREV_BOOSTERS.load(storage, &id.to_be_bytes())
     }
 
-    pub fn spend_drop_booster(&mut self, amount: Uint128) -> StdResult<()> {
-        self.drop_booster_left_amount = self.drop_booster_left_amount.checked_sub(amount)?;
-        Ok(())
+    pub fn load_active(storage: &dyn Storage) -> StdResult<Booster> {
+        ACTIVE_BOOSTER.load(storage)
     }
 
-    pub fn compute_activity_booster(&self, querier: &QuerierWrapper, distributor: &Addr) -> StdResult<Uint128> {
-        let config = load_distributor_config(querier, distributor)?;
-        Ok(std::cmp::min(
-            self.activity_booster_left_amount,
-            config.activity_booster_multiplier * self.compute_drop_booster(),
-        ))
+    pub fn load_prev(storage: &dyn Storage, id: u64) -> StdResult<Booster> {
+        PREV_BOOSTERS.load(storage, &id.to_be_bytes())
     }
 
-    pub fn spend_activity_booster(&mut self, amount: Uint128) -> StdResult<()> {
-        self.activity_booster_left_amount =
-            self.activity_booster_left_amount.checked_sub(amount)?;
-        Ok(())
+    pub fn may_load_active(storage: &dyn Storage) -> StdResult<Option<Booster>> {
+        ACTIVE_BOOSTER.may_load(storage)
     }
 
-    pub fn compute_plus_booster(
-        &self,
-        querier: &QuerierWrapper,
-        governance: &Addr,
-        address: &Addr,
-    ) -> StdResult<Uint128> {
-        let voting_power = load_voting_power(querier, governance, address).ok()
-            .map_or(Decimal::zero(), |v| v.voting_power);
+    pub fn query(
+        storage: &dyn Storage,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order_by: Option<OrderBy>,
+    ) -> StdResult<Vec<BoosterResponse>> {
+        let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+        let start_after = start_after.map(|v| Bound::exclusive(v.to_be_bytes()));
+        let (min, max, order_by) = match order_by {
+            Some(OrderBy::Asc) => (start_after, None, OrderBy::Asc),
+            _ => (None, start_after, OrderBy::Desc),
+        };
 
-        Ok(std::cmp::min(
-            self.plus_booster_left_amount,
-            self.plus_booster_amount * voting_power,
-        ))
+        PREV_BOOSTERS
+            .range(storage, min, max, order_by.into())
+            .take(limit)
+            .map(|item| {
+                let (_, v) = item?;
+                Ok(v.to_response())
+            })
+            .collect()
     }
 
-    pub fn spend_plus_booster(&mut self, amount: Uint128) -> StdResult<()> {
-        self.plus_booster_left_amount = self.plus_booster_left_amount.checked_sub(amount)?;
-        Ok(())
+    pub fn is_boosting(storage: &dyn Storage) -> StdResult<bool> {
+        Ok(ACTIVE_BOOSTER.may_load(storage)?.is_some())
     }
 
-    pub fn compute_and_spend_participate_booster(
-        storage: &mut dyn Storage,
-        querier: &QuerierWrapper,
-        governance: &Addr,
-        distributor: &Addr,
-        address: &Addr,
-    ) -> StdResult<(Uint128, Uint128, bool)> {
-        if let Some(mut booster_state) = BOOSTER_STATE.may_load(storage)? {
-            let activity_booster = booster_state.compute_activity_booster(querier, distributor)?;
-            let plus_booster = booster_state.compute_plus_booster(querier, governance, address)?;
-
-            booster_state.spend_activity_booster(activity_booster)?;
-            booster_state.spend_plus_booster(plus_booster)?;
-            booster_state.save(storage)?;
-
-            Ok((activity_booster, plus_booster, false))
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        if self.is_active() {
+            ACTIVE_BOOSTER.save(storage, self)
         } else {
-            Ok((Uint128::zero(), Uint128::zero(), true))
+            PREV_BOOSTERS.save(storage, &self.id.to_be_bytes(), self)
         }
     }
 
-    pub fn compute_and_spend_drop_booster(storage: &mut dyn Storage) -> StdResult<Uint128> {
-        if let Some(mut booster_state) = BOOSTER_STATE.may_load(storage)? {
-            let drop_booster = booster_state.compute_drop_booster();
+    pub fn finish_with_save(&mut self, storage: &mut dyn Storage, time: Timestamp) -> StdResult<()> {
+        self.finished_at = Some(time);
 
-            booster_state.spend_drop_booster(drop_booster)?;
-            booster_state.save(storage)?;
-            Ok(drop_booster)
+        ACTIVE_BOOSTER.remove(storage);
+
+        self.save(storage)
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.finished_at.is_none()
+    }
+
+    pub fn to_response(&self) -> BoosterResponse {
+        BoosterResponse {
+            drop_booster: self.drop_booster.to_response(),
+            activity_booster: self.activity_booster.to_response(),
+            plus_booster: self.plus_booster.to_response(),
+            boosted_at: self.boosted_at,
+            finished_at: self.finished_at,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DropBooster {
+    pub assigned_amount: Uint128,
+    pub calculated_amount: Uint128,
+    pub spent_amount: Uint128,
+    pub reward_amount: Uint128,
+    pub reward_amounts: Vec<Uint128>,
+    pub snapped_participation_count: u64,
+    pub snapped_distance_counts: Vec<u64>,
+}
+
+impl DropBooster {
+    pub fn new(
+        assigned_amount: Uint128,
+        distribution_amounts: Vec<Uint128>,
+        participation_count: u64,
+        distance_counts: Vec<u64>,
+    ) -> DropBooster {
+        let reward_amount = if participation_count == 0 {
+            Uint128::zero()
         } else {
-            Ok(Uint128::zero())
+            assigned_amount
+                .checked_div(Uint128::from(participation_count)).unwrap()
+        };
+        let reward_amounts = split_uint128(
+            reward_amount.clone(),
+            &distribution_amounts,
+        );
+
+        let mut calculated_amount = Uint128::zero();
+        for (distance, amount) in reward_amounts.iter().enumerate() {
+            let count = distance_counts.get(distance)
+                .map_or(Uint128::zero(), |v| Uint128::from(*v));
+
+            calculated_amount += count.checked_mul(*amount).unwrap();
+        }
+
+        DropBooster {
+            assigned_amount,
+            calculated_amount,
+            spent_amount: Uint128::zero(),
+            reward_amount,
+            reward_amounts,
+            snapped_participation_count: participation_count,
+            snapped_distance_counts: distance_counts,
+        }
+    }
+
+    pub fn calc_reward_amount(&self, participation: &Participation, booster_id: u64) -> Uint128 {
+        let mut result = Uint128::zero();
+
+        for (distance, amount) in self.reward_amounts.iter().enumerate() {
+            result += participation.drop_booster_distance_counts(booster_id).get(distance)
+                .map_or(Uint128::zero(), |(_, count)| Uint128::from(*count))
+                .checked_mul(*amount).unwrap();
+        }
+
+        result
+    }
+
+    pub fn to_response(&self) -> DropBoosterResponse {
+        DropBoosterResponse {
+            assigned_amount: self.assigned_amount,
+            calculated_amount: self.calculated_amount,
+            spent_amount: self.spent_amount,
+            reward_amounts: self.reward_amounts.clone(),
+            snapped_participation_count: self.snapped_participation_count,
+            snapped_distance_counts: self.snapped_distance_counts.clone(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ActivityBooster {
+    pub assigned_amount: Uint128,
+    pub distributed_amount: Uint128,
+    pub reward_amount: Uint128,
+    pub reward_amounts: Vec<Uint128>,
+}
+
+impl ActivityBooster {
+    pub fn new(
+        assigned_amount: Uint128,
+        distribution_amounts: Vec<Uint128>,
+        drop_booster_reward_amount: Uint128,
+        multiplier: Decimal,
+    ) -> ActivityBooster {
+        let reward_amount = drop_booster_reward_amount * multiplier;
+        let reward_amounts = split_uint128(
+            reward_amount,
+            &distribution_amounts,
+        );
+
+        ActivityBooster {
+            assigned_amount,
+            distributed_amount: Uint128::zero(),
+            reward_amount,
+            reward_amounts,
+        }
+    }
+
+    pub fn left_amount(&self) -> Uint128 {
+        self.assigned_amount.checked_sub(self.distributed_amount).unwrap()
+    }
+
+    pub fn reward_amount(&self) -> Uint128 {
+        std::cmp::min(self.left_amount(), self.reward_amount)
+    }
+
+    pub fn boost(
+        &mut self,
+        participation: &mut Participation,
+        distance: u64,
+        total_reward_amount: Uint128,
+    ) -> Uint128 {
+        let amount = self.reward_amounts.get(distance as usize)
+            .map_or(Uint128::zero(), |v| v.clone())
+            .multiply_ratio(total_reward_amount, self.reward_amount);
+
+        participation.activity_booster_reward_amount += amount;
+        self.distributed_amount += amount;
+
+        amount
+    }
+
+    pub fn to_response(&self) -> ActivityBoosterResponse {
+        ActivityBoosterResponse {
+            assigned_amount: self.assigned_amount,
+            distributed_amount: self.distributed_amount,
+            reward_amounts: self.reward_amounts.clone(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PlusBooster {
+    pub assigned_amount: Uint128,
+    pub distributed_amount: Uint128,
+}
+
+impl PlusBooster {
+    pub fn new(assigned_amount: Uint128) -> PlusBooster {
+        PlusBooster {
+            assigned_amount,
+            distributed_amount: Uint128::zero(),
+        }
+    }
+
+    pub fn boost(
+        &mut self,
+        participation: &mut Participation,
+        voting_power: Decimal,
+    ) -> Uint128 {
+        let amount = self.assigned_amount * voting_power;
+
+        participation.plus_booster_reward_amount += amount;
+        self.distributed_amount += amount;
+
+        amount
+    }
+
+    pub fn to_response(&self) -> PlusBoosterResponse {
+        PlusBoosterResponse {
+            assigned_amount: self.assigned_amount,
+            distributed_amount: self.distributed_amount,
         }
     }
 }
@@ -313,12 +461,14 @@ const PARTICIPATION: Map<&Addr, Participation> = Map::new("participation");
 pub struct Participation {
     pub actor_address: Addr,
     pub referrer_address: Option<Addr>,
-    pub rewards: Vec<(Denom, Uint128)>,
+    pub reward_amount: Uint128,
     pub participated_at: Timestamp,
 
     // booster state
-    pub booster_rewards: Uint128,
-    pub drop_booster_claimable: bool,
+    pub drop_booster_claimable: Vec<(u64, bool)>,
+    pub drop_booster_distance_counts: Vec<(u64, Vec<(u64, u64)>)>,
+    pub activity_booster_reward_amount: Uint128,
+    pub plus_booster_reward_amount: Uint128,
 }
 
 impl Participation {
@@ -357,23 +507,183 @@ impl Participation {
             .collect()
     }
 
-    pub fn plus_reward(&mut self, denom: Denom, amount: Uint128) {
-        find_mut_or_push(
-            &mut self.rewards,
-            |v| v.0 == denom.clone(),
-            || (denom.clone(), amount),
-            |v| v.1 += amount,
-        );
+    pub fn increase_distance_count(&mut self, booster_id: u64, distance: u64) {
+        match self.drop_booster_distance_counts.iter_mut().find(|(id, _)| *id == booster_id) {
+            Some((_, distance_counts)) => {
+                match distance_counts.iter_mut().find(|(d, _)| *d == distance) {
+                    Some((_, count)) => *count += 1,
+                    None => distance_counts.push((distance, 1)),
+                }
+            }
+            None => self.drop_booster_distance_counts.push((booster_id, vec![(distance, 1)])),
+        }
+    }
+
+    pub fn drop_booster_distance_counts(&self, booster_id: u64) -> Vec<(u64, u64)> {
+        let mut result: Vec<(u64, u64)> = vec![];
+
+        for (idx, distance_counts) in self.drop_booster_distance_counts.iter() {
+            if *idx > booster_id {
+                continue;
+            }
+
+            for (distance, count) in distance_counts.iter() {
+                match result.iter_mut().find(|(d, _)| *d == *distance) {
+                    Some(value) => value.1 += *count,
+                    None => result.push((*distance, *count)),
+                }
+            }
+        }
+
+        result
+    }
+
+    pub fn has_reward(&self) -> bool {
+        !self.reward_amount.is_zero()
+    }
+
+    pub fn has_booster_reward(&self, booster_id: u64) -> bool {
+        self.has_drop_booster_reward(booster_id)
+            || self.has_activity_booster_reward()
+            || self.has_plus_booster_reward()
+    }
+
+    fn has_drop_booster_reward(&self, booster_id: u64) -> bool {
+        for (id, claimable) in self.drop_booster_claimable.iter() {
+            if *id > booster_id {
+                continue;
+            }
+
+            if *claimable {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn has_activity_booster_reward(&self) -> bool {
+        !self.activity_booster_reward_amount.is_zero()
+    }
+
+    fn has_plus_booster_reward(&self) -> bool {
+        !self.plus_booster_reward_amount.is_zero()
+    }
+
+    pub fn calc_drop_booster_amount(
+        &self,
+        storage: &dyn Storage,
+        recent_booster_id: u64,
+    ) -> StdResult<Uint128> {
+        let mut result = Uint128::zero();
+
+        for (id, claimable) in self.drop_booster_claimable.iter() {
+            if !claimable {
+                continue;
+            }
+
+            let booster = if recent_booster_id == *id {
+                Booster::load(storage, *id)?
+            } else {
+                Booster::load_prev(storage, *id)?
+            };
+
+            result += booster.drop_booster.calc_reward_amount(self, *id);
+        }
+
+        Ok(result)
+    }
+
+    pub fn receive_reward(
+        &mut self,
+        campaign_state: &mut CampaignState,
+    ) -> StdResult<Uint128> {
+        let amount = self.reward_amount;
+
+        self.reward_amount = Uint128::zero();
+        campaign_state.locked_balance = campaign_state.locked_balance.checked_sub(amount)?;
+
+        Ok(amount)
+    }
+
+    pub fn receive_booster_reward(
+        &mut self,
+        storage: &mut dyn Storage,
+        recent_booster_id: u64,
+    ) -> StdResult<Uint128> {
+        let mut reward_amount = Uint128::zero();
+        if self.has_drop_booster_reward(recent_booster_id) {
+            reward_amount += self.receive_drop_booster(storage, recent_booster_id)?;
+        }
+
+        if self.has_activity_booster_reward() {
+            reward_amount += self.receive_activity_booster();
+        }
+
+        if self.has_plus_booster_reward() {
+            reward_amount += self.receive_plus_booster();
+        }
+
+        Ok(reward_amount)
+    }
+
+    fn receive_drop_booster(
+        &mut self,
+        storage: &mut dyn Storage,
+        recent_booster_id: u64,
+    ) -> StdResult<Uint128> {
+        let mut result = Uint128::zero();
+
+        let mut claimable_ids: Vec<u64> = vec![];
+        for (id, claimable) in self.drop_booster_claimable.iter_mut() {
+            if !*claimable {
+                continue;
+            }
+
+            *claimable = false;
+            claimable_ids.push(*id);
+        }
+
+        for id in claimable_ids { //iter_mut 로 이미 borrow 한 상태라서 calc_reward_amount 를 호출할 수 없어 반복문 분리함.
+            let mut booster = if recent_booster_id == id {
+                Booster::load(storage, id)?
+            } else {
+                Booster::load_prev(storage, id)?
+            };
+            let amount = booster.drop_booster.calc_reward_amount(self, id);
+            booster.drop_booster.spent_amount += amount;
+            booster.save(storage)?;
+
+            result += amount;
+        }
+
+        Ok(result)
+    }
+
+    fn receive_activity_booster(&mut self) -> Uint128 {
+        let amount = self.activity_booster_reward_amount;
+
+        self.activity_booster_reward_amount = Uint128::zero();
+
+        amount
+    }
+
+    fn receive_plus_booster(&mut self) -> Uint128 {
+        let amount = self.plus_booster_reward_amount;
+
+        self.plus_booster_reward_amount = Uint128::zero();
+
+        amount
     }
 }
 
-pub fn load_valkyrie_config(
+pub fn load_global_campaign_config(
     querier: &QuerierWrapper,
-    factory: &Addr,
-) -> StdResult<CampaignConfigResponse> {
+    campaign_manager: &Addr,
+) -> StdResult<valkyrie::campaign_manager::query_msgs::CampaignConfigResponse> {
     querier.query_wasm_smart(
-        factory,
-        &valkyrie::factory::query_msgs::QueryMsg::CampaignConfig {},
+        campaign_manager,
+        &valkyrie::campaign_manager::query_msgs::QueryMsg::CampaignConfig {},
     )
 }
 
@@ -381,20 +691,13 @@ pub fn load_voting_power(
     querier: &QuerierWrapper,
     governance: &Addr,
     staker_address: &Addr,
-) -> StdResult<VotingPowerResponse> {
-    querier.query_wasm_smart(
+) -> Decimal {
+    let response: StdResult<VotingPowerResponse> = querier.query_wasm_smart(
         governance,
         &valkyrie::governance::query_msgs::QueryMsg::VotingPower {
             address: staker_address.to_string(),
         },
-    )
-}
+    );
 
-fn load_distributor_config(querier: &QuerierWrapper, address: &Addr) -> StdResult<BoosterConfig> {
-    let contract_config: ContractConfigResponse = querier.query_wasm_smart(
-        address,
-        &valkyrie::distributor::query_msgs::QueryMsg::ContractConfig {},
-    )?;
-
-    Ok(contract_config.booster_config)
+    response.map_or(Decimal::zero(), |v| v.voting_power)
 }

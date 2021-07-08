@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::enumerations::VoteOption;
-use super::models::ExecutionMsg;
+use crate::common::ExecutionMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -68,7 +68,7 @@ pub enum Cw20HookMsg {
         title: String,
         description: String,
         link: Option<String>,
-        execution: Option<Vec<ExecutionMsg>>,
+        executions: Vec<ExecutionMsg>,
     },
 }
 

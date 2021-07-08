@@ -44,10 +44,10 @@ fn succeed_without_booster() {
     ]);
 
     let participation = Participation::load(&deps.storage, &participator).unwrap();
-    assert_eq!(participation.rewards, vec![]);
+    assert_eq!(participation.reward_amount, Uint128::zero());
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
-    assert_eq!(campaign_state.locked_balance.iter().map(|v| v.1).sum::<Uint128>(), Uint128::zero());
+    assert_eq!(campaign_state.locked_balance, Uint128::zero());
 }
 
 // #[test]

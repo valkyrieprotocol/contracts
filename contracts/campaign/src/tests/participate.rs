@@ -8,8 +8,8 @@ use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
 
 use crate::executions::participate;
 use crate::states::{CampaignState, Participation};
-use crate::tests::{CAMPAIGN_DISTRIBUTION_AMOUNTS, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE};
-use crate::tests::register_booster::{DROP_BOOSTER_AMOUNT, PLUS_BOOSTER_AMOUNT};
+use crate::tests::{CAMPAIGN_DISTRIBUTION_AMOUNTS, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE, TOKEN_CONTRACT};
+use crate::tests::enable_booster::{DROP_BOOSTER_AMOUNT, PLUS_BOOSTER_AMOUNT};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -53,23 +53,19 @@ fn succeed_without_referrer() {
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(campaign_state.participation_count, 1);
-    assert_eq!(campaign_state.last_active_block, Some(env.block.height));
-    assert_eq!(campaign_state.locked_balance, vec![(
-        cw20::Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
-    )]);
+    assert_eq!(campaign_state.last_active_height, Some(env.block.height));
+    assert_eq!(campaign_state.locked_balance, CAMPAIGN_DISTRIBUTION_AMOUNTS[0]);
 
     let participation = Participation::load(&deps.storage, &participator).unwrap();
     assert_eq!(participation, Participation {
         actor_address: participator.clone(),
         referrer_address: None,
-        rewards: vec![(
-            cw20::Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-            CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
-        )],
-        booster_rewards: Uint128::zero(),
-        drop_booster_claimable: true,
+        reward_amount: CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
         participated_at: env.block.time,
+        drop_booster_claimable: vec![(1, true)],
+        drop_booster_distance_counts: vec![(1, vec![(0, 1)])],
+        activity_booster_reward_amount: Uint128::zero(),
+        plus_booster_reward_amount: Uint128::zero(),
     });
 }
 
@@ -99,36 +95,31 @@ fn succeed_with_referrer() {
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(campaign_state.participation_count, 2);
-    assert_eq!(campaign_state.last_active_block, Some(env.block.height));
-    assert_eq!(campaign_state.locked_balance, vec![(
-        cw20::Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[1],
-    )]);
+    assert_eq!(campaign_state.last_active_height, Some(env.block.height));
+    assert_eq!(campaign_state.locked_balance, CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[1]);
 
     let participation = Participation::load(&deps.storage, &participator).unwrap();
     assert_eq!(participation, Participation {
         actor_address: participator.clone(),
         referrer_address: Some(referrer.clone()),
-        rewards: vec![(
-            cw20::Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-            CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
-        )],
-        booster_rewards: Uint128::zero(),
-        drop_booster_claimable: true,
+        reward_amount: CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
         participated_at: env.block.time,
+        drop_booster_claimable: vec![(1, true)],
+        drop_booster_distance_counts: vec![(1, vec![(0, 1)])],
+        activity_booster_reward_amount: Uint128::zero(),
+        plus_booster_reward_amount: Uint128::zero(),
     });
 
     let referrer_participation = Participation::load(&deps.storage, &referrer).unwrap();
     assert_eq!(referrer_participation, Participation {
         actor_address: referrer.clone(),
         referrer_address: None,
-        rewards: vec![(
-            cw20::Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-            CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[1],
-        )],
-        booster_rewards: Uint128::zero(),
-        drop_booster_claimable: true,
+        reward_amount: CAMPAIGN_DISTRIBUTION_AMOUNTS[0] + CAMPAIGN_DISTRIBUTION_AMOUNTS[1],
         participated_at: referrer_env.block.time,
+        drop_booster_claimable: vec![(1, true)],
+        drop_booster_distance_counts: vec![(1, vec![(0, 1), (1, 1)])],
+        activity_booster_reward_amount: Uint128::zero(),
+        plus_booster_reward_amount: Uint128::zero(),
     });
 }
 
@@ -140,6 +131,7 @@ fn succeed_with_booster() {
     let activity_booster_multiplier = Decimal::percent(80);
     let min_participation_count = 10u64;
     deps.querier.with_booster_config(
+        TOKEN_CONTRACT.to_string(),
         Decimal::percent(10),
         Decimal::percent(80),
         Decimal::percent(10),
@@ -158,7 +150,7 @@ fn succeed_with_booster() {
     let referrer = "Referrer";
     will_success(&mut deps,  referrer, None);
 
-    super::register_booster::default(&mut deps);
+    super::enable_booster::default(&mut deps);
 
     let participator = "Participator";
     will_success(
@@ -178,7 +170,8 @@ fn succeed_with_booster() {
         CAMPAIGN_DISTRIBUTION_AMOUNTS[1],
         CAMPAIGN_DISTRIBUTION_AMOUNTS.iter().sum::<Uint128>(),
     );
-    assert_eq!(referrer_participation.booster_rewards, reward_rate * activity_booster);
+    assert_eq!(referrer_participation.activity_booster_reward_amount, reward_rate * activity_booster);
+    assert_eq!(referrer_participation.plus_booster_reward_amount, Uint128::zero());
 
     let participation = Participation::load(
         &deps.storage,
@@ -188,7 +181,8 @@ fn succeed_with_booster() {
         CAMPAIGN_DISTRIBUTION_AMOUNTS[0],
         CAMPAIGN_DISTRIBUTION_AMOUNTS.iter().sum::<Uint128>(),
     );
-    assert_eq!(participation.booster_rewards, reward_rate * activity_booster);
+    assert_eq!(participation.activity_booster_reward_amount, reward_rate * activity_booster);
+    assert_eq!(participation.plus_booster_reward_amount, Uint128::zero());
 
     let participator = "StakingParticipator";
     let voting_power = Decimal::percent(1);
@@ -207,7 +201,8 @@ fn succeed_with_booster() {
         CAMPAIGN_DISTRIBUTION_AMOUNTS.iter().sum::<Uint128>(),
     );
     let plus_booster_amount = voting_power * PLUS_BOOSTER_AMOUNT;
-    assert_eq!(participation.booster_rewards, (reward_rate * activity_booster) + plus_booster_amount);
+    assert_eq!(participation.activity_booster_reward_amount, reward_rate * activity_booster);
+    assert_eq!(participation.plus_booster_reward_amount, plus_booster_amount);
 }
 
 #[test]

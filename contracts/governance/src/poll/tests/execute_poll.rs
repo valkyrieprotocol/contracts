@@ -43,7 +43,7 @@ fn succeed() {
         POLL_TITLE,
         POLL_DESCRIPTION,
         Some(POLL_LINK),
-        Some(execution_msgs.clone()),
+        execution_msgs.clone(),
     );
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
@@ -100,7 +100,7 @@ fn failed_not_passed() {
         POLL_TITLE,
         POLL_DESCRIPTION,
         Some(POLL_LINK),
-        Some(execution_msgs),
+        execution_msgs,
     );
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 
@@ -141,7 +141,7 @@ fn failed_in_execution_delay() {
         POLL_TITLE,
         POLL_DESCRIPTION,
         Some(POLL_LINK),
-        Some(execution_msgs),
+        execution_msgs,
     );
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
 

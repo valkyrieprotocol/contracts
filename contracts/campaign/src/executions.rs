@@ -1,22 +1,17 @@
-use cosmwasm_std::{
-    attr, to_binary, Addr, Attribute, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper,
-    Response, StdError, StdResult, Uint128, WasmMsg,
-};
+use cosmwasm_std::{attr, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128, WasmMsg, from_binary, Decimal};
 use cw20::Denom as Cw20Denom;
 
-use valkyrie::campaign::enumerations::{Denom, Referrer};
-use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, InstantiateMsg};
-use valkyrie::common::ContractResult;
+use valkyrie::campaign::enumerations::Referrer;
+use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, CampaignConfigMsg};
+use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
 use valkyrie::cw20::query_balance;
-use valkyrie::distributor::execute_msgs::ExecuteMsg as DistributorExecuteMsg;
+use valkyrie::fund_manager::execute_msgs::{ExecuteMsg as FundExecuteMsg};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::calc_ratio_amount;
 
-use crate::states::{
-    BoosterState, CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin,
-    is_pending, load_valkyrie_config, Participation,
-};
+use crate::states::{BoosterState, CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin, is_pending, Participation, load_global_campaign_config, Booster, get_booster_id, DropBooster, ActivityBooster, PlusBooster, load_voting_power};
+use valkyrie::campaign_manager::execute_msgs::{CampaignInstantiateMsg, ExecuteMsg};
 
 const MIN_TITLE_LENGTH: usize = 4;
 const MAX_TITLE_LENGTH: usize = 64;
@@ -29,52 +24,95 @@ pub fn instantiate(
     deps: DepsMut,
     env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: CampaignInstantiateMsg,
 ) -> ContractResult<Response> {
     // Validate
-    validate_title(&msg.title)?;
-    validate_url(&msg.url)?;
-    validate_description(&msg.description)?;
+    let campaign_config: CampaignConfigMsg = from_binary(&msg.config_msg)?;
+
+    validate_title(&campaign_config.title)?;
+    validate_url(&campaign_config.url)?;
+    validate_description(&campaign_config.description)?;
 
     // Execute
     ContractConfig {
         admin: deps.api.addr_validate(&msg.admin)?,
         governance: deps.api.addr_validate(&msg.governance)?,
-        distributor: deps.api.addr_validate(&msg.distributor)?,
-        token_contract: deps.api.addr_validate(&msg.token_contract)?,
-        factory: deps.api.addr_validate(&msg.factory)?,
-        burn_contract: deps.api.addr_validate(&msg.burn_contract)?,
-    }
-        .save(deps.storage)?;
+        campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
+        fund_manager: deps.api.addr_validate(&msg.fund_manager)?,
+        proxies: msg.proxies.iter()
+            .map(|v| deps.api.addr_validate(v).unwrap())
+            .collect(),
+    }.save(deps.storage)?;
 
     CampaignInfo {
-        title: msg.title,
-        description: msg.description,
-        url: msg.url,
-        parameter_key: msg.parameter_key,
+        title: campaign_config.title,
+        description: campaign_config.description,
+        url: campaign_config.url,
+        parameter_key: campaign_config.parameter_key,
+        executions: msg.executions.iter()
+            .map(|e| Execution::from(deps.api, e))
+            .collect(),
         creator: deps.api.addr_validate(&msg.creator)?,
         created_at: env.block.time,
-        created_block: env.block.height,
-    }
-        .save(deps.storage)?;
+        created_height: env.block.height,
+    }.save(deps.storage)?;
 
     CampaignState {
         participation_count: 0,
-        cumulative_distribution_amount: vec![],
-        locked_balance: vec![],
+        distance_counts: vec![],
+        cumulative_distribution_amount: Uint128::zero(),
+        locked_balance: Uint128::zero(),
         active_flag: false,
-        last_active_block: None,
-    }
-        .save(deps.storage)?;
+        last_active_height: None,
+    }.save(deps.storage)?;
 
     DistributionConfig {
-        denom: msg.distribution_denom.to_cw20(deps.api),
-        amounts: msg.distribution_amounts,
-    }
-        .save(deps.storage)?;
+        denom: campaign_config.distribution_denom.to_cw20(deps.api),
+        amounts: campaign_config.distribution_amounts,
+    }.save(deps.storage)?;
+
+    BoosterState {
+        recent_booster_id: 0u64,
+    }.save(deps.storage)?;
 
     // Response
     Ok(Response::default())
+}
+
+pub fn update_contract_config(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    admin: Option<String>,
+    proxies: Option<Vec<String>>,
+) -> ContractResult<Response> {
+    // Validate
+    if !is_admin(deps.storage, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut contract_config = ContractConfig::load(deps.storage)?;
+
+    if let Some(admin) = admin {
+        contract_config.admin = deps.api.addr_validate(&admin)?;
+    }
+
+    if let Some(proxies) = proxies {
+        contract_config.proxies = proxies.iter()
+            .map(|v| deps.api.addr_validate(v).unwrap())
+            .collect();
+    }
+
+    contract_config.save(deps.storage)?;
+
+    // Response
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![attr("action", "update_contract_config")],
+        data: None,
+    })
 }
 
 pub fn update_campaign_info(
@@ -82,8 +120,10 @@ pub fn update_campaign_info(
     _env: Env,
     info: MessageInfo,
     title: Option<String>,
-    url: Option<String>,
     description: Option<String>,
+    url: Option<String>,
+    parameter_key: Option<String>,
+    execution_msgs: Option<Vec<ExecutionMsg>>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, &info.sender) {
@@ -98,6 +138,11 @@ pub fn update_campaign_info(
         campaign_info.title = title;
     }
 
+    if let Some(description) = description {
+        validate_description(&description)?;
+        campaign_info.description = description;
+    }
+
     if let Some(url) = url {
         if !is_pending(deps.storage)? {
             return Err(ContractError::Std(StdError::generic_err(
@@ -108,9 +153,20 @@ pub fn update_campaign_info(
         campaign_info.url = url;
     }
 
-    if let Some(description) = description {
-        validate_description(&description)?;
-        campaign_info.description = description;
+    if let Some(parameter_key) = parameter_key {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
+        campaign_info.parameter_key = parameter_key;
+    }
+
+    if let Some(execution_msgs) = execution_msgs {
+        campaign_info.executions = execution_msgs.iter()
+            .map(|e| Execution::from(deps.api, e))
+            .collect();
     }
 
     campaign_info.save(deps.storage)?;
@@ -159,33 +215,6 @@ pub fn update_distribution_config(
     })
 }
 
-pub fn update_admin(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    address: String,
-) -> ContractResult<Response> {
-    // Validate
-    if !is_admin(deps.storage, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Execute
-    let mut contract_config = ContractConfig::load(deps.storage)?;
-
-    contract_config.admin = deps.api.addr_validate(&address)?;
-
-    contract_config.save(deps.storage)?;
-
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![attr("action", "update_admin")],
-        data: None,
-    })
-}
-
 pub fn update_activation(
     deps: DepsMut,
     env: Env,
@@ -203,7 +232,7 @@ pub fn update_activation(
     campaign_state.active_flag = is_active;
 
     if is_active {
-        campaign_state.last_active_block = Some(env.block.height);
+        campaign_state.last_active_height = Some(env.block.height);
     }
 
     campaign_state.save(deps.storage)?;
@@ -217,7 +246,7 @@ pub fn update_activation(
     })
 }
 
-pub fn withdraw_reward(
+pub fn withdraw(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -230,11 +259,17 @@ pub fn withdraw_reward(
         return Err(ContractError::Unauthorized {});
     }
 
+    let distribution_config = DistributionConfig::load(deps.storage)?;
     let campaign_state = CampaignState::load(deps.storage)?;
 
     let campaign_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
     let denom_cw20 = denom.to_cw20(deps.api);
-    let free_balance = campaign_balance.checked_sub(campaign_state.locked_balance(denom_cw20.clone()))?;
+    let locked_balance = if distribution_config.denom == denom_cw20 {
+        campaign_state.locked_balance
+    } else {
+        Uint128::zero()
+    };
+    let free_balance = campaign_balance.checked_sub(locked_balance)?;
     let withdraw_amount = amount.unwrap_or(free_balance);
 
     if withdraw_amount > free_balance {
@@ -244,20 +279,23 @@ pub fn withdraw_reward(
     }
 
     // Execute
-    let valkyrie_config = load_valkyrie_config(&deps.querier, &contract_config.factory)?;
-    let (burn_amount, receive_amount) = if campaign_state.is_pending() {
+    let global_campaign_config = load_global_campaign_config(
+        &deps.querier,
+        &contract_config.campaign_manager,
+    )?;
+    let (withdraw_fee_amount, receive_amount) = if campaign_state.is_pending() {
         (Uint128::zero(), withdraw_amount)
     } else {
-        calc_ratio_amount(withdraw_amount, valkyrie_config.reward_withdraw_burn_rate)
+        calc_ratio_amount(withdraw_amount, global_campaign_config.withdraw_fee_rate)
     };
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    if !burn_amount.is_zero() {
+    if !withdraw_fee_amount.is_zero() {
         messages.push(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
-            burn_amount,
-            &Addr::unchecked(contract_config.burn_contract),
+            withdraw_fee_amount,
+            &Addr::unchecked(global_campaign_config.withdraw_fee_recipient),
         )?);
     }
 
@@ -275,82 +313,64 @@ pub fn withdraw_reward(
         submessages: vec![],
         messages,
         attributes: vec![
-            attr("action", "withdraw_reward"),
+            attr("action", "withdraw"),
             attr("receive_amount", format!("{}{}", receive_amount, denom)),
-            attr("burn_amount", format!("{}{}", burn_amount, denom)),
+            attr("withdraw_fee_amount", format!("{}{}", withdraw_fee_amount, denom)),
         ],
         data: None,
     })
 }
 
 pub fn claim_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
-    let contract_config = ContractConfig::load(deps.storage)?;
-
     // Execute
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    let mut campaign_state = CampaignState::load(deps.storage)?;
     let mut participation = Participation::load(deps.storage, &info.sender)?;
 
-    // normal rewards
-    let mut rewards_attrs: Vec<Attribute> = vec![];
-    for (denom, amount) in participation.rewards {
-        campaign_state.unlock_balance(denom.clone(), amount)?;
+    if participation.has_reward() {
+        let distribution_config = DistributionConfig::load(deps.storage)?;
+        let mut campaign_state = CampaignState::load(deps.storage)?;
+
+        let reward_amount = participation.receive_reward(&mut campaign_state)?;
+
+        campaign_state.save(deps.storage)?;
+
         messages.push(make_send_msg(
             &deps.querier,
-            denom.clone(),
-            amount.clone(),
-            &info.sender,
+            distribution_config.denom.clone(),
+            reward_amount,
+            &participation.actor_address,
         )?);
-
-        let cw20_denom = Denom::from_cw20(denom);
-        rewards_attrs.push(attr(
-            format!("reward[{}]", cw20_denom),
-            format!("{}{}", amount, cw20_denom),
-        ));
     }
 
-    participation.rewards = vec![];
+    let booster_state = BoosterState::load(deps.storage)?;
+    if participation.has_booster_reward(booster_state.recent_booster_id) {
+        let contract_config = ContractConfig::load(deps.storage)?;
 
-    // check drop booster
-    if participation.drop_booster_claimable {
-        let drop_booster = BoosterState::compute_and_spend_drop_booster(deps.storage)?;
-        participation.booster_rewards += drop_booster;
-        participation.drop_booster_claimable = false;
-    }
+        let reward_amount = participation.receive_booster_reward(
+            deps.storage,
+            booster_state.recent_booster_id,
+        )?;
 
-    // claim booster rewards
-    let booster_claim_amount = participation.booster_rewards;
-    if !booster_claim_amount.is_zero() {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_config.distributor.to_string(),
+            contract_addr: contract_config.fund_manager.to_string(),
             send: vec![],
-            msg: to_binary(&DistributorExecuteMsg::Spend {
-                recipient: info.sender.to_string(),
-                amount: booster_claim_amount,
-            })?,
-        }))
+            msg: to_binary(&FundExecuteMsg::Transfer {
+                recipient: participation.actor_address.to_string(),
+                amount: reward_amount.clone(),
+            }).unwrap(),
+        }));
     }
 
-    participation.booster_rewards = Uint128::zero();
     participation.save(deps.storage)?;
-    campaign_state.save(deps.storage)?;
 
     // Response
     Ok(Response {
         submessages: vec![],
         messages,
         attributes: vec![
-            vec![
-                attr("action", "claim_reward"),
-                attr(
-                    "booster_rewards",
-                    format!("{}{}", booster_claim_amount, contract_config.token_contract),
-                ),
-            ],
-            rewards_attrs,
-        ]
-            .concat(),
+            attr("action", "claim_reward"),
+        ],
         data: None,
     })
 }
@@ -364,6 +384,10 @@ pub fn participate(
     let contract_config = ContractConfig::load(deps.storage)?;
 
     // Validate
+    if !contract_config.can_participate_execution(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut campaign_state = CampaignState::load(deps.storage)?;
     if !campaign_state.is_active(deps.storage, &deps.querier, env.block.height)? {
         return Err(ContractError::Std(StdError::generic_err(
@@ -379,25 +403,22 @@ pub fn participate(
 
     // Execute
     let distribution_config = DistributionConfig::load(deps.storage)?;
-    let (activity_booster, plus_booster, drop_booster_claimable) =
-        BoosterState::compute_and_spend_participate_booster(
-            deps.storage,
-            &deps.querier,
-            &contract_config.governance,
-            &contract_config.distributor,
-            &info.sender,
-        )?;
+    let booster_state = BoosterState::load(deps.storage)?;
+    let next_booster_id = booster_state.recent_booster_id + 1;
+    let mut active_booster = Booster::may_load_active(deps.storage)?;
 
     let mut referrer = referrer.and_then(|v| v.to_address(deps.api).ok())
         .and_then(|a| Participation::may_load(deps.storage, &a).unwrap_or_default());
 
     let my_participation = Participation {
         actor_address: info.sender.clone(),
-        referrer_address: referrer.clone().map(|r| r.actor_address), //todo: optimize
-        rewards: vec![],
-        booster_rewards: plus_booster,
-        drop_booster_claimable,
+        referrer_address: referrer.clone().map(|r| r.actor_address),
+        reward_amount: Uint128::zero(),
         participated_at: env.block.time.clone(),
+        drop_booster_claimable: vec![(next_booster_id, true)],
+        drop_booster_distance_counts: vec![],
+        activity_booster_reward_amount: Uint128::zero(),
+        plus_booster_reward_amount: Uint128::zero(),
     };
 
     let mut participations = vec![my_participation];
@@ -414,69 +435,106 @@ pub fn participate(
     }
 
     let distribution_denom = Denom::from_cw20(distribution_config.denom.clone());
-    let reward_amount_sum: Uint128 = distribution_config.amounts_sum();
 
     let mut distribution_amount = Uint128::zero();
+    let total_activity_boost_amount = active_booster.as_ref()
+        .map_or(Uint128::zero(), |b| b.activity_booster.reward_amount());
+    let mut total_plus_boost_amount = Uint128::zero();
     let mut distributions_response: Vec<Distribution> = vec![];
     for (distance, (participation, reward_amount)) in participations
         .iter_mut()
         .zip(distribution_config.amounts.clone())
         .enumerate()
     {
-        // activity booster is distributed
-        // in the same ratio with normal rewards scheme
-        let booster_rewards = activity_booster.checked_mul(reward_amount)?
-            .checked_div(reward_amount_sum).unwrap();
+        participation.reward_amount += reward_amount;
+        participation.increase_distance_count(next_booster_id, distance as u64);
+        campaign_state.increase_distance_count(distance as u64);
+        campaign_state.plus_distribution(reward_amount);
+        distribution_amount += reward_amount;
 
-        participation.plus_reward(distribution_config.denom.clone(), reward_amount);
-        participation.booster_rewards += booster_rewards;
+        let (activity_booster_amount, plus_booster_amount) = match active_booster.as_mut() {
+            Some(booster) => {
+                let activity_booster_amount = booster.activity_booster.boost(
+                    participation,
+                    distance as u64,
+                    total_activity_boost_amount,
+                );
+                let plus_booster_amount = if distance == 0 {
+                    booster.plus_booster.boost(
+                        participation,
+                        load_voting_power(
+                            &deps.querier,
+                            &contract_config.governance,
+                            &participation.actor_address,
+                        ),
+                    )
+                } else {
+                    Uint128::zero()
+                };
+
+                (activity_booster_amount, plus_booster_amount)
+            }
+            None => {
+                (Uint128::zero(), Uint128::zero())
+            }
+        };
+
+        total_plus_boost_amount += plus_booster_amount;
+
         participation.save(deps.storage)?;
 
-        campaign_state.plus_distribution(distribution_config.denom.clone(), reward_amount);
-
-        distribution_amount += reward_amount;
         distributions_response.push(Distribution {
             address: participation.actor_address.to_string(),
             distance: distance as u64,
-            rewards: vec![
-                vec![(distribution_denom.clone(), reward_amount)],
-                if booster_rewards.is_zero() {
-                    vec![]
-                } else {
-                    vec![(
-                        Denom::Token(contract_config.token_contract.to_string()),
-                        booster_rewards,
-                    )]
-                },
-            ]
-                .concat(),
+            reward_denom: distribution_denom.clone(),
+            reward_amount,
+            activity_boost_amount: activity_booster_amount,
+            plus_boost_amount: plus_booster_amount,
         });
     }
 
     campaign_state.participation_count += 1;
-    campaign_state.last_active_block = Some(env.block.height);
+    campaign_state.last_active_height = Some(env.block.height);
     campaign_state.save(deps.storage)?;
+
+    let finish_booster = if let Some(active_booster) = active_booster {
+        active_booster.save(deps.storage)?;
+        active_booster.activity_booster.left_amount().is_zero()
+    } else {
+        false
+    };
 
     let campaign_balance = query_balance(
         &deps.querier,
         deps.api,
         distribution_config.denom.clone(),
-        env.contract.address,
+        env.contract.address.clone(),
     )?;
 
-    if campaign_state
-        .locked_balance(distribution_config.denom.clone())
-        > campaign_balance
-    {
+    if campaign_state.locked_balance > campaign_balance {
         return Err(ContractError::Std(StdError::generic_err(
             "Insufficient balance",
         )));
     }
 
     // Response
+    let messages = if finish_booster {
+        vec![
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: contract_config.campaign_manager.to_string(),
+                send: vec![],
+                msg: to_binary(&ExecuteMsg::FinishBoosting {
+                    campaign: env.contract.address.to_string(),
+                })?,
+            }),
+        ]
+    } else {
+        vec![]
+    };
+
     let configured_reward = format!(
         "{}{}",
-        distribution_config.amounts.iter().sum::<Uint128>().to_string(),
+        distribution_config.amounts_sum().to_string(),
         Denom::from_cw20(distribution_config.denom.clone()).to_string()
     );
 
@@ -492,99 +550,110 @@ pub fn participate(
 
     Ok(Response {
         submessages: vec![],
-        messages: vec![],
+        messages,
         attributes: vec![
             attr("action", "participate"),
             attr("actor", info.sender),
             attr("configured_reward_amount", configured_reward),
             attr("distributed_reward_amount", distributed_reward),
-            attr(
-                "activity_booster",
-                format!("{}{}", activity_booster, contract_config.token_contract),
-            ),
-            attr(
-                "plus_booster",
-                format!("{}{}", plus_booster, contract_config.token_contract),
-            ),
+            attr("activity_boost_amount", total_activity_boost_amount),
+            attr("plus_boost_amount", total_plus_boost_amount),
         ],
         data: Some(to_binary(&result)?),
     })
 }
 
-pub fn register_booster(
+pub fn enable_booster(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    drop_booster_amount: Uint128,
-    activity_booster_amount: Uint128,
-    plus_booster_amount: Uint128,
+    drop_booster_assigned_amount: Uint128,
+    activity_booster_assigned_amount: Uint128,
+    plus_booster_assigned_amount: Uint128,
+    activity_booster_multiplier: Decimal,
 ) -> ContractResult<Response> {
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if !contract_config.is_distributor(&info.sender) {
+    if !contract_config.is_campaign_manager(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
-    if BoosterState::load(deps.storage).is_ok() {
+    if Booster::is_boosting(deps.storage)? {
         return Err(ContractError::AlreadyExists {});
     }
 
+    let distribution_config = DistributionConfig::load(deps.storage)?;
     let campaign_state: CampaignState = CampaignState::load(deps.storage)?;
-    let booster_state = BoosterState {
-        drop_booster_amount,
-        drop_booster_left_amount: drop_booster_amount,
-        drop_booster_participations: campaign_state.participation_count,
-        activity_booster_amount,
-        activity_booster_left_amount: activity_booster_amount,
-        plus_booster_amount,
-        plus_booster_left_amount: plus_booster_amount,
-        boosted_at: env.block.time,
-    };
 
-    booster_state.save(deps.storage)?;
+    let booster_id = get_booster_id(deps.storage)?;
+
+    let drop_booster = DropBooster::new(
+        drop_booster_assigned_amount,
+        distribution_config.amounts.clone(),
+        campaign_state.participation_count,
+        campaign_state.distance_counts,
+    );
+
+    let activity_booster = ActivityBooster::new(
+        activity_booster_assigned_amount,
+        distribution_config.amounts.clone(),
+        drop_booster.reward_amount.clone(),
+        activity_booster_multiplier,
+    );
+
+    let plus_booster = PlusBooster::new(
+        plus_booster_assigned_amount,
+    );
+
+    Booster {
+        id: booster_id,
+        drop_booster,
+        activity_booster,
+        plus_booster,
+        boosted_at: env.block.time,
+        finished_at: None,
+    }.save(deps.storage)?;
 
     Ok(Response {
         submessages: vec![],
         messages: vec![],
         attributes: vec![
-            attr("action", "register_booster"),
-            attr("drop_booster_amount", drop_booster_amount),
-            attr(
-                "drop_booster_participations",
-                campaign_state.participation_count,
-            ),
-            attr("activity_booster_amount", activity_booster_amount),
-            attr("plus_booster_amount", plus_booster_amount),
+            attr("action", "enable_booster"),
+            attr("booster_id", booster_id.to_string()),
+            attr("drop_booster_amount", drop_booster_assigned_amount),
+            attr("activity_booster_amount", activity_booster_assigned_amount),
+            attr("plus_booster_amount", plus_booster_assigned_amount),
+            attr("snapped_participation_count", campaign_state.participation_count),
         ],
         data: None,
     })
 }
 
-pub fn deregister_booster(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
+pub fn disable_booster(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if !contract_config.is_distributor(&info.sender) {
+    if !contract_config.is_campaign_manager(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
-    let booster_state = BoosterState::load(deps.storage)?;
-    BoosterState::remove(deps.storage);
+    let mut booster_state = Booster::load_active(deps.storage)?;
+    booster_state.finish_with_save(deps.storage, env.block.time)?;
+
+    let drop_booster_left_amount = booster_state.drop_booster.assigned_amount
+        .checked_sub(booster_state.drop_booster.calculated_amount)?;
+
+    let activity_booster_left_amount = booster_state.activity_booster.assigned_amount
+        .checked_sub(booster_state.activity_booster.distributed_amount)?;
+
+    let plus_booster_left_amount = booster_state.plus_booster.assigned_amount
+        .checked_sub(booster_state.plus_booster.distributed_amount)?;
 
     Ok(Response {
         submessages: vec![],
         messages: vec![],
         attributes: vec![
-            attr("action", "deregister_booster"),
-            attr(
-                "drop_booster_left_amount",
-                booster_state.drop_booster_left_amount,
-            ),
-            attr(
-                "activity_booster_left_amount",
-                booster_state.activity_booster_left_amount,
-            ),
-            attr(
-                "plus_booster_left_amount",
-                booster_state.plus_booster_left_amount,
-            ),
+            attr("action", "disable_booster"),
+            attr("drop_booster_left_amount", drop_booster_left_amount),
+            attr("activity_booster_left_amount", activity_booster_left_amount),
+            attr("plus_booster_left_amount", plus_booster_left_amount),
         ],
         data: None,
     })

@@ -1,7 +1,6 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, WasmMsg, to_binary, Addr};
-use valkyrie::campaign::enumerations::Denom;
-use valkyrie::common::ContractResult;
+use valkyrie::common::{ContractResult, Denom};
 use crate::executions::swap;
 use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
 use crate::tests::{TERRASWAP_ROUTER, TOKEN_CONTRACT};

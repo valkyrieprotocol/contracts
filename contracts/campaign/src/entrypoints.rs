@@ -1,17 +1,18 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw20::Cw20ReceiveMsg;
 
-use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
+use valkyrie::campaign::execute_msgs::{ExecuteMsg, MigrateMsg};
 use valkyrie::campaign::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
+use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
+use crate::executions;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: CampaignInstantiateMsg,
 ) -> ContractResult<Response> {
     let mut deps_mut = deps;
 
@@ -28,51 +29,55 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::UpdateContractConfig {
+            admin,
+            proxies,
+        } => executions::update_contract_config(deps, env, info, admin, proxies),
         ExecuteMsg::UpdateCampaignInfo {
             title,
-            url,
             description,
-        } => crate::executions::update_campaign_info(deps, env, info, title, url, description),
+            url,
+            parameter_key,
+            executions: execution_msgs,
+        } => crate::executions::update_campaign_info(
+            deps,
+            env,
+            info,
+            title,
+            description,
+            url,
+            parameter_key,
+            execution_msgs,
+        ),
         ExecuteMsg::UpdateDistributionConfig { denom, amounts } => {
             crate::executions::update_distribution_config(deps, env, info, denom, amounts)
-        }
-        ExecuteMsg::UpdateAdmin { address } => {
-            crate::executions::update_admin(deps, env, info, address)
         }
         ExecuteMsg::UpdateActivation { active } => {
             crate::executions::update_activation(deps, env, info, active)
         }
-        ExecuteMsg::WithdrawReward { denom, amount } => {
-            crate::executions::withdraw_reward(deps, env, info, denom, amount)
+        ExecuteMsg::Withdraw { denom, amount } => {
+            crate::executions::withdraw(deps, env, info, denom, amount)
         }
         ExecuteMsg::ClaimReward {} => crate::executions::claim_reward(deps, env, info),
         ExecuteMsg::Participate { referrer } => {
             crate::executions::participate(deps, env, info, referrer)
         }
-        ExecuteMsg::RegisterBooster {
+        ExecuteMsg::EnableBooster {
             drop_booster_amount,
             activity_booster_amount,
             plus_booster_amount,
-        } => crate::executions::register_booster(
+            activity_booster_multiplier,
+        } => crate::executions::enable_booster(
             deps,
             env,
             info,
             drop_booster_amount,
             activity_booster_amount,
             plus_booster_amount,
+            activity_booster_multiplier,
         ),
-        ExecuteMsg::DeregisterBooster {} => crate::executions::deregister_booster(deps, env, info),
+        ExecuteMsg::DisableBooster {} => crate::executions::disable_booster(deps, env, info),
     }
-}
-
-pub fn receive_cw20(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _cw20_msg: Cw20ReceiveMsg,
-) -> ContractResult<Response> {
-    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -89,7 +94,23 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             to_binary(&crate::queries::get_distribution_config(deps, env)?)
         }
         QueryMsg::CampaignState {} => to_binary(&crate::queries::get_campaign_state(deps, env)?),
-        QueryMsg::BoosterState {} => to_binary(&crate::queries::get_booster_state(deps, env)?),
+        QueryMsg::ActiveBooster {} => to_binary(&crate::queries::get_active_booster(deps, env)?),
+        QueryMsg::PrevBooster { booster_id } => to_binary(
+            &crate::queries::get_prev_booster(deps, env, booster_id)?
+        ),
+        QueryMsg::PrevBoosters {
+            start_after,
+            limit,
+            order_by,
+        } => to_binary(
+            &crate::queries::query_prev_boosters(
+                deps,
+                env,
+                start_after,
+                limit,
+                order_by
+            )?
+        ),
         QueryMsg::ShareUrl { address } => {
             to_binary(&crate::queries::get_share_url(deps, env, address)?)
         }

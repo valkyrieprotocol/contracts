@@ -1,52 +1,48 @@
-use crate::campaign::enumerations::{Denom, Referrer};
-use cosmwasm_std::Uint128;
-use cw20::Cw20ReceiveMsg;
+use crate::campaign::enumerations::Referrer;
+use cosmwasm_std::{Uint128, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::common::{Denom, ExecutionMsg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InstantiateMsg {
-    pub governance: String,
-    pub distributor: String,
-    pub token_contract: String,
-    pub factory: String,
-    pub burn_contract: String,
+pub struct CampaignConfigMsg {
     pub title: String,
-    pub url: String,
     pub description: String,
+    pub url: String,
     pub parameter_key: String,
     pub distribution_denom: Denom,
     pub distribution_amounts: Vec<Uint128>,
-    pub admin: String,
-    pub creator: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Receive(Cw20ReceiveMsg),
+    UpdateContractConfig {
+        admin: Option<String>,
+        proxies: Option<Vec<String>>,
+    },
     UpdateCampaignInfo {
         title: Option<String>,
-        url: Option<String>,
         description: Option<String>,
+        url: Option<String>,
+        parameter_key: Option<String>,
+        executions: Option<Vec<ExecutionMsg>>,
     },
     UpdateDistributionConfig {
         denom: Denom,
         amounts: Vec<Uint128>,
     },
-    UpdateAdmin {
-        address: String,
-    },
     UpdateActivation {
         active: bool,
     },
-    RegisterBooster {
+    EnableBooster {
         drop_booster_amount: Uint128,
         activity_booster_amount: Uint128,
         plus_booster_amount: Uint128,
+        activity_booster_multiplier: Decimal,
     },
-    DeregisterBooster {},
-    WithdrawReward {
+    DisableBooster {},
+    Withdraw {
         denom: Denom,
         amount: Option<Uint128>,
     },
@@ -57,10 +53,6 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Cw20HookMsg {}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct DistributeResult {
     pub distributions: Vec<Distribution>,
 }
@@ -69,7 +61,10 @@ pub struct DistributeResult {
 pub struct Distribution {
     pub address: String,
     pub distance: u64,
-    pub rewards: Vec<(Denom, Uint128)>,
+    pub reward_denom: Denom,
+    pub reward_amount: Uint128,
+    pub activity_boost_amount: Uint128,
+    pub plus_boost_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

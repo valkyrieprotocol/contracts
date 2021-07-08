@@ -10,6 +10,26 @@ pub fn map_uint128(value: Vec<u128>) -> Vec<Uint128> {
     value.iter().map(|&v| Uint128::from(v)).collect()
 }
 
+pub fn split_uint128(value: Uint128, ratio: &Vec<Uint128>) -> Vec<Uint128> {
+    let total_amount = ratio.iter().sum::<Uint128>();
+
+    ratio.iter()
+        .map(|v| value.multiply_ratio(*v, total_amount))
+        .collect()
+}
+
+pub fn split_ratio_uint128(value: Uint128, ratio: &Vec<Decimal>) -> Vec<Uint128> {
+    ratio.iter().map(|r| *r * value).collect()
+}
+
+pub fn to_ratio_uint128(values: &Vec<Uint128>) -> Vec<Decimal> {
+    let total_amount = values.iter().sum::<Uint128>();
+
+    values.iter()
+        .map(|v| Decimal::from_ratio(*v, total_amount))
+        .collect()
+}
+
 pub fn parse_uint128(value: &str) -> Result<Uint128, ParseIntError> {
     value.parse::<u128>().map(|v| Uint128(v))
 }
