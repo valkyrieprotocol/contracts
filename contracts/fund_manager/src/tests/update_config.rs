@@ -10,13 +10,15 @@ pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
+    admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
 ) -> ContractResult<Response> {
-    update_config(deps.as_mut(), env, info, terraswap_router)
+    update_config(deps.as_mut(), env, info, admins, terraswap_router)
 }
 
 pub fn will_success(
     deps: &mut CustomDeps,
+    admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
 ) -> (Env, MessageInfo, Response) {
     let env = contract_env();
@@ -26,6 +28,7 @@ pub fn will_success(
         deps,
         env.clone(),
         info.clone(),
+        admins,
         terraswap_router,
     ).unwrap();
 
@@ -38,11 +41,13 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
+    let admins = vec!["Admin1".to_string(), "Admins2".to_string()];
     let terraswap_router = "TerraSwapRouterChanged";
 
-    will_success(&mut deps, Some(terraswap_router.to_string()));
+    will_success(&mut deps, Some(admins.clone()), Some(terraswap_router.to_string()));
 
     let config = ContractConfig::load(&deps.storage).unwrap();
+    assert_eq!(config.admins, admins.iter().map(|v| Addr::unchecked(v)).collect::<Vec<Addr>>());
     assert_eq!(config.terraswap_router, Addr::unchecked(terraswap_router));
 }
 
@@ -56,6 +61,7 @@ fn failed_invalid_permission() {
         &mut deps,
         contract_env(),
         default_sender(),
+        None,
         None,
     );
     expect_unauthorized_err(&result);

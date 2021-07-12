@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
+use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
 
 use crate::executions::update_booster_config;
 use crate::states::BoosterConfig;
@@ -112,4 +112,25 @@ fn failed_invalid_permission() {
     );
 
     expect_unauthorized_err(&result);
+}
+
+#[test]
+fn failed_invalid_booster_ratio() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        governance_sender(),
+        None,
+        None,
+        Some(Decimal::percent(81)),
+        None,
+        None,
+        None,
+    );
+
+    expect_generic_err(&result, "Invalid booster ratio");
 }

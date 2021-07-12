@@ -114,19 +114,37 @@ fn succeed() {
 
 #[test]
 fn succeed_after_finished_boosting() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps(&[
+        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
 
     super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    super::participate::will_success(&mut deps, "Participator1", None);
 
     default(&mut deps);
     assert!(Booster::is_boosting(&deps.storage).unwrap());
+
+    let booster_state = BoosterState::load(&deps.storage).unwrap();
+    assert_eq!(booster_state, BoosterState {
+        recent_booster_id: 1,
+    });
 
     super::disable_booster::will_success(&mut deps);
-
     assert!(!Booster::is_boosting(&deps.storage).unwrap());
+
+    let booster_state = BoosterState::load(&deps.storage).unwrap();
+    assert_eq!(booster_state, BoosterState {
+        recent_booster_id: 1,
+    });
 
     default(&mut deps);
     assert!(Booster::is_boosting(&deps.storage).unwrap());
+
+    let booster_state = BoosterState::load(&deps.storage).unwrap();
+    assert_eq!(booster_state, BoosterState {
+        recent_booster_id: 2,
+    });
 }
 
 #[test]
@@ -150,9 +168,13 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_already_boosting() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps(&[
+        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
 
     super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    super::participate::will_success(&mut deps, "Participator1", None);
 
     default(&mut deps);
     assert!(Booster::is_boosting(&deps.storage).unwrap());
@@ -168,4 +190,75 @@ fn failed_already_boosting() {
     );
 
     expect_already_exists_err(&result);
+}
+
+#[test]
+fn test_correct_drop_booster_reward() {
+    fn test(
+        assigned_amount: Uint128,
+        distribution_amount: Vec<Uint128>,
+        distance_counts: Vec<u64>,
+        expect_calculated_amount: Uint128,
+        expect_reward_amounts: Vec<Uint128>,
+    ) {
+        assert_eq!(
+            DropBooster::new(
+                assigned_amount.clone(),
+                distribution_amount.clone(),
+                distance_counts[0],
+                distance_counts.clone(),
+            ),
+            DropBooster {
+                assigned_amount,
+                calculated_amount: expect_calculated_amount,
+                spent_amount: Uint128::zero(),
+                reward_amount: expect_reward_amounts.iter().sum(),
+                reward_amounts: expect_reward_amounts,
+                snapped_participation_count: distance_counts[0],
+                snapped_distance_counts: distance_counts,
+            },
+        );
+    }
+
+    test(
+        Uint128::from(1000u64),
+        vec![Uint128::from(5u64), Uint128::from(3u64), Uint128::from(2u64)],
+        vec![10, 5, 1],
+        Uint128::from(670u64),
+        vec![Uint128::from(50u64), Uint128::from(30u64), Uint128::from(20u64)],
+    );
+}
+
+#[test]
+fn test_correct_activity_booster_reward() {
+    fn test(
+        assigned_amount: Uint128,
+        distribution_amounts: Vec<Uint128>,
+        drop_booster_reward_amount: Uint128,
+        multiplier: Decimal,
+        expect_reward_amounts: Vec<Uint128>,
+    ) {
+        assert_eq!(
+            ActivityBooster::new(
+                assigned_amount.clone(),
+                distribution_amounts,
+                drop_booster_reward_amount,
+                multiplier,
+            ),
+            ActivityBooster {
+                assigned_amount,
+                distributed_amount: Uint128::zero(),
+                reward_amount: expect_reward_amounts.iter().sum(),
+                reward_amounts: expect_reward_amounts,
+            },
+        )
+    }
+
+    test(
+        Uint128::from(8000u64),
+        vec![Uint128::from(5u64), Uint128::from(3u64), Uint128::from(2u64)],
+        Uint128::from(100u64),
+        Decimal::percent(80u64),
+        vec![Uint128::from(40u64), Uint128::from(24u64), Uint128::from(16u64)],
+    )
 }

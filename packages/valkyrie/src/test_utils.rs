@@ -99,3 +99,13 @@ pub fn expect_exceed_limit_err(result: &ContractResult<Response>) {
         Err(e) => panic!("Unexpected error: {:?}", e),
     }
 }
+
+pub fn expect_invalid_zero_amount_err(result: &ContractResult<Response>) {
+    match result {
+        Ok(_) => panic!("Must return error"),
+        Err(ContractError::InvalidZeroAmount {}) => {
+            // do nothing
+        },
+        Err(e) => panic!("Unexpected error: {:?}", e),
+    }
+}

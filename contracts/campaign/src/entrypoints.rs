@@ -60,8 +60,8 @@ pub fn execute(
         }
         ExecuteMsg::ClaimParticipationReward {} => crate::executions::claim_participation_reward(deps, env, info),
         ExecuteMsg::ClaimBoosterReward {} => crate::executions::claim_booster_reward(deps, env, info),
-        ExecuteMsg::Participate { referrer } => {
-            crate::executions::participate(deps, env, info, referrer)
+        ExecuteMsg::Participate { actor, referrer } => {
+            crate::executions::participate(deps, env, info, actor, referrer)
         }
         ExecuteMsg::EnableBooster {
             drop_booster_amount,

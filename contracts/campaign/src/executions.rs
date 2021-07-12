@@ -422,12 +422,14 @@ pub fn participate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    actor: String,
     referrer: Option<Referrer>,
 ) -> ContractResult<Response> {
     let contract_config = ContractConfig::load(deps.storage)?;
+    let actor = deps.api.addr_validate(&actor)?;
 
     // Validate
-    if !contract_config.can_participate_execution(&info.sender) {
+    if !contract_config.can_participate_execution(&info.sender, &actor) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -438,7 +440,7 @@ pub fn participate(
         )));
     }
 
-    if Participation::load(deps.storage, &info.sender).is_ok() {
+    if Participation::load(deps.storage, &actor).is_ok() {
         return Err(ContractError::Std(StdError::generic_err(
             "Already participated",
         )));
@@ -451,7 +453,7 @@ pub fn participate(
     let mut active_booster = Booster::may_load_active(deps.storage)?;
 
     let mut my_participation = Participation {
-        actor_address: info.sender.clone(),
+        actor_address: actor.clone(),
         referrer_address: referrer.and_then(|v| v.to_address(deps.api).ok()),
         reward_amount: Uint128::zero(),
         participated_at: env.block.time.clone(),
@@ -471,8 +473,7 @@ pub fn participate(
     participations.insert(0, my_participation);
 
     let mut total_reward_amount = Uint128::zero();
-    let total_activity_booster_amount = active_booster.as_ref()
-        .map_or(Uint128::zero(), |b| b.activity_booster.reward_amount());
+    let mut total_activity_booster_amount = Uint128::zero();
     let mut total_plus_booster_amount = Uint128::zero();
     let distribution_denom = Denom::from_cw20(distribution_config.denom.clone());
 
@@ -498,8 +499,9 @@ pub fn participate(
             activity_booster_amount = booster.activity_booster.boost(
                 participation,
                 distance as u64,
-                total_activity_booster_amount,
             );
+
+            total_activity_booster_amount += activity_booster_amount;
 
             if distance == 0 {
                 plus_booster_amount = booster.plus_booster.boost(
@@ -534,7 +536,7 @@ pub fn participate(
 
     let finish_booster = if let Some(active_booster) = active_booster {
         active_booster.save(deps.storage)?;
-        active_booster.activity_booster.left_amount().is_zero()
+        !active_booster.can_boost()
     } else {
         false
     };
@@ -554,19 +556,24 @@ pub fn participate(
     }
 
     // Response
-    let messages = if finish_booster {
-        vec![
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_config.campaign_manager.to_string(),
-                send: vec![],
-                msg: to_binary(&ExecuteMsg::FinishBoosting {
-                    campaign: env.contract.address.to_string(),
-                })?,
-            }),
-        ]
-    } else {
-        vec![]
-    };
+    let campaign_info = CampaignInfo::load(deps.storage)?;
+    let mut messages: Vec<CosmosMsg> = campaign_info.executions.iter()
+        .map(|e| CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: e.contract.to_string(),
+            send: vec![],
+            msg: e.msg.clone(),
+        }))
+        .collect();
+
+    if finish_booster {
+        messages.insert(0, CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_config.campaign_manager.to_string(),
+            send: vec![],
+            msg: to_binary(&ExecuteMsg::FinishBoosting {
+                campaign: env.contract.address.to_string(),
+            })?,
+        }));
+    }
 
     let configured_reward = format!(
         "{}{}",
@@ -589,7 +596,7 @@ pub fn participate(
         messages,
         attributes: vec![
             attr("action", "participate"),
-            attr("actor", info.sender),
+            attr("actor", actor.to_string()),
             attr("configured_reward_amount", configured_reward),
             attr("distributed_reward_amount", distributed_reward),
             attr("activity_boost_amount", total_activity_booster_amount),
@@ -608,6 +615,10 @@ pub fn enable_booster(
     plus_booster_assigned_amount: Uint128,
     activity_booster_multiplier: Decimal,
 ) -> ContractResult<Response> {
+    if drop_booster_assigned_amount.is_zero() || activity_booster_assigned_amount.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
     let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
     if !contract_config.is_campaign_manager(&info.sender) {
         return Err(ContractError::Unauthorized {});
@@ -619,6 +630,10 @@ pub fn enable_booster(
 
     let distribution_config = DistributionConfig::load(deps.storage)?;
     let campaign_state: CampaignState = CampaignState::load(deps.storage)?;
+
+    if campaign_state.participation_count == 0 {
+        return Err(ContractError::Std(StdError::generic_err("participation_count must be greater than 0")));
+    }
 
     let booster_id = get_booster_id(deps.storage)?;
 

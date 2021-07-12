@@ -4,7 +4,7 @@ use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, expect_unauthorized_err};
 
-use crate::executions::update_campaign_info;
+use crate::executions::{update_campaign_info, MIN_TITLE_LENGTH, MAX_TITLE_LENGTH, MIN_DESC_LENGTH, MAX_DESC_LENGTH, MIN_URL_LENGTH, MAX_URL_LENGTH, MIN_PARAM_KEY_LENGTH, MAX_PARAM_KEY_LENGTH};
 use crate::states::CampaignInfo;
 use crate::tests::campaign_admin_sender;
 
@@ -184,4 +184,181 @@ fn failed_invalid_permission() {
     );
 
     expect_unauthorized_err(&result);
+}
+
+#[test]
+fn failed_invalid_title() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        Some(std::iter::repeat('b').take(MIN_TITLE_LENGTH - 1).collect()),
+        None,
+        None,
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Title too short");
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        Some(std::iter::repeat('b').take(MAX_TITLE_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Title too long");
+}
+
+#[test]
+fn failed_invalid_description() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        Some(std::iter::repeat('b').take(MIN_DESC_LENGTH - 1).collect()),
+        None,
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Description too short");
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        Some(std::iter::repeat('b').take(MAX_DESC_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Description too long");
+}
+
+#[test]
+fn failed_invalid_url() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        Some(std::iter::repeat('b').take(MIN_URL_LENGTH - 1).collect()),
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Url too short");
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        Some(std::iter::repeat('b').take(MAX_URL_LENGTH + 1).collect()),
+        None,
+        None,
+    );
+    expect_generic_err(&result, "Url too long");
+}
+
+#[test]
+fn failed_invalid_parameter_key() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        None,
+        Some(std::iter::repeat('b').take(MIN_PARAM_KEY_LENGTH - 1).collect()),
+        None,
+    );
+    expect_generic_err(&result, "ParameterKey too short");
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        None,
+        Some(std::iter::repeat('b').take(MAX_PARAM_KEY_LENGTH + 1).collect()),
+        None,
+    );
+    expect_generic_err(&result, "ParameterKey too long");
+}
+
+#[test]
+fn test_execution_order() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let executions = vec![
+        ExecutionMsg {
+            order: 2,
+            contract: "Contract2".to_string(),
+            msg: to_binary("").unwrap(),
+        },
+        ExecutionMsg {
+            order: 1,
+            contract: "Contract2".to_string(),
+            msg: to_binary("").unwrap(),
+        },
+        ExecutionMsg {
+            order: 3,
+            contract: "Contract2".to_string(),
+            msg: to_binary("").unwrap(),
+        },
+    ];
+
+    will_success(
+        &mut deps,
+        None,
+        None,
+        None,
+        None,
+        Some(executions),
+    );
+
+    let campaign = CampaignInfo::load(&deps.storage).unwrap();
+    assert_eq!(campaign.executions, vec![
+        Execution {
+            order: 1,
+            contract: Addr::unchecked("Contract2"),
+            msg: to_binary("").unwrap(),
+        },
+        Execution {
+            order: 2,
+            contract: Addr::unchecked("Contract2"),
+            msg: to_binary("").unwrap(),
+        },
+        Execution {
+            order: 3,
+            contract: Addr::unchecked("Contract2"),
+            msg: to_binary("").unwrap(),
+        },
+    ]);
 }

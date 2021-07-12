@@ -7,7 +7,8 @@ pub mod update_campaign_info;
 pub mod update_distribution_config;
 pub mod update_activation;
 pub mod withdraw;
-pub mod claim_reward;
+pub mod claim_participation_reward;
+pub mod claim_booster_reward;
 pub mod participate;
 pub mod enable_booster;
 pub mod disable_booster;
@@ -21,7 +22,7 @@ pub const CAMPAIGN_DESCRIPTION: &str = "CamapignDescription";
 pub const CAMPAIGN_URL: &str = "https://campaign.url";
 pub const CAMPAIGN_PARAMETER_KEY: &str = "vkr";
 pub const CAMPAIGN_DISTRIBUTION_DENOM_NATIVE: &str = "uusd";
-pub const CAMPAIGN_DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128(10), Uint128(8), Uint128(2)];
+pub const CAMPAIGN_DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128(5), Uint128(3), Uint128(2)];
 pub const CAMPAIGN_ADMIN: &str = "CampaignAdmin";
 
 pub fn campaign_manager_sender() -> MessageInfo {

@@ -49,6 +49,7 @@ pub enum ExecuteMsg {
     ClaimParticipationReward {},
     ClaimBoosterReward {},
     Participate {
+        actor: String,
         referrer: Option<Referrer>,
     },
 }

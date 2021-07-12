@@ -4,7 +4,7 @@ use cw20::Cw20ExecuteMsg;
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, expect_generic_err};
+use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, expect_generic_err, default_sender};
 
 use crate::executions::{create_campaign, REPLY_CREATE_CAMPAIGN};
 use crate::states::CreateCampaignContext;
@@ -127,6 +127,49 @@ fn succeed() {
 }
 
 #[test]
+fn succeed_zero_creation_fee() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+    super::update_campaign_config::will_success(
+        &mut deps,
+        None,
+        Some(Uint128::zero()),
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
+    let response = exec(
+        &mut deps,
+        contract_env(),
+        mock_info(TOKEN_CONTRACT, &[]),
+        DEFAULT_SENDER.to_string(),
+        Uint128::zero(),
+        to_binary(&CampaignConfigMsg {
+            title: CAMPAIGN_TITLE.to_string(),
+            description: CAMPAIGN_DESCRIPTION.to_string(),
+            url: CAMPAIGN_URL.to_string(),
+            parameter_key: PARAMETER_KEY.to_string(),
+            distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
+            distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+        }).unwrap(),
+        vec![],
+        vec![],
+    ).unwrap();
+
+    assert_eq!(response.messages, vec![]);
+
+    let context = CreateCampaignContext::load(&deps.storage).unwrap();
+    assert_eq!(context, CreateCampaignContext {
+        code_id: CAMPAIGN_CODE_ID,
+        creator: Addr::unchecked(DEFAULT_SENDER),
+    });
+}
+
+#[test]
 fn failed_insufficient_creation_fee() {
     let mut deps = custom_deps(&[]);
 
@@ -154,4 +197,30 @@ fn failed_insufficient_creation_fee() {
         &result,
         format!("Insufficient creation fee (Fee = {})", CREATION_FEE_AMOUNT).as_str(),
     );
+}
+
+#[test]
+fn failed_invalid_creation_token() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        default_sender(),
+        DEFAULT_SENDER.to_string(),
+        CREATION_FEE_AMOUNT,
+        to_binary(&CampaignConfigMsg {
+            title: CAMPAIGN_TITLE.to_string(),
+            description: CAMPAIGN_DESCRIPTION.to_string(),
+            url: CAMPAIGN_URL.to_string(),
+            parameter_key: PARAMETER_KEY.to_string(),
+            distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
+            distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+        }).unwrap(),
+        vec![],
+        vec![],
+    );
+    expect_generic_err(&result, "Invalid creation fee token");
 }

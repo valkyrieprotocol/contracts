@@ -2,7 +2,7 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response};
 use valkyrie::common::{Denom, ContractResult};
 use crate::executions::add_distribution_denom;
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
+use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_already_exists_err};
 use crate::tests::governance_sender;
 use crate::states::CampaignConfig;
 use valkyrie::utils::find;
@@ -57,4 +57,22 @@ fn failed_invalid_permission() {
     );
 
     expect_unauthorized_err(&result);
+}
+
+#[test]
+fn failed_duplicated() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let denom = Denom::Token("NewToken".to_string());
+    will_success(&mut deps, denom.clone());
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        governance_sender(),
+        denom.clone(),
+    );
+    expect_already_exists_err(&result);
 }

@@ -1,23 +1,25 @@
-use cosmwasm_std::{Addr, coin, Decimal, Env, MessageInfo, Response, Uint128};
-use cosmwasm_std::testing::mock_info;
+use cosmwasm_std::{Addr, coin, Decimal, Env, MessageInfo, Response, Uint128, CosmosMsg, WasmMsg, to_binary};
+use cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
+use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, DEFAULT_SENDER, expect_unauthorized_err};
 
 use crate::executions::participate;
 use crate::states::{CampaignState, Participation};
-use crate::tests::{CAMPAIGN_DISTRIBUTION_AMOUNTS, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE, TOKEN_CONTRACT};
+use crate::tests::{CAMPAIGN_DISTRIBUTION_AMOUNTS, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE, TOKEN_CONTRACT, CAMPAIGN_ADMIN, CAMPAIGN_MANAGER};
 use crate::tests::enable_booster::{DROP_BOOSTER_AMOUNT, PLUS_BOOSTER_AMOUNT};
+use valkyrie::campaign_manager::execute_msgs::ExecuteMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
+    actor: String,
     referrer: Option<Referrer>,
 ) -> ContractResult<Response> {
-    participate(deps.as_mut(), env, info, referrer)
+    participate(deps.as_mut(), env, info, actor, referrer)
 }
 
 pub fn will_success(
@@ -32,6 +34,7 @@ pub fn will_success(
         deps,
         env.clone(),
         info.clone(),
+        participator.to_string(),
         referrer,
     ).unwrap();
 
@@ -206,6 +209,109 @@ fn succeed_with_booster() {
 }
 
 #[test]
+fn succeed_insufficient_booster_reward_balance() {
+    let mut deps = custom_deps(&[
+        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
+
+    super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    will_success(&mut deps, "Participator1", None);
+    super::enable_booster::will_success(
+        &mut deps,
+        Uint128::from(10u64),
+        Uint128::from(18u64),
+        Uint128::from(10u64),
+        Decimal::percent(80),
+    );
+
+    deps.querier.with_voting_powers(&[
+        (&"Participator2".to_string(), &Decimal::percent(70)),
+        (&"Participator3".to_string(), &Decimal::percent(50)),
+    ]);
+    will_success(&mut deps, "Participator2", Some(Referrer::Address("Participator1".to_string())));
+    will_success(&mut deps, "Participator3", None);
+    let (_, _, response) = will_success(&mut deps, "Participator4", None);
+
+    let participation = Participation::load(&deps.storage, &Addr::unchecked("Participator3")).unwrap();
+    assert_eq!(participation.activity_booster_reward_amount, Uint128::from(4u64));
+    assert_eq!(participation.plus_booster_reward_amount, Uint128::from(3u64));
+
+    let participation = Participation::load(&deps.storage, &Addr::unchecked("Participator4")).unwrap();
+    assert_eq!(participation.activity_booster_reward_amount, Uint128::from(4u64));
+    assert_eq!(participation.plus_booster_reward_amount, Uint128::zero());
+
+    //finish boosting msg must be first.
+    assert_eq!(response.messages.first(), Some(&CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: CAMPAIGN_MANAGER.to_string(),
+        send: vec![],
+        msg: to_binary(&ExecuteMsg::FinishBoosting {
+            campaign: MOCK_CONTRACT_ADDR.to_string(),
+        }).unwrap(),
+    })));
+}
+
+#[test]
+fn succeed_proxy() {
+    let mut deps = custom_deps(&[
+        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
+
+    super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    will_success(&mut deps, "Participator1", None);
+
+    super::update_contract_config::will_success(
+        &mut deps,
+        None,
+        Some(vec!["Proxy".to_string()]),
+    );
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        mock_info("Proxy", &[]),
+        "Participator2".to_string(),
+        None,
+    );
+    assert!(result.is_ok());
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        mock_info(CAMPAIGN_ADMIN, &[]),
+        "Participator3".to_string(),
+        None,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn failed_proxy_not_in_whitelist() {
+    let mut deps = custom_deps(&[
+        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
+
+    super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+
+    super::update_contract_config::will_success(
+        &mut deps,
+        None,
+        Some(vec!["Proxy".to_string()]),
+    );
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        mock_info("Non-Proxy", &[]),
+        "Participator".to_string(),
+        None,
+    );
+    expect_unauthorized_err(&result);
+}
+
+#[test]
 fn failed_inactive_campaign() {
     let mut deps = custom_deps(&[]);
 
@@ -215,6 +321,7 @@ fn failed_inactive_campaign() {
         &mut deps,
         contract_env(),
         default_sender(),
+        DEFAULT_SENDER.to_string(),
         None,
     );
 
@@ -232,7 +339,33 @@ fn failed_twice() {
 
     let (_, info, _) = will_success(&mut deps, "Participator1", None);
 
-    let result = exec(&mut deps, contract_env(), info, None);
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        info,
+        "Participator1".to_string(),
+        None,
+    );
 
     expect_generic_err(&result, "Already participated");
+}
+
+#[test]
+fn failed_insufficient_balance() {
+    let mut deps = custom_deps(&[
+        coin(5, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
+    ]);
+
+    super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    will_success(&mut deps, "Participator1", None);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        mock_info("Participator2", &[]),
+        "Participator2".to_string(),
+        None,
+    );
+    expect_generic_err(&result, "Insufficient balance");
 }

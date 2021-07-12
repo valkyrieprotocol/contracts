@@ -89,3 +89,34 @@ fn failed_after_activation() {
 
     expect_generic_err(&result, "Only modifiable in pending status");
 }
+
+#[test]
+fn failed_invalid_amounts() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    will_success(
+        &mut deps,
+        Denom::Token(TOKEN_CONTRACT.to_string()),
+        vec![Uint128::zero(), Uint128::from(100u64)],
+    );
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        Denom::Token(TOKEN_CONTRACT.to_string()),
+        vec![],
+    );
+    expect_generic_err(&result, "Invalid reward scheme");
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_admin_sender(),
+        Denom::Token(TOKEN_CONTRACT.to_string()),
+        vec![Uint128::zero(), Uint128::zero()],
+    );
+    expect_generic_err(&result, "Invalid reward scheme");
+}

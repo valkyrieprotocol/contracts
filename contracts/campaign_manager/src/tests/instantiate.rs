@@ -4,7 +4,7 @@ use cosmwasm_std::testing::mock_env;
 use valkyrie::campaign_manager::execute_msgs::{BoosterConfigInitMsg, CampaignConfigInitMsg, ContractConfigInitMsg, InstantiateMsg};
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::default_sender;
+use valkyrie::test_utils::{default_sender, expect_generic_err};
 
 use crate::executions::instantiate;
 use crate::tests::{ACTIVITY_BOOSTER_MULTIPLIER_PERCENT, ACTIVITY_BOOSTER_RATIO_PERCENT, CAMPAIGN_CODE_ID, CAMPAIGN_DEACTIVATE_PERIOD, CREATION_FEE_AMOUNT, DISTRIBUTION_DENOM_WHITELIST_NATIVE, DISTRIBUTION_DENOM_WHITELIST_TOKEN, DROP_BOOSTER_RATIO_PERCENT, FUND_MANAGER, GOVERNANCE, MIN_PARTICIPATION_COUNT, PLUS_BOOSTER_RATIO_PERCENT, TOKEN_CONTRACT, WITHDRAW_FEE_RATE_PERCENT};
@@ -132,4 +132,35 @@ fn succeed() {
         activity_multiplier: Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
         min_participation_count: MIN_PARTICIPATION_COUNT,
     });
+}
+
+#[test]
+fn failed_invalid_booster_ratio() {
+    let mut deps = custom_deps(&[]);
+
+    let result = exec(
+        &mut deps,
+        mock_env(),
+        default_sender(),
+        GOVERNANCE.to_string(),
+        FUND_MANAGER.to_string(),
+        TOKEN_CONTRACT.to_string(),
+        CREATION_FEE_AMOUNT,
+        FUND_MANAGER.to_string(),
+        CAMPAIGN_CODE_ID,
+        vec![
+            Denom::Native(DISTRIBUTION_DENOM_WHITELIST_NATIVE.to_string()),
+            Denom::Token(DISTRIBUTION_DENOM_WHITELIST_TOKEN.to_string()),
+        ],
+        Decimal::percent(WITHDRAW_FEE_RATE_PERCENT),
+        FUND_MANAGER.to_string(),
+        CAMPAIGN_DEACTIVATE_PERIOD,
+        TOKEN_CONTRACT.to_string(),
+        Decimal::percent(DROP_BOOSTER_RATIO_PERCENT - 1),
+        Decimal::percent(ACTIVITY_BOOSTER_RATIO_PERCENT),
+        Decimal::percent(PLUS_BOOSTER_RATIO_PERCENT),
+        Decimal::percent(ACTIVITY_BOOSTER_MULTIPLIER_PERCENT),
+        MIN_PARTICIPATION_COUNT,
+    );
+    expect_generic_err(&result, "Invalid booster ratio");
 }

@@ -40,9 +40,9 @@ impl ContractConfig {
         self.campaign_manager == *address
     }
 
-    pub fn can_participate_execution(&self, address: &Addr) -> bool {
+    pub fn can_participate_execution(&self, address: &Addr, actor: &Addr) -> bool {
         if self.proxies.is_empty() {
-            true
+            *address == *actor
         } else {
             self.proxies.contains(address) || self.is_admin(address)
         }
@@ -284,6 +284,10 @@ impl Booster {
         self.finished_at.is_none()
     }
 
+    pub fn can_boost(&self) -> bool {
+        self.activity_booster.left_amount() >= self.activity_booster.reward_amount
+    }
+
     pub fn to_response(&self) -> BoosterResponse {
         BoosterResponse {
             drop_booster: self.drop_booster.to_response(),
@@ -400,19 +404,13 @@ impl ActivityBooster {
         self.assigned_amount.checked_sub(self.distributed_amount).unwrap()
     }
 
-    pub fn reward_amount(&self) -> Uint128 {
-        std::cmp::min(self.left_amount(), self.reward_amount)
-    }
-
     pub fn boost(
         &mut self,
         participation: &mut Participation,
         distance: u64,
-        total_reward_amount: Uint128,
     ) -> Uint128 {
         let amount = self.reward_amounts.get(distance as usize)
-            .map_or(Uint128::zero(), |v| v.clone())
-            .multiply_ratio(total_reward_amount, self.reward_amount);
+            .map_or(Uint128::zero(), |v| v.clone());
 
         participation.activity_booster_reward_amount += amount;
         self.distributed_amount += amount;
@@ -443,12 +441,17 @@ impl PlusBooster {
         }
     }
 
+    pub fn left_amount(&self) -> Uint128 {
+        self.assigned_amount.checked_sub(self.distributed_amount).unwrap()
+    }
+
     pub fn boost(
         &mut self,
         participation: &mut Participation,
         voting_power: Decimal,
     ) -> Uint128 {
-        let amount = self.assigned_amount * voting_power;
+        let expect_amount = self.assigned_amount * voting_power;
+        let amount = std::cmp::min(expect_amount, self.left_amount());
 
         participation.plus_booster_reward_amount += amount;
         self.distributed_amount += amount;
