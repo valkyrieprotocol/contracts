@@ -46,7 +46,8 @@ pub enum ExecuteMsg {
         denom: Denom,
         amount: Option<Uint128>,
     },
-    ClaimReward {},
+    ClaimParticipationReward {},
+    ClaimBoosterReward {},
     Participate {
         referrer: Option<Referrer>,
     },

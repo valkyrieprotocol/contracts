@@ -15,6 +15,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     UpdateConfig {
+        admins: Option<Vec<String>>,
         terraswap_router: Option<String>,
     },
     IncreaseAllowance {

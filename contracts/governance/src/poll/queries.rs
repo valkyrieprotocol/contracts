@@ -3,11 +3,12 @@ use cosmwasm_std::{Deps, Env, StdError};
 use valkyrie::common::{ContractResult, OrderBy};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::query_msgs::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse, VotersResponseItem};
+use valkyrie::governance::query_msgs::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse};
 
 use crate::poll::states::Poll;
 
 use super::states::{PollConfig, PollState};
+use valkyrie::governance::models::VoteInfoMsg;
 
 pub fn get_poll_config(
     deps: Deps,
@@ -97,10 +98,10 @@ pub fn query_voters(
     };
 
     let response_items = voters.iter().map(|(voter, voter_info)| {
-        VotersResponseItem {
+        VoteInfoMsg {
             voter: voter.to_string(),
-            vote: voter_info.option.clone(),
-            balance: voter_info.amount,
+            option: voter_info.option.clone(),
+            amount: voter_info.amount,
         }
     }).collect();
 

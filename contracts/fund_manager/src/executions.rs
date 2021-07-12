@@ -33,11 +33,18 @@ pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
+    admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
 ) -> ContractResult<Response> {
     let mut config = ContractConfig::load(deps.storage)?;
     if !config.is_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(admins) = admins {
+        config.admins = admins.iter()
+            .map(|v| deps.api.addr_validate(v).unwrap())
+            .collect();
     }
 
     if let Some(terraswap_router) = terraswap_router {

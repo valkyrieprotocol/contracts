@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Storage, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Storage, Timestamp, Uint128, StdError};
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
@@ -148,11 +148,20 @@ pub struct DistributionConfig {
 
 impl DistributionConfig {
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        self.validate()?;
         DISTRIBUTION_CONFIG.save(storage, self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<DistributionConfig> {
         DISTRIBUTION_CONFIG.load(storage)
+    }
+
+    pub fn validate(&self) -> StdResult<()> {
+        if self.amounts.is_empty() || self.amounts.iter().all(|v| v.is_zero()) {
+            return Err(StdError::generic_err("Invalid reward scheme"));
+        }
+
+        Ok(())
     }
 
     pub fn amounts_sum(&self) -> Uint128 {
@@ -482,6 +491,27 @@ impl Participation {
 
     pub fn may_load(storage: &dyn Storage, actor_address: &Addr) -> StdResult<Option<Participation>> {
         PARTICIPATION.may_load(storage, actor_address)
+    }
+
+    pub fn load_referrers(&self, storage: &dyn Storage, distance_limit: usize) -> StdResult<Vec<Participation>> {
+        let mut result = vec![];
+
+        let mut referrer = self.referrer_address.clone();
+        for _ in 0..distance_limit {
+            if referrer.is_none() {
+                break;
+            }
+
+            let referrer_participation = Self::may_load(storage, referrer.as_ref().unwrap())?;
+            if referrer_participation.is_none() {
+                break;
+            }
+            let referrer_participation = referrer_participation.unwrap();
+            referrer = referrer_participation.referrer_address.clone();
+            result.push(referrer_participation)
+        }
+
+        Ok(result)
     }
 
     pub fn query(

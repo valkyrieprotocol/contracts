@@ -3,7 +3,7 @@ use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, expect_unauthorized_err};
+use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, expect_unauthorized_err, expect_invalid_zero_amount_err};
 
 use crate::executions::increase_allowance;
 use crate::states::{Allowance, ContractState};
@@ -117,4 +117,21 @@ fn failed_overflow_free_balance() {
         Uint128(1),
     );
     expect_generic_err(&result, "Insufficient balance");
+}
+
+#[test]
+fn failed_zero_amount() {
+    let mut deps = custom_deps(&[]);
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        contract_env(),
+        campaign_manager_sender(),
+        "Address".to_string(),
+        Uint128::zero(),
+    );
+
+    expect_invalid_zero_amount_err(&result);
 }

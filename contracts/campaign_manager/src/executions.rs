@@ -179,7 +179,12 @@ pub fn add_distribution_denom(
 
     let mut config = CampaignConfig::load(deps.storage)?;
 
-    config.distribution_denom_whitelist.push(denom.to_cw20(deps.api));
+    let denom = denom.to_cw20(deps.api);
+    if config.distribution_denom_whitelist.contains(&denom) {
+        return Err(ContractError::AlreadyExists {})
+    }
+
+    config.distribution_denom_whitelist.push(denom);
 
     config.save(deps.storage)?;
 
@@ -229,7 +234,7 @@ pub fn create_campaign(
     let campaign_config = CampaignConfig::load(deps.storage)?;
 
     if info.sender != campaign_config.creation_fee_token {
-        return Err(ContractError::Std(StdError::generic_err("Invalid creation fee denom")));
+        return Err(ContractError::Std(StdError::generic_err("Invalid creation fee token")));
     }
 
     if amount < campaign_config.creation_fee_amount {
@@ -261,11 +266,15 @@ pub fn create_campaign(
         })?,
     );
 
-    let fee_send_msg = message_factories::cw20_transfer(
-        &campaign_config.creation_fee_token,
-        &campaign_config.creation_fee_recipient,
-        amount,
-    );
+    let mut messages = vec![];
+
+    if !amount.is_zero() {
+        messages.push(message_factories::cw20_transfer(
+            &campaign_config.creation_fee_token,
+            &campaign_config.creation_fee_recipient,
+            amount,
+        ));
+    }
 
     // Response
     Ok(Response {
@@ -277,7 +286,7 @@ pub fn create_campaign(
                 reply_on: ReplyOn::Success,
             }
         ],
-        messages: vec![fee_send_msg],
+        messages,
         attributes: vec![],
         data: None,
     })
@@ -400,26 +409,30 @@ pub fn finish_boosting(
         .add(booster_state.plus_booster.assigned_amount)
         .checked_sub(booster_state.plus_booster.distributed_amount)?;
 
-    let contract_config = ContractConfig::load(deps.storage)?;
+    let mut messages = vec![];
 
-    let revoke_allowance_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: contract_config.fund_manager.to_string(),
-        send: vec![],
-        msg: to_binary(&DecreaseAllowance {
-            address: campaign.to_string(),
-            amount: Some(release_amount),
-        })?,
-    });
+    if !release_amount.is_zero() {
+        let contract_config = ContractConfig::load(deps.storage)?;
 
-    let disable_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_config.fund_manager.to_string(),
+            send: vec![],
+            msg: to_binary(&DecreaseAllowance {
+                address: campaign.to_string(),
+                amount: Some(release_amount),
+            })?,
+        }));
+    }
+
+    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: campaign.to_string(),
         send: vec![],
         msg: to_binary(&CampaignExecuteMsg::DisableBooster {})?,
-    });
+    }));
 
     Ok(Response {
         submessages: vec![],
-        messages: vec![revoke_allowance_msg, disable_msg],
+        messages,
         attributes: vec![],
         data: None,
     })

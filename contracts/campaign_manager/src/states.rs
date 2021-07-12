@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128, StdError};
 use cw20::Denom;
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
@@ -72,11 +72,20 @@ pub struct BoosterConfig {
 
 impl BoosterConfig {
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        self.validate()?;
         BOOSTER_CONFIG.save(storage, self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<BoosterConfig> {
         BOOSTER_CONFIG.load(storage)
+    }
+
+    pub fn validate(&self) -> StdResult<()> {
+        if self.drop_ratio + self.activity_ratio + self.plus_ratio != Decimal::one() {
+            return Err(StdError::generic_err("Invalid booster ratio"));
+        }
+
+        Ok(())
     }
 }
 

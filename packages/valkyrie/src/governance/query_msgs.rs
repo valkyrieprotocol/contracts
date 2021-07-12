@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::super::common::OrderBy;
-use super::enumerations::{PollStatus, VoteOption};
+use super::enumerations::PollStatus;
 use super::models::VoteInfoMsg;
 use crate::common::ExecutionMsg;
 
@@ -118,15 +118,8 @@ pub struct PollCountResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct VotersResponseItem {
-    pub voter: String,
-    pub vote: VoteOption,
-    pub balance: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotersResponse {
-    pub voters: Vec<VotersResponseItem>,
+    pub voters: Vec<VoteInfoMsg>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

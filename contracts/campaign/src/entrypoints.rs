@@ -58,7 +58,8 @@ pub fn execute(
         ExecuteMsg::Withdraw { denom, amount } => {
             crate::executions::withdraw(deps, env, info, denom, amount)
         }
-        ExecuteMsg::ClaimReward {} => crate::executions::claim_reward(deps, env, info),
+        ExecuteMsg::ClaimParticipationReward {} => crate::executions::claim_participation_reward(deps, env, info),
+        ExecuteMsg::ClaimBoosterReward {} => crate::executions::claim_booster_reward(deps, env, info),
         ExecuteMsg::Participate { referrer } => {
             crate::executions::participate(deps, env, info, referrer)
         }

@@ -27,8 +27,9 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
+            admins,
             terraswap_router,
-        } => executions::update_config(deps, env, info, terraswap_router),
+        } => executions::update_config(deps, env, info, admins, terraswap_router),
         ExecuteMsg::IncreaseAllowance {
             address,
             amount,
