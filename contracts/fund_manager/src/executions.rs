@@ -26,7 +26,14 @@ pub fn instantiate(
         remain_allowance_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_config(
@@ -41,13 +48,13 @@ pub fn update_config(
         return Err(ContractError::Unauthorized {});
     }
 
-    if let Some(admins) = admins {
+    if let Some(admins) = admins.as_ref() {
         config.admins = admins.iter()
             .map(|v| deps.api.addr_validate(v).unwrap())
             .collect();
     }
 
-    if let Some(terraswap_router) = terraswap_router {
+    if let Some(terraswap_router) = terraswap_router.as_ref() {
         config.terraswap_router = deps.api.addr_validate(terraswap_router.as_str())?;
     }
 
@@ -58,6 +65,8 @@ pub fn update_config(
         submessages: vec![],
         attributes: vec![
             attr("action", "update_config"),
+            attr("is_updated_admins", admins.is_some().to_string()),
+            attr("is_updated_terraswap_router", terraswap_router.is_some().to_string()),
         ],
         data: None,
     })
@@ -134,14 +143,10 @@ pub fn decrease_allowance(
         allowance.remain_amount.clone()
     };
 
-    if amount < allowance.remain_amount {
-        state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(amount)?;
-        allowance.decrease(amount)?;
-        allowance.save(deps.storage)?;
-    } else {
-        state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(allowance.remain_amount)?;
-        allowance.remove(deps.storage);
-    }
+    allowance.decrease(amount)?;
+    allowance.save_or_delete(deps.storage)?;
+
+    state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(amount)?;
     state.save(deps.storage)?;
 
     Ok(Response {
@@ -168,11 +173,14 @@ pub fn transfer(
     let config = ContractConfig::load(deps.storage)?;
     let mut state = ContractState::load(deps.storage)?;
 
-    if config.is_admin(&info.sender) {
+    let remain_amount = if config.is_admin(&info.sender) {
         let balance = state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?;
+
         if balance.free_balance < amount {
             return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
         }
+
+        balance.free_balance
     } else {
         let allowance = Allowance::may_load(deps.storage, &info.sender)?;
 
@@ -182,17 +190,16 @@ pub fn transfer(
             }
 
             allowance.remain_amount = allowance.remain_amount.checked_sub(amount)?;
+            allowance.save_or_delete(deps.storage)?;
+
             state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(amount)?;
             state.save(deps.storage)?;
-            if allowance.remain_amount.is_zero() {
-                allowance.remove(deps.storage);
-            } else {
-                allowance.save(deps.storage)?;
-            }
+
+            allowance.remain_amount
         } else {
             return Err(ContractError::Unauthorized {});
         }
-    }
+    };
 
     Ok(Response {
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
@@ -205,10 +212,11 @@ pub fn transfer(
         })],
         submessages: vec![],
         attributes: vec![
-            attr("action", "spend"),
+            attr("action", "transfer"),
             attr("requester", info.sender.as_str()),
             attr("recipient", recipient),
             attr("amount", amount),
+            attr("remain_amount", remain_amount)
         ],
         data: None,
     })
@@ -285,7 +293,9 @@ pub fn swap(
     Ok(Response {
         submessages: vec![],
         messages: vec![swap_msg],
-        attributes: vec![],
+        attributes: vec![
+            attr("action", "swap"),
+        ],
         data: None,
     })
 }

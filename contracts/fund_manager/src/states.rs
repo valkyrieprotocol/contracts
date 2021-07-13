@@ -90,8 +90,17 @@ impl Allowance {
         ALLOWANCE.save(storage, &self.address, self)
     }
 
-    pub fn remove(&self, storage: &mut dyn Storage) {
+    pub fn delete(&self, storage: &mut dyn Storage) {
         ALLOWANCE.remove(storage, &self.address)
+    }
+
+    pub fn save_or_delete(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        if self.remain_amount.is_zero() {
+            self.delete(storage);
+            Ok(())
+        } else {
+            self.save(storage)
+        }
     }
 
     pub fn load(storage: &dyn Storage, address: &Addr) -> StdResult<Allowance> {

@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Decimal, Uint128, Binary, StdError, to_binary, SubMsg, ReplyOn, Reply, CosmosMsg, WasmMsg};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Decimal, Uint128, Binary, StdError, to_binary, SubMsg, ReplyOn, Reply, CosmosMsg, WasmMsg, attr};
 use valkyrie::campaign_manager::execute_msgs::{InstantiateMsg, CampaignInstantiateMsg};
 use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
 use crate::states::{ContractConfig, CampaignConfig, BoosterConfig, is_governance, CreateCampaignContext, Campaign};
@@ -8,7 +8,6 @@ use valkyrie::utils::find;
 use valkyrie::fund_manager::execute_msgs::ExecuteMsg::{IncreaseAllowance, DecreaseAllowance};
 use valkyrie::campaign::query_msgs::{QueryMsg, CampaignStateResponse, ActiveBoosterResponse};
 use valkyrie::campaign::execute_msgs::ExecuteMsg as CampaignExecuteMsg;
-use std::ops::Add;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -41,7 +40,14 @@ pub fn instantiate(
         min_participation_count: msg.booster_config.min_participation_count,
     }.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_contract_config(
@@ -57,17 +63,26 @@ pub fn update_contract_config(
         return Err(ContractError::Unauthorized {});
     }
 
-    if let Some(governance) = governance {
-        config.governance = deps.api.addr_validate(governance.as_str())?;
+    if let Some(governance) = governance.as_ref() {
+        config.governance = deps.api.addr_validate(governance)?;
     }
 
-    if let Some(fund_manager) = fund_manager {
-        config.fund_manager = deps.api.addr_validate(fund_manager.as_str())?;
+    if let Some(fund_manager) = fund_manager.as_ref() {
+        config.fund_manager = deps.api.addr_validate(fund_manager)?;
     }
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_contract_config"),
+            attr("is_updated_governance", governance.is_some().to_string()),
+            attr("is_updated_fund_manager", fund_manager.is_some().to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_campaign_config(
@@ -88,37 +103,51 @@ pub fn update_campaign_config(
 
     let mut config = CampaignConfig::load(deps.storage)?;
 
-    if let Some(creation_fee_token) = creation_fee_token {
-        config.creation_fee_token = deps.api.addr_validate(creation_fee_token.as_str())?;
+    if let Some(creation_fee_token) = creation_fee_token.as_ref() {
+        config.creation_fee_token = deps.api.addr_validate(creation_fee_token)?;
     }
 
-    if let Some(creation_fee_amount) = creation_fee_amount {
-        config.creation_fee_amount = creation_fee_amount;
+    if let Some(creation_fee_amount) = creation_fee_amount.as_ref() {
+        config.creation_fee_amount = *creation_fee_amount;
     }
 
-    if let Some(creation_fee_recipient) = creation_fee_recipient {
-        config.creation_fee_recipient = deps.api.addr_validate(creation_fee_recipient.as_str())?;
+    if let Some(creation_fee_recipient) = creation_fee_recipient.as_ref() {
+        config.creation_fee_recipient = deps.api.addr_validate(creation_fee_recipient)?;
     }
 
-    if let Some(code_id) = code_id {
-        config.code_id = code_id;
+    if let Some(code_id) = code_id.as_ref() {
+        config.code_id = *code_id;
     }
 
-    if let Some(withdraw_fee_rate) = withdraw_fee_rate {
-        config.withdraw_fee_rate = withdraw_fee_rate;
+    if let Some(withdraw_fee_rate) = withdraw_fee_rate.as_ref() {
+        config.withdraw_fee_rate = *withdraw_fee_rate;
     }
 
-    if let Some(withdraw_fee_recipient) = withdraw_fee_recipient {
-        config.withdraw_fee_recipient = deps.api.addr_validate(withdraw_fee_recipient.as_str())?;
+    if let Some(withdraw_fee_recipient) = withdraw_fee_recipient.as_ref() {
+        config.withdraw_fee_recipient = deps.api.addr_validate(withdraw_fee_recipient)?;
     }
 
-    if let Some(deactivate_period) = deactivate_period {
-        config.deactivate_period = deactivate_period;
+    if let Some(deactivate_period) = deactivate_period.as_ref() {
+        config.deactivate_period = *deactivate_period;
     }
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_campaign_config"),
+            attr("is_updated_creation_fee_token", creation_fee_token.is_some().to_string()),
+            attr("is_updated_creation_fee_amount", creation_fee_amount.is_some().to_string()),
+            attr("is_updated_creation_fee_recipient", creation_fee_recipient.is_some().to_string()),
+            attr("is_updated_code_id", code_id.is_some().to_string()),
+            attr("is_updated_withdraw_fee_rate", withdraw_fee_rate.is_some().to_string()),
+            attr("is_updated_withdraw_fee_recipient", withdraw_fee_recipient.is_some().to_string()),
+            attr("is_updated_deactivate_period", deactivate_period.is_some().to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_booster_config(
@@ -138,33 +167,46 @@ pub fn update_booster_config(
 
     let mut config = BoosterConfig::load(deps.storage)?;
 
-    if let Some(booster_token) = booster_token {
-        config.booster_token = deps.api.addr_validate(booster_token.as_str())?;
+    if let Some(booster_token) = booster_token.as_ref() {
+        config.booster_token = deps.api.addr_validate(booster_token)?;
     }
 
-    if let Some(drop_ratio) = drop_ratio {
-        config.drop_ratio = drop_ratio;
+    if let Some(drop_ratio) = drop_ratio.as_ref() {
+        config.drop_ratio = *drop_ratio;
     }
 
-    if let Some(activity_ratio) = activity_ratio {
-        config.activity_ratio = activity_ratio;
+    if let Some(activity_ratio) = activity_ratio.as_ref() {
+        config.activity_ratio = *activity_ratio;
     }
 
-    if let Some(plus_ratio) = plus_ratio {
-        config.plus_ratio = plus_ratio;
+    if let Some(plus_ratio) = plus_ratio.as_ref() {
+        config.plus_ratio = *plus_ratio;
     }
 
-    if let Some(activity_multiplier) = activity_multiplier {
-        config.activity_multiplier = activity_multiplier;
+    if let Some(activity_multiplier) = activity_multiplier.as_ref() {
+        config.activity_multiplier = *activity_multiplier;
     }
 
-    if let Some(min_participation_count) = min_participation_count {
-        config.min_participation_count = min_participation_count;
+    if let Some(min_participation_count) = min_participation_count.as_ref() {
+        config.min_participation_count = *min_participation_count;
     }
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_booster_config"),
+            attr("is_updated_booster_token", booster_token.is_some().to_string()),
+            attr("is_updated_drop_ratio", drop_ratio.is_some().to_string()),
+            attr("is_updated_activity_ratio", activity_ratio.is_some().to_string()),
+            attr("is_updated_plus_ratio", plus_ratio.is_some().to_string()),
+            attr("is_updated_activity_multiplier", activity_multiplier.is_some().to_string()),
+            attr("is_updated_min_participation_count", min_participation_count.is_some().to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn add_distribution_denom(
@@ -188,7 +230,15 @@ pub fn add_distribution_denom(
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "add_distribution_denom"),
+            attr("whitelist_size", config.distribution_denom_whitelist.len()),
+        ],
+        data: None,
+    })
 }
 
 pub fn remove_distribution_denom(
@@ -215,7 +265,15 @@ pub fn remove_distribution_denom(
 
     config.save(deps.storage)?;
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "remove_distribution_denom"),
+            attr("whitelist_size", config.distribution_denom_whitelist.len()),
+        ],
+        data: None,
+    })
 }
 
 pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
@@ -287,7 +345,12 @@ pub fn create_campaign(
             }
         ],
         messages,
-        attributes: vec![],
+        attributes: vec![
+            attr("action", "create_campaign"),
+            attr("campaign_code_id", campaign_config.code_id),
+            attr("campaign_creator",  sender.clone()),
+            attr("campaign_admin", sender.clone()),
+        ],
         data: None,
     })
 }
@@ -320,7 +383,15 @@ pub fn created_campaign(
 
     CreateCampaignContext::clear(deps.storage);
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "created_campaign"),
+            attr("campaign_address", contract_address.to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn boost_campaign(
@@ -367,17 +438,24 @@ pub fn boost_campaign(
         contract_addr: campaign,
         send: vec![],
         msg: to_binary(&CampaignExecuteMsg::EnableBooster {
-            drop_booster_amount,
-            activity_booster_amount,
-            plus_booster_amount,
-            activity_booster_multiplier: booster_config.activity_multiplier,
+            drop_booster_amount: drop_booster_amount.clone(),
+            activity_booster_amount: activity_booster_amount.clone(),
+            plus_booster_amount: plus_booster_amount.clone(),
+            activity_booster_multiplier: booster_config.activity_multiplier.clone(),
         })?,
     });
 
     Ok(Response {
         submessages: vec![],
         messages: vec![allowance_msg, enable_msg],
-        attributes: vec![],
+        attributes: vec![
+            attr("action", "boost_campaign"),
+            attr("participation_count", campaign_state.participation_count),
+            attr("drop_booster_amount", drop_booster_amount.to_string()),
+            attr("activity_booster_amount", activity_booster_amount.to_string()),
+            attr("plus_booster_amount", plus_booster_amount.to_string()),
+            attr("activity_booster_multiplier", booster_config.activity_multiplier.to_string()),
+        ],
         data: None,
     })
 }
@@ -402,12 +480,14 @@ pub fn finish_boosting(
     }
     let booster_state = booster_state.active_booster.unwrap();
 
-    let release_amount = booster_state.drop_booster.assigned_amount
-        .checked_sub(booster_state.drop_booster.calculated_amount)?
-        .add(booster_state.activity_booster.assigned_amount)
-        .checked_sub(booster_state.activity_booster.distributed_amount)?
-        .add(booster_state.plus_booster.assigned_amount)
+    let drop_booster_left_amount = booster_state.drop_booster.assigned_amount
+        .checked_sub(booster_state.drop_booster.calculated_amount)?;
+    let activity_booster_left_amount = booster_state.activity_booster.assigned_amount
+        .checked_sub(booster_state.activity_booster.distributed_amount)?;
+    let plus_booster_left_amount = booster_state.plus_booster.assigned_amount
         .checked_sub(booster_state.plus_booster.distributed_amount)?;
+
+    let release_amount = drop_booster_left_amount + activity_booster_left_amount + plus_booster_left_amount;
 
     let mut messages = vec![];
 
@@ -433,7 +513,12 @@ pub fn finish_boosting(
     Ok(Response {
         submessages: vec![],
         messages,
-        attributes: vec![],
+        attributes: vec![
+            attr("action", "finish_boosting"),
+            attr("drop_booster_left_amount", drop_booster_left_amount.to_string()),
+            attr("activity_booster_left_amount", activity_booster_left_amount.to_string()),
+            attr("plus_booster_left_amount", plus_booster_left_amount.to_string()),
+        ],
         data: None,
     })
 }

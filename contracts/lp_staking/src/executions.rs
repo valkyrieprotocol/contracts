@@ -30,6 +30,7 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     state.save(deps.storage)?;
 
     Ok(Response {
+        submessages: vec![],
         messages: vec![],
         attributes: vec![
             attr("action", "bond"),
@@ -37,7 +38,6 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
             attr("amount", amount.to_string()),
         ],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -72,6 +72,7 @@ pub fn auto_stake(
     let tax_amount: Uint128 = compute_uusd_tax(&deps.querier, uusd_amount)?;
 
     Ok(Response {
+        submessages: vec![],
         messages: vec![
             // 1. Transfer token asset to staking contract
             CosmosMsg::Wasm(WasmMsg::Execute {
@@ -133,7 +134,6 @@ pub fn auto_stake(
             attr("tax_amount", tax_amount.to_string()),
         ],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -205,6 +205,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     }
 
     Ok(Response {
+        submessages: vec![],
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: config.lp_token.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -219,7 +220,6 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
             attr("amount", amount.to_string()),
         ],
         data: None,
-        submessages: vec![],
     })
 }
 
@@ -248,6 +248,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     }
 
     Ok(Response {
+        submessages: vec![],
         messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: config.token.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -262,6 +263,5 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
             attr("amount", amount.to_string()),
         ],
         data: None,
-        submessages: vec![],
     })
 }

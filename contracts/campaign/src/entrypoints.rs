@@ -38,7 +38,7 @@ pub fn execute(
             description,
             url,
             parameter_key,
-            executions: execution_msgs,
+            executions,
         } => crate::executions::update_campaign_info(
             deps,
             env,
@@ -47,7 +47,7 @@ pub fn execute(
             description,
             url,
             parameter_key,
-            execution_msgs,
+            executions,
         ),
         ExecuteMsg::UpdateDistributionConfig { denom, amounts } => {
             crate::executions::update_distribution_config(deps, env, info, denom, amounts)

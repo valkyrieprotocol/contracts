@@ -29,7 +29,14 @@ pub fn instantiate(
     }.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_config(
@@ -53,7 +60,15 @@ pub fn update_config(
     config.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_config"),
+            attr("is_updated_withdraw_delay", withdraw_delay.is_some().to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn stake_governance_token(
@@ -93,19 +108,17 @@ pub fn stake_governance_token(
     staker_state.save(deps.storage)?;
 
     // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages: vec![],
-            attributes: vec![
-                attr("action", "stake_governance_token"),
-                attr("sender", sender.as_str()),
-                attr("share", share.to_string()),
-                attr("amount", amount.to_string()),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "stake_governance_token"),
+            attr("sender", sender.as_str()),
+            attr("share", share.to_string()),
+            attr("amount", amount.to_string()),
+        ],
+        data: None,
+    })
 }
 
 // Withdraw amount if not staked. By default all funds will be withdrawn.
@@ -195,12 +208,10 @@ pub fn withdraw_governance_token(
 
     // Response
     let contract_config = ContractConfig::load(deps.storage)?;
-    Ok(
-        create_send_msg_response(
-            &contract_config.governance_token,
-            &info.sender,
-            withdraw_amount,
-            "withdraw_governance_token",
-        )
-    )
+    Ok(create_send_msg_response(
+        &contract_config.governance_token,
+        &info.sender,
+        withdraw_amount,
+        "withdraw_governance_token",
+    ))
 }

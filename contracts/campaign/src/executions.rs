@@ -83,7 +83,14 @@ pub fn instantiate(
     }.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }
 
 pub fn update_contract_config(
@@ -101,11 +108,11 @@ pub fn update_contract_config(
     // Execute
     let mut contract_config = ContractConfig::load(deps.storage)?;
 
-    if let Some(admin) = admin {
-        contract_config.admin = deps.api.addr_validate(&admin)?;
+    if let Some(admin) = admin.as_ref() {
+        contract_config.admin = deps.api.addr_validate(admin)?;
     }
 
-    if let Some(proxies) = proxies {
+    if let Some(proxies) = proxies.as_ref() {
         contract_config.proxies = proxies.iter()
             .map(|v| deps.api.addr_validate(v).unwrap())
             .collect();
@@ -117,7 +124,11 @@ pub fn update_contract_config(
     Ok(Response {
         submessages: vec![],
         messages: vec![],
-        attributes: vec![attr("action", "update_contract_config")],
+        attributes: vec![
+            attr("action", "update_contract_config"),
+            attr("is_updated_admin", admin.is_some().to_string()),
+            attr("is_updated_proxies", proxies.is_some().to_string()),
+        ],
         data: None,
     })
 }
@@ -130,7 +141,7 @@ pub fn update_campaign_info(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    execution_msgs: Option<Vec<ExecutionMsg>>,
+    mut executions: Option<Vec<ExecutionMsg>>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, &info.sender) {
@@ -140,18 +151,18 @@ pub fn update_campaign_info(
     // Execute
     let mut campaign_info = CampaignInfo::load(deps.storage)?;
 
-    if let Some(title) = title {
-        validate_title(&title)?;
-        campaign_info.title = title;
+    if let Some(title) = title.as_ref() {
+        validate_title(title)?;
+        campaign_info.title = title.clone();
     }
 
-    if let Some(description) = description {
-        validate_description(&description)?;
-        campaign_info.description = description;
+    if let Some(description) = description.as_ref() {
+        validate_description(description)?;
+        campaign_info.description = description.clone();
     }
 
-    if let Some(url) = url {
-        validate_url(&url)?;
+    if let Some(url) = url.as_ref() {
+        validate_url(url)?;
 
         if !is_pending(deps.storage)? {
             return Err(ContractError::Std(StdError::generic_err(
@@ -159,11 +170,11 @@ pub fn update_campaign_info(
             )));
         }
 
-        campaign_info.url = url;
+        campaign_info.url = url.clone();
     }
 
-    if let Some(parameter_key) = parameter_key {
-        validate_parameter_key(&parameter_key)?;
+    if let Some(parameter_key) = parameter_key.as_ref() {
+        validate_parameter_key(parameter_key)?;
 
         if !is_pending(deps.storage)? {
             return Err(ContractError::Std(StdError::generic_err(
@@ -171,12 +182,12 @@ pub fn update_campaign_info(
             )));
         }
 
-        campaign_info.parameter_key = parameter_key;
+        campaign_info.parameter_key = parameter_key.clone();
     }
 
-    if let Some(mut execution_msgs) = execution_msgs {
-        execution_msgs.sort_by_key(|e| e.order);
-        campaign_info.executions = execution_msgs.iter()
+    if let Some(executions) = executions.as_mut() {
+        executions.sort_by_key(|e| e.order);
+        campaign_info.executions = executions.iter()
             .map(|e| Execution::from(deps.api, e))
             .collect();
     }
@@ -187,7 +198,14 @@ pub fn update_campaign_info(
     Ok(Response {
         submessages: vec![],
         messages: vec![],
-        attributes: vec![attr("action", "update_campaign_info")],
+        attributes: vec![
+            attr("action", "update_campaign_info"),
+            attr("is_updated_title", title.is_some().to_string()),
+            attr("is_updated_description", description.is_some().to_string()),
+            attr("is_updated_url", url.is_some().to_string()),
+            attr("is_updated_parameter_key", parameter_key.is_some().to_string()),
+            attr("is_updated_executions", executions.is_some().to_string()),
+        ],
         data: None,
     })
 }
@@ -329,6 +347,8 @@ pub fn withdraw(
         messages,
         attributes: vec![
             attr("action", "withdraw"),
+            attr("pre_campaign_balance", format!("{}{}", campaign_balance, denom)),
+            attr("pre_locked_balance", format!("{}{}", locked_balance, denom)),
             attr("receive_amount", format!("{}{}", receive_amount, denom)),
             attr("withdraw_fee_amount", format!("{}{}", withdraw_fee_amount, denom)),
         ],
@@ -368,6 +388,7 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
         )?],
         attributes: vec![
             attr("action", "claim_participation_reward"),
+            attr("amount", format!("{}{}", reward_amount, Denom::from_cw20(distribution_config.denom))),
         ],
         data: None,
     })
@@ -413,6 +434,7 @@ pub fn claim_booster_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Cont
         })],
         attributes: vec![
             attr("action", "claim_booster_reward"),
+            attr("amount", reward_amount.to_string()),
         ],
         data: None,
     })
@@ -483,7 +505,6 @@ pub fn participate(
         .enumerate();
 
     for (distance, (participation, reward_amount)) in participation_rewards {
-
         //Distribute reward
         participation.reward_amount += reward_amount;
         participation.increase_distance_count(next_booster_id, distance as u64);
@@ -587,22 +608,25 @@ pub fn participate(
         Denom::from_cw20(distribution_config.denom.clone()).to_string()
     );
 
-    let result = DistributeResult {
-        distributions: distributions_response,
-    };
-
     Ok(Response {
         submessages: vec![],
         messages,
         attributes: vec![
             attr("action", "participate"),
             attr("actor", actor.to_string()),
+            attr("booster_id", booster_state.recent_booster_id),
             attr("configured_reward_amount", configured_reward),
             attr("distributed_reward_amount", distributed_reward),
             attr("activity_boost_amount", total_activity_booster_amount),
             attr("plus_boost_amount", total_plus_booster_amount),
+            attr("distribution_length", distributions_response.len()),
+            attr("participation_count", campaign_state.participation_count),
+            attr("cumulative_distribution_amount", campaign_state.cumulative_distribution_amount),
+            attr("finish_booster", finish_booster.to_string()),
         ],
-        data: Some(to_binary(&result)?),
+        data: Some(to_binary(&DistributeResult {
+            distributions: distributions_response,
+        })?),
     })
 }
 
@@ -673,6 +697,7 @@ pub fn enable_booster(
             attr("drop_booster_amount", drop_booster_assigned_amount),
             attr("activity_booster_amount", activity_booster_assigned_amount),
             attr("plus_booster_amount", plus_booster_assigned_amount),
+            attr("activity_booster_multiplier", activity_booster_multiplier.to_string()),
             attr("snapped_participation_count", campaign_state.participation_count),
         ],
         data: None,

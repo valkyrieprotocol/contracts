@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, attr};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::execute_msgs::ContractConfigInitMsg;
@@ -18,5 +18,12 @@ pub fn instantiate(
     }.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }

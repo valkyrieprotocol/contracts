@@ -48,7 +48,14 @@ pub fn instantiate(
     poll_state.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "instantiate"),
+        ],
+        data: None,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -100,7 +107,20 @@ pub fn update_poll_config(
     poll_config.save(deps.storage)?;
 
     // Response
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_poll_config"),
+            attr("is_updated_quorum", quorum.is_some().to_string()),
+            attr("is_updated_threshold", threshold.is_some().to_string()),
+            attr("is_updated_voting_period", voting_period.is_some().to_string()),
+            attr("is_updated_execution_delay_period", execution_delay_period.is_some().to_string()),
+            attr("is_updated_proposal_deposit", proposal_deposit.is_some().to_string()),
+            attr("is_updated_snapshot_period", snapshot_period.is_some().to_string()),
+        ],
+        data: None,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -152,25 +172,23 @@ pub fn create_poll(
         deposit_amount,
         total_balance_at_end_poll: None,
         snapped_staked_amount: None,
-        _status: None
+        _status: None,
     };
 
     poll.save_with_index(deps.storage)?;
 
     // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages: vec![],
-            attributes: vec![
-                attr("action", "create_poll"),
-                attr("creator", proposer.as_str()),
-                attr("poll_id", poll.id.to_string()),
-                attr("end_height", poll.end_height),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "create_poll"),
+            attr("creator", proposer.as_str()),
+            attr("poll_id", poll.id.to_string()),
+            attr("end_height", poll.end_height),
+        ],
+        data: None,
+    })
 }
 
 pub fn cast_vote(
@@ -215,20 +233,18 @@ pub fn cast_vote(
 
 
     // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages: vec![],
-            attributes: vec![
-                attr("action", "cast_vote"),
-                attr("poll_id", &poll_id.to_string()),
-                attr("amount", &amount.to_string()),
-                attr("voter", info.sender.as_str()),
-                attr("voter_option", option.to_string()),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "cast_vote"),
+            attr("poll_id", &poll_id.to_string()),
+            attr("amount", &amount.to_string()),
+            attr("voter", info.sender.as_str()),
+            attr("voter_option", option.to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn end_poll(
@@ -282,19 +298,17 @@ pub fn end_poll(
     poll_state.save(deps.storage)?;
 
     // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages,
-            attributes: vec![
-                attr("action", "end_poll"),
-                attr("poll_id", poll_id.to_string()),
-                attr("result", poll_result.to_string()),
-                attr("passed", (poll_result == PollResult::Passed).to_string()),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages: vec![],
+        messages,
+        attributes: vec![
+            attr("action", "end_poll"),
+            attr("poll_id", poll_id.to_string()),
+            attr("result", poll_result.to_string()),
+            attr("passed", (poll_result == PollResult::Passed).to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub const REPLY_EXECUTION: u64 = 1;
@@ -344,17 +358,15 @@ pub fn execute_poll(
         execution_count: executions.len() as u64,
     }.save(deps.storage)?;
 
-    Ok(
-        Response {
-            submessages,
-            messages: vec![],
-            attributes: vec![
-                attr("action", "execute_poll"),
-                attr("poll_id", poll_id.to_string()),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages,
+        messages: vec![],
+        attributes: vec![
+            attr("action", "execute_poll"),
+            attr("poll_id", poll_id.to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn reply_execution(
@@ -381,7 +393,15 @@ pub fn reply_execution(
         poll_execution_context.save(deps.storage)?;
     }
 
-    Ok(Response::default())
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "reply_execution"),
+            attr("execution_success", msg.result.is_ok().to_string()),
+        ],
+        data: None,
+    })
 }
 
 pub fn snapshot_poll(
@@ -407,18 +427,16 @@ pub fn snapshot_poll(
     poll.save(deps.storage)?;
 
     // Response
-    Ok(
-        Response {
-            submessages: vec![],
-            messages: vec![],
-            attributes: vec![
-                attr("action", "snapshot_poll"),
-                attr("poll_id", poll_id.to_string()),
-                attr("staked_amount", staked_amount),
-            ],
-            data: None,
-        }
-    )
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "snapshot_poll"),
+            attr("poll_id", poll_id.to_string()),
+            attr("staked_amount", staked_amount),
+        ],
+        data: None,
+    })
 }
 
 // Validate_quorum returns an error if the quorum is invalid
