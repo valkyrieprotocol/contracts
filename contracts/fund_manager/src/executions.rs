@@ -173,6 +173,10 @@ pub fn transfer(
     let config = ContractConfig::load(deps.storage)?;
     let mut state = ContractState::load(deps.storage)?;
 
+    if amount.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
     let remain_amount = if config.is_admin(&info.sender) {
         let balance = state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?;
 
@@ -268,6 +272,10 @@ pub fn swap(
     } else {
         balance
     };
+
+    if amount.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
 
     let swap_msg = match denom {
         Denom::Native(denom) => {
