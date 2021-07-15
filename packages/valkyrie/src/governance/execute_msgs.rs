@@ -58,6 +58,7 @@ pub enum ExecuteMsg {
     SnapshotPoll { poll_id: u64 },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
+    RunExecution { executions: Vec<ExecutionMsg> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

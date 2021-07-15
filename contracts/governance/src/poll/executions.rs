@@ -1,16 +1,16 @@
-use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg, SubMsg, ReplyOn, Reply};
+use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg};
 
-use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
+use valkyrie::common::{ContractResult, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::execute_msgs::PollConfigInitMsg;
+use valkyrie::governance::execute_msgs::{ExecuteMsg, PollConfigInitMsg};
+use valkyrie::message_factories;
 
 use crate::common::states::{ContractConfig, load_available_balance};
+use crate::poll::states::{PollExecutionContext, PollResult};
 use crate::staking::states::StakerState;
 
 use super::states::{get_poll_id, Poll, PollConfig, PollState};
-use crate::poll::states::{PollResult, PollExecutionContext};
-use valkyrie::message_factories;
 
 const MIN_TITLE_LENGTH: usize = 4;
 const MAX_TITLE_LENGTH: usize = 64;
@@ -339,31 +339,62 @@ pub fn execute_poll(
     // Execute
     executions.sort();
 
-    let submessages = executions.iter().map(|execution| {
-        SubMsg {
-            id: REPLY_EXECUTION,
-            msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: execution.contract.to_string(),
-                msg: execution.msg.clone(),
-                send: vec![],
-            }),
-            gas_limit: None,
-            reply_on: ReplyOn::Always,
-        }
-    }).collect();
-
     // Response
     PollExecutionContext {
         poll_id: poll.id,
         execution_count: executions.len() as u64,
     }.save(deps.storage)?;
 
+    let run_execution = SubMsg {
+        id: REPLY_EXECUTION,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            send: vec![],
+            msg: to_binary(&ExecuteMsg::RunExecution {
+                executions: executions.iter().map(|e| ExecutionMsg::from(e)).collect(),
+            })?,
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Always,
+    };
+
     Ok(Response {
-        submessages,
+        submessages: vec![run_execution],
         messages: vec![],
         attributes: vec![
             attr("action", "execute_poll"),
             attr("poll_id", poll_id.to_string()),
+        ],
+        data: None,
+    })
+}
+
+pub fn run_execution(
+    _deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    mut executions: Vec<ExecutionMsg>,
+) -> ContractResult<Response> {
+    if env.contract.address != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    executions.sort_by_key(|e| e.order);
+
+    let messages: Vec<CosmosMsg> = executions.iter().map(|e| {
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: e.contract.to_string(),
+            send: vec![],
+            msg: e.msg.clone(),
+        })
+    }).collect();
+
+    Ok(Response {
+        submessages: vec![],
+        messages,
+        attributes: vec![
+            attr("action", "execution_runner"),
+            attr("execution_count", executions.len()),
         ],
         data: None,
     })
@@ -374,31 +405,28 @@ pub fn reply_execution(
     _env: Env,
     msg: Reply,
 ) -> ContractResult<Response> {
-    let mut poll_execution_context = PollExecutionContext::load(deps.storage)?;
+    let poll_execution_context = PollExecutionContext::load(deps.storage)?;
     let mut poll = Poll::load(deps.storage, &poll_execution_context.poll_id)?;
 
-    poll.status = if poll.status != PollStatus::Failed && msg.result.is_ok() {
+    if poll.status == PollStatus::Failed || poll.status == PollStatus::Executed {
+        return Err(ContractError::Std(StdError::generic_err("Already executed")));
+    }
+
+    poll.status = if msg.result.is_ok() {
         PollStatus::Executed
     } else {
         PollStatus::Failed
     };
 
     poll.save_with_index(deps.storage)?;
-
-    poll_execution_context.execution_count -= 1;
-
-    if poll_execution_context.execution_count == 0 {
-        PollExecutionContext::clear(deps.storage);
-    } else {
-        poll_execution_context.save(deps.storage)?;
-    }
+    PollExecutionContext::clear(deps.storage);
 
     Ok(Response {
         submessages: vec![],
         messages: vec![],
         attributes: vec![
             attr("action", "reply_execution"),
-            attr("execution_success", msg.result.is_ok().to_string()),
+            attr("poll_status", poll.status.to_string()),
         ],
         data: None,
     })

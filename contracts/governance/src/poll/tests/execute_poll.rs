@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, ReplyOn};
+use cosmwasm_std::{Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, ReplyOn, to_binary};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::{execute_poll, REPLY_EXECUTION};
 use crate::tests::{ POLL_EXECUTION_DELAY_PERIOD, init_default, POLL_PROPOSAL_DEPOSIT};
@@ -8,6 +8,7 @@ use crate::poll::tests::cast_vote::VOTER1;
 use valkyrie::governance::enumerations::VoteOption;
 use crate::poll::tests::create_poll::{PROPOSER1, POLL_TITLE, POLL_DESCRIPTION, POLL_LINK, mock_exec_msg};
 use valkyrie::test_utils::{default_sender, expect_generic_err, contract_env_height};
+use valkyrie::governance::execute_msgs::ExecuteMsg;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) -> ContractResult<Response> {
     execute_poll(deps.as_mut(), env, info, poll_id)
@@ -58,21 +59,19 @@ fn succeed() {
         mock_exec_msg(3),
     ];
 
-    let sub_msgs: Vec<SubMsg> = sorted_execution_msgs.iter().map(|e| {
-        SubMsg {
-            id: REPLY_EXECUTION,
-            msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: e.contract.to_string(),
-                msg: e.msg.clone(),
-                send: vec![],
-            }),
-            gas_limit: None,
-            reply_on: ReplyOn::Always,
-        }
-    }).collect();
-
-    let (_, _, response) = will_success(&mut deps, poll_id);
-    assert_eq!(response.submessages, sub_msgs);
+    let (env, _, response) = will_success(&mut deps, poll_id);
+    assert_eq!(response.submessages, vec![SubMsg {
+        id: REPLY_EXECUTION,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            send: vec![],
+            msg: to_binary(&ExecuteMsg::RunExecution {
+                executions: sorted_execution_msgs.clone(),
+            }).unwrap(),
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Always,
+    }]);
 
     let context = PollExecutionContext::load(&deps.storage).unwrap();
     assert_eq!(context, PollExecutionContext {
