@@ -272,22 +272,22 @@ pub fn end_poll(
 
     let (poll_result, staked_amount) = poll.get_result(deps.as_ref())?;
 
-    if poll_result == PollResult::Passed {
-        poll.status = PollStatus::Passed;
+    poll.status = if poll_result == PollResult::Passed {
+        PollStatus::Passed
     } else {
-        poll.status = PollStatus::Rejected;
-
-        // Refunds deposit only when quorum is reached
-        if poll_result != PollResult::QuorumNotReached && !poll.deposit_amount.is_zero() {
-            messages.push(
-                message_factories::cw20_transfer(
-                    &contract_config.governance_token,
-                    &poll.creator,
-                    poll.deposit_amount,
-                )
-            )
-        }
+        PollStatus::Rejected
     };
+
+    // Refunds deposit only when quorum is reached
+    if poll_result != PollResult::QuorumNotReached && !poll.deposit_amount.is_zero() {
+        messages.push(
+            message_factories::cw20_transfer(
+                &contract_config.governance_token,
+                &poll.creator,
+                poll.deposit_amount,
+            )
+        )
+    }
 
     // Update poll status
     poll.total_balance_at_end_poll = Some(staked_amount);

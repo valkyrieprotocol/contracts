@@ -61,7 +61,17 @@ fn succeed_passed() {
     super::cast_vote::will_success(&mut deps, VOTER2, poll_id, VoteOption::No, Uint128(30));
     super::cast_vote::will_success(&mut deps, VOTER3, poll_id, VoteOption::Abstain, Uint128(100));
 
-    will_success(&mut deps, poll_id);
+    let (_, _, response) = will_success(&mut deps, poll_id);
+    assert_eq!(response.messages, vec![
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: GOVERNANCE_TOKEN.to_string(),
+            send: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: PROPOSER1.to_string(),
+                amount: POLL_PROPOSAL_DEPOSIT,
+            }).unwrap(),
+        }),
+    ]);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     assert_eq!(poll.status, PollStatus::Passed);
@@ -130,6 +140,7 @@ fn succeed_rejected_quorum_not_reached() {
     super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(1));
 
     let (_, _, response) = will_success(&mut deps, poll_id);
+    assert!(response.messages.is_empty());
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     assert_eq!(poll.status, PollStatus::Rejected);
@@ -159,6 +170,7 @@ fn succeed_rejected_zero_quorum() {
     let poll_id = 1u64;
 
     let (_, _, response) = will_success(&mut deps, poll_id);
+    assert!(response.messages.is_empty());
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     assert_eq!(poll.status, PollStatus::Rejected);
@@ -171,7 +183,9 @@ fn succeed_rejected_zero_quorum() {
 }
 
 #[test]
-fn succeed_end_poll_with_controlled_quorum() {}
+fn succeed_end_poll_with_controlled_quorum() {
+    //TODO:
+}
 
 #[test]
 fn succeed_rejected_nothing_staked() {
@@ -184,6 +198,7 @@ fn succeed_rejected_nothing_staked() {
     let poll_id = 1u64;
 
     let (_, _, response) = will_success(&mut deps, poll_id);
+    assert!(response.messages.is_empty());
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     assert_eq!(poll.status, PollStatus::Rejected);

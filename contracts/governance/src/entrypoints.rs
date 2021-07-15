@@ -90,6 +90,9 @@ pub fn execute(
         ExecuteMsg::ExecutePoll {
             poll_id,
         } => crate::poll::executions::execute_poll(deps, env, info, poll_id),
+        ExecuteMsg::RunExecution {
+            executions,
+        } => crate::poll::executions::run_execution(deps, env, info, executions),
     }
 }
 
