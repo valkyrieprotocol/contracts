@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Storage, Timestamp, Uint128, StdError};
+use cosmwasm_std::{Addr, Decimal, QuerierWrapper, StdResult, Storage, Timestamp, Uint128, StdError, BlockInfo};
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
@@ -16,6 +16,7 @@ const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract_info");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfig {
+    pub chain_id: String,
     pub admin: Addr,
     pub governance: Addr,
     pub campaign_manager: Addr,
@@ -102,19 +103,24 @@ impl CampaignState {
         &self,
         storage: &dyn Storage,
         querier: &QuerierWrapper,
-        block_height: u64,
+        block: &BlockInfo,
     ) -> StdResult<bool> {
         if !self.active_flag {
             return Ok(false);
         }
 
         let config = ContractConfig::load(storage)?;
+
+        if config.chain_id != block.chain_id {
+            return Ok(false);
+        }
+
         let global_campaign_config = load_global_campaign_config(
             querier,
             &config.campaign_manager,
         )?;
 
-        Ok(global_campaign_config.deactivate_period + self.last_active_height.unwrap_or_default() >= block_height)
+        Ok(global_campaign_config.deactivate_period + self.last_active_height.unwrap_or_default() >= block.height)
     }
 
     pub fn is_pending(&self) -> bool {

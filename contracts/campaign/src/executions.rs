@@ -2,7 +2,7 @@ use cosmwasm_std::{attr, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, 
 use cw20::Denom as Cw20Denom;
 
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, CampaignConfigMsg};
+use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, CampaignConfigMsg, MigrateMsg};
 use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
 use valkyrie::cw20::query_balance;
 use valkyrie::fund_manager::execute_msgs::{ExecuteMsg as FundExecuteMsg};
@@ -38,6 +38,7 @@ pub fn instantiate(
 
     // Execute
     ContractConfig {
+        chain_id: env.block.chain_id,
         admin: deps.api.addr_validate(&msg.admin)?,
         governance: deps.api.addr_validate(&msg.governance)?,
         campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
@@ -88,6 +89,28 @@ pub fn instantiate(
         messages: vec![],
         attributes: vec![
             attr("action", "instantiate"),
+        ],
+        data: None,
+    })
+}
+
+pub fn migrate(
+    deps: DepsMut,
+    env: Env,
+    _msg: MigrateMsg,
+) -> ContractResult<Response> {
+    let mut contract_config = ContractConfig::load(deps.storage)?;
+
+    contract_config.chain_id = env.block.chain_id.clone();
+
+    contract_config.save(deps.storage)?;
+
+    Ok(Response {
+        submessages: vec![],
+        messages: vec![],
+        attributes: vec![
+            attr("action", "migrate"),
+            attr("chain_id", env.block.chain_id),
         ],
         data: None,
     })
@@ -257,6 +280,12 @@ pub fn update_activation(
     }
 
     // Execute
+    let contract_config = ContractConfig::load(deps.storage)?;
+
+    if contract_config.chain_id != env.block.chain_id {
+        return Err(ContractError::Std(StdError::generic_err("Different chain_id. Required migrate contract.")));
+    }
+
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
     campaign_state.active_flag = is_active;
@@ -456,7 +485,7 @@ pub fn participate(
     }
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
-    if !campaign_state.is_active(deps.storage, &deps.querier, env.block.height)? {
+    if !campaign_state.is_active(deps.storage, &deps.querier, &env.block)? {
         return Err(ContractError::Std(StdError::generic_err(
             "Inactive campaign",
         )));

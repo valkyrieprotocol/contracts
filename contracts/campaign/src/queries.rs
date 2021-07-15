@@ -63,7 +63,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
         cumulative_distribution_amount: state.cumulative_distribution_amount,
         locked_balance: state.locked_balance,
         balance,
-        is_active: state.is_active(deps.storage, &deps.querier, env.block.height)?,
+        is_active: state.is_active(deps.storage, &deps.querier, &env.block)?,
         is_pending: state.is_pending(),
     })
 }

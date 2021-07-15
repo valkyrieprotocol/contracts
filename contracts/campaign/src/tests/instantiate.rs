@@ -99,6 +99,7 @@ fn succeed() {
 
     let contract_config = ContractConfig::load(&deps.storage).unwrap();
     assert_eq!(contract_config, ContractConfig {
+        chain_id: env.block.chain_id,
         admin: Addr::unchecked(CAMPAIGN_ADMIN),
         governance: Addr::unchecked(GOVERNANCE),
         campaign_manager: Addr::unchecked(CAMPAIGN_MANAGER),
