@@ -37,8 +37,8 @@ pub fn instantiate(
     Ok(Response {
         messages: vec![],
         attributes: vec![],
-        submessages: vec![],
         data: None,
+        events: vec![],
     })
 }
 

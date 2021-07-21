@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery};
-use cosmwasm_storage::to_length_prefixed;
 use crate::message_factories;
+use cosmwasm_std::{
+    attr, Addr, Api, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128,
+    WasmQuery,
+};
+use cosmwasm_storage::to_length_prefixed;
 
 pub fn query_cw20_balance(
     querier: &QuerierWrapper,
@@ -9,17 +12,15 @@ pub fn query_cw20_balance(
     account_addr: &Addr,
 ) -> StdResult<Uint128> {
     // load balance form the token contract
-    Ok(
-        querier.query(
-            &QueryRequest::Wasm(WasmQuery::Raw {
-                contract_addr: contract_addr.to_string(),
-                key: Binary::from(concat(
-                    &to_length_prefixed(b"balance").to_vec(),
-                    (api.addr_canonicalize(account_addr.as_str())?).as_slice(),
-                )),
-            })
-        ).unwrap_or_else(|_| Uint128::zero())
-    )
+    Ok(querier
+        .query(&QueryRequest::Wasm(WasmQuery::Raw {
+            contract_addr: contract_addr.to_string(),
+            key: Binary::from(concat(
+                &to_length_prefixed(b"balance").to_vec(),
+                (api.addr_canonicalize(account_addr.as_str())?).as_slice(),
+            )),
+        }))
+        .unwrap_or_else(|_| Uint128::zero()))
 }
 
 pub fn create_send_msg_response(
@@ -29,18 +30,18 @@ pub fn create_send_msg_response(
     action: &str,
 ) -> Response {
     Response {
-        submessages: vec![],
-        messages: vec![message_factories::cw20_transfer(token, recipient, amount.clone())],
+        messages: vec![message_factories::cw20_transfer(
+            token,
+            recipient,
+            amount.clone(),
+        )],
         attributes: create_send_attr(recipient, amount, action),
+        events: vec![],
         data: None,
     }
 }
 
-pub fn create_send_attr(
-    recipient: &Addr,
-    amount: Uint128,
-    action: &str,
-) -> Vec<Attribute> {
+pub fn create_send_attr(recipient: &Addr, amount: Uint128, action: &str) -> Vec<Attribute> {
     vec![
         attr("action", action),
         attr("recipient", recipient.as_str()),
