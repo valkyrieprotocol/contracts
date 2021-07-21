@@ -1,25 +1,55 @@
-use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
+use std::cmp::max;
+
+use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128, Uint64};
 
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::create_send_msg_response;
 use valkyrie::errors::ContractError;
+use valkyrie::governance::execute_msgs::StakingConfigInitMsg;
 
-use crate::common::states::{ContractConfig, load_contract_available_balance};
+use crate::common::states::{ContractConfig, is_admin, load_contract_available_balance};
+use crate::staking::states::StakingConfig;
 
 use super::states::{StakerState, StakingState};
-use std::cmp::max;
 
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
+    msg: StakingConfigInitMsg,
 ) -> ContractResult<Response> {
     // Execute
-    let state = StakingState {
-        total_share: Uint128::zero(),
-    };
+    StakingConfig {
+        withdraw_delay: msg.withdraw_delay.u64(),
+    }.save(deps.storage)?;
 
-    state.save(deps.storage)?;
+    StakingState {
+        total_share: Uint128::zero(),
+    }.save(deps.storage)?;
+
+    // Response
+    Ok(Response::default())
+}
+
+pub fn update_config(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    withdraw_delay: Option<Uint64>,
+) -> ContractResult<Response> {
+    // Validate
+    if !is_admin(deps.storage, env, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut config = StakingConfig::load(deps.storage)?;
+
+    if let Some(withdraw_delay) = withdraw_delay {
+        config.withdraw_delay = withdraw_delay.u64();
+    }
+
+    config.save(deps.storage)?;
 
     // Response
     Ok(Response::default())
@@ -75,7 +105,7 @@ pub fn stake_voting_token(
 // Withdraw amount if not staked. By default all funds will be withdrawn.
 pub fn unstake_voting_token(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
@@ -115,10 +145,30 @@ pub fn unstake_voting_token(
     }
 
     staker_state.share = user_share.checked_sub(withdraw_share)?;
+    staker_state.withdraw_unstaked_amounts.push((env.block.height, withdraw_amount));
     staker_state.save(deps.storage)?;
 
     staking_state.total_share = total_share.checked_sub(withdraw_share)?;
     staking_state.save(deps.storage)?;
+
+    // Response
+    Ok(Response::default())
+}
+
+pub fn withdraw_voting_token(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> ContractResult<Response> {
+    // Execute
+    let mut staker_state = StakerState::load(deps.storage, &info.sender)?;
+
+    let withdraw_amount = staker_state.withdraw_unstaked(deps.storage, env.block.height)
+        .iter()
+        .map(|(_, amount)| amount)
+        .sum();
+
+    staker_state.save(deps.storage)?;
 
     // Response
     let contract_config = ContractConfig::load(deps.storage)?;
@@ -127,7 +177,7 @@ pub fn unstake_voting_token(
             &contract_config.token_contract,
             &info.sender,
             withdraw_amount,
-            "withdraw",
+            "claim_pending_withdrawal",
         )
     )
 }

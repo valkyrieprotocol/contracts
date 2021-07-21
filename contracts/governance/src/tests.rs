@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Addr, Decimal, Uint128, OwnedDeps, Coin};
 use crate::entrypoints;
-use valkyrie::governance::messages::{InstantiateMsg, PollConfigInitMsg, ContractConfigInitMsg};
+use valkyrie::governance::execute_msgs::{InstantiateMsg, PollConfigInitMsg, ContractConfigInitMsg};
 use cosmwasm_std::testing::{MockStorage, MockApi, mock_env, mock_info};
 use valkyrie::mock_querier::{WasmMockQuerier, mock_dependencies};
 

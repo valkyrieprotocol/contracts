@@ -7,20 +7,22 @@ use valkyrie::governance::enumerations::PollStatus;
 
 use crate::poll::states::{Poll, VoteInfo};
 
-// static KEY_STAKING_CONFIG: &[u8] = b"staking-config";
+const STAKING_CONFIG: Item<StakingConfig> = Item::new("staking-config");
 
-// #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-// pub struct StakingConfig {}
-//
-// impl StakingConfig {
-//     pub fn singleton(storage: &mut dyn Storage) -> Singleton<StakingConfig> {
-//         singleton(storage, KEY_STAKING_CONFIG)
-//     }
-//
-//     pub fn singleton_read(storage: &dyn Storage) -> ReadonlySingleton<StakingConfig> {
-//         singleton_read(storage, KEY_STAKING_CONFIG)
-//     }
-// }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct StakingConfig {
+    pub withdraw_delay: u64,
+}
+
+impl StakingConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        STAKING_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<StakingConfig> {
+        STAKING_CONFIG.load(storage)
+    }
+}
 
 
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
@@ -49,6 +51,7 @@ pub struct StakerState {
     pub share: Uint128,
     // total staked balance
     pub votes: Vec<(u64, VoteInfo)>, // maps poll_id to weight voted
+    pub withdraw_unstaked_amounts: Vec<(u64, Uint128)>,
 }
 
 impl StakerState {
@@ -57,6 +60,7 @@ impl StakerState {
             address: address.clone(),
             share: Uint128::zero(),
             votes: vec![],
+            withdraw_unstaked_amounts: vec![],
         }
     }
 
@@ -123,5 +127,24 @@ impl StakerState {
 
     pub fn vote(&mut self, poll_id: u64, vote: VoteInfo) {
         self.votes.push((poll_id, vote));
+    }
+
+    pub fn withdraw_unstaked(&mut self, storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
+        let config = StakingConfig::load(storage).unwrap();
+
+        let mut pending: Vec<(u64, Uint128)> = vec![];
+        let mut withdrawable: Vec<(u64, Uint128)> = vec![];
+
+        for each in self.withdraw_unstaked_amounts.iter() {
+            if block_height > each.0 + config.withdraw_delay {
+                withdrawable.push(*each)
+            } else {
+                pending.push(*each)
+            }
+        }
+
+        self.withdraw_unstaked_amounts = pending;
+
+        withdrawable
     }
 }

@@ -3,7 +3,7 @@ use cosmwasm_std::{Deps, Env, StdError};
 use valkyrie::common::{ContractResult, OrderBy};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::models::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse, VotersResponseItem};
+use valkyrie::governance::query_msgs::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse, VotersResponseItem};
 
 use crate::poll::states::Poll;
 

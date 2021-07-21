@@ -3,7 +3,7 @@ use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Re
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::messages::PollConfigInitMsg;
+use valkyrie::governance::execute_msgs::PollConfigInitMsg;
 use valkyrie::governance::models::ExecutionMsg;
 
 use crate::common::states::{ContractConfig, load_contract_available_balance, is_admin};
@@ -204,7 +204,7 @@ pub fn cast_vote(
 
     // Execute
     poll.vote(deps.storage, &mut staker_state, option.clone(), amount)?;
-    poll.snapshot_staked_amount(deps.storage, env.block.height, contract_available_balance)?;
+    poll.snapshot_staked_amount(deps.storage, env.block.height, contract_available_balance).ok(); //snapshot 실패하더라도 무시
 
     poll.save(deps.storage)?;
     staker_state.save(deps.storage)?;
@@ -372,7 +372,7 @@ pub fn reply_execution(
     poll_execution_context.execution_count -= 1;
 
     if poll_execution_context.execution_count == 0 {
-        PollExecutionContext::remove(deps.storage);
+        PollExecutionContext::clear(deps.storage);
     }
 
     Ok(Response::default())

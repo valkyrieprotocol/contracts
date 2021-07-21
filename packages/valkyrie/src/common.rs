@@ -13,12 +13,11 @@ pub enum OrderBy {
     Desc,
 }
 
-impl Into<Order> for OrderBy {
-    fn into(self) -> Order {
-        if self == OrderBy::Asc {
-            Order::Ascending
-        } else {
-            Order::Descending
+impl From<OrderBy> for Order {
+    fn from(order_by: OrderBy) -> Self {
+        match order_by {
+            OrderBy::Asc => Order::Ascending,
+            OrderBy::Desc => Order::Descending,
         }
     }
 }

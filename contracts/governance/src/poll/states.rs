@@ -1,17 +1,18 @@
 use std::cmp::Ordering;
 use std::fmt;
 
-use cosmwasm_std::{Addr, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128, Api};
+use cosmwasm_std::{Addr, Api, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie::common::OrderBy;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::models::{ExecutionMsg, PollResponse};
+use valkyrie::governance::models::ExecutionMsg;
+use valkyrie::governance::query_msgs::PollResponse;
 
 use crate::common::states::load_contract_available_balance;
-use crate::staking::states::{StakingState, StakerState};
+use crate::staking::states::{StakerState, StakingState};
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -324,7 +325,7 @@ impl PollExecutionContext {
         POLL_EXECUTION_TEMP.load(storage)
     }
 
-    pub fn remove(storage: &mut dyn Storage) {
+    pub fn clear(storage: &mut dyn Storage) {
         POLL_EXECUTION_TEMP.remove(storage)
     }
 }
