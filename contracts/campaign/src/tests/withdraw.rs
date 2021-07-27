@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, BankMsg, WasmMsg, to_binary, Decimal};
+use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, BankMsg, WasmMsg, to_binary, Decimal, SubMsg};
 use valkyrie::common::{ContractResult, Denom};
 use crate::executions::withdraw;
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
@@ -62,58 +62,58 @@ fn succeed_at_pending() {
     let mut deps = custom_deps(&[coin(10000u128, "uusd")]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128(100))]);
+    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
 
     let mut denom = Denom::Native("uusd".to_string());
-    let amount = Uint128(4000);
+    let amount = Uint128::new(4000);
     let tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), amount).unwrap();
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
-        CosmosMsg::Bank(BankMsg::Send {
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
             amount: vec![coin(amount.checked_sub(tax).unwrap().u128(), "uusd")],
-        }),
+        })),
     ]);
 
-    let remain_amount = Uint128(6000);
+    let remain_amount = Uint128::new(6000);
     let tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), remain_amount).unwrap();
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
-        CosmosMsg::Bank(BankMsg::Send {
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
             amount: vec![coin(remain_amount.checked_sub(tax).unwrap().u128(), "uusd")],
-        }),
+        })),
     ]);
 
     denom = Denom::Token(TOKEN_CONTRACT.to_string());
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount,
             }).unwrap(),
-            send: vec![],
-        }),
+            funds: vec![],
+        })),
     ]);
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: remain_amount,
             }).unwrap(),
-            send: vec![],
-        }),
+            funds: vec![],
+        })),
     ]);
 }
 
@@ -122,14 +122,14 @@ fn succeed_at_active() {
     let mut deps = custom_deps(&[coin(10000u128, "uusd")]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128(100))]);
+    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     let burn_rate = Decimal::percent(10);
     deps.querier.with_global_campaign_config(
         TOKEN_CONTRACT.to_string(),
-        Uint128(1000),
+        Uint128::new(1000),
         FUND_MANAGER.to_string(),
         1,
         vec![Denom::Token(TOKEN_CONTRACT.to_string()), Denom::Native("uusd".to_string())],
@@ -142,37 +142,37 @@ fn succeed_at_active() {
     super::update_activation::will_success(&mut deps, true);
 
     let mut denom = Denom::Native("uusd".to_string());
-    let amount = Uint128(4000);
+    let amount = Uint128::new(4000);
     let (burn_amount, expect_amount) = calc_ratio_amount(amount, burn_rate);
     let burn_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), burn_amount).unwrap();
     let expect_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), expect_amount).unwrap();
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
-        CosmosMsg::Bank(BankMsg::Send {
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: FUND_MANAGER.to_string(),
             amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
-        }),
-        CosmosMsg::Bank(BankMsg::Send {
+        })),
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
             amount: vec![coin(expect_amount.checked_sub(expect_tax).unwrap().u128(), "uusd")],
-        }),
+        })),
     ]);
 
-    let remain_amount = Uint128(6000);
+    let remain_amount = Uint128::new(6000);
     let (burn_amount, expect_amount) = calc_ratio_amount(remain_amount, burn_rate);
     let burn_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), burn_amount).unwrap();
     let expect_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), expect_amount).unwrap();
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
-        CosmosMsg::Bank(BankMsg::Send {
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: FUND_MANAGER.to_string(),
             amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
-        }),
-        CosmosMsg::Bank(BankMsg::Send {
+        })),
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
             amount: vec![coin(expect_amount.checked_sub(expect_tax).unwrap().u128(), "uusd")],
-        }),
+        })),
     ]);
 
     denom = Denom::Token(TOKEN_CONTRACT.to_string());
@@ -180,43 +180,43 @@ fn succeed_at_active() {
     let (burn_amount, expect_amount) = calc_ratio_amount(amount, burn_rate);
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
                 amount: burn_amount,
             }).unwrap(),
-            send: vec![],
-        }),
-        CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![],
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
             }).unwrap(),
-            send: vec![],
-        }),
+            funds: vec![],
+        })),
     ]);
 
     let (burn_amount, expect_amount) = calc_ratio_amount(remain_amount, burn_rate);
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
                 amount: burn_amount,
             }).unwrap(),
-            send: vec![],
-        }),
-        CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![],
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
             }).unwrap(),
-            send: vec![],
-        }),
+            funds: vec![],
+        })),
     ]);
 }
 
@@ -233,7 +233,7 @@ fn succeed_free_balance() {
     will_success(
         &mut deps,
         Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        Some(Uint128(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap()),
+        Some(Uint128::new(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap()),
     );
 }
 
@@ -259,7 +259,7 @@ fn failed_overflow() {
     let mut deps = custom_deps(&[coin(1000, "uusd")]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(1000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(1000))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -269,7 +269,7 @@ fn failed_overflow() {
         contract_env(),
         campaign_admin_sender(),
         Denom::Native("uusd".to_string()),
-        Some(Uint128(1001)),
+        Some(Uint128::new(1001)),
     );
     expect_generic_err(&result, "Insufficient balance");
 
@@ -278,7 +278,7 @@ fn failed_overflow() {
         contract_env(),
         campaign_admin_sender(),
         Denom::Token(TOKEN_CONTRACT.to_string()),
-        Some(Uint128(1001)),
+        Some(Uint128::new(1001)),
     );
     expect_generic_err(&result, "Insufficient balance");
 
@@ -291,7 +291,7 @@ fn failed_overflow() {
         contract_env(),
         campaign_admin_sender(),
         Denom::Token(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        Some(Uint128(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap() + Uint128(1)),
+        Some(Uint128::new(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap() + Uint128::new(1)),
     );
     expect_generic_err(&result, "Insufficient balance");
 }

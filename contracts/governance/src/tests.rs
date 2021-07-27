@@ -17,7 +17,7 @@ pub const POLL_QUORUM_PERCENT: u64 = 30;
 pub const POLL_THRESHOLD_PERCENT: u64 = 50;
 pub const POLL_VOTING_PERIOD: u64 = 10000u64;
 pub const POLL_EXECUTION_DELAY_PERIOD: u64 = 10000u64;
-pub const POLL_PROPOSAL_DEPOSIT: Uint128 = Uint128(10000000000u128);
+pub const POLL_PROPOSAL_DEPOSIT: Uint128 = Uint128::new(10000000000u128);
 pub const POLL_SNAPSHOT_PERIOD: u64 = 10u64;
 
 pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {

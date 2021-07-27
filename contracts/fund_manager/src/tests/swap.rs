@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, WasmMsg, to_binary, Addr};
+use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, WasmMsg, to_binary, Addr, SubMsg};
 use valkyrie::common::{ContractResult, Denom};
 use crate::executions::swap;
 use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
@@ -64,9 +64,9 @@ fn succeed_native() {
     );
 
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TERRASWAP_ROUTER.to_string(),
-            send: vec![coin(10000, "uusd")],
+            funds: vec![coin(10000, "uusd")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
                     SwapOperation::TerraSwap {
@@ -81,7 +81,7 @@ fn succeed_native() {
                 minimum_receive: None,
                 to: None,
             }).unwrap(),
-        }),
+        })),
     ]);
 }
 
@@ -90,7 +90,7 @@ fn succeed_token() {
     let mut deps = custom_deps(&[]);
     deps.querier.with_token_balances(&[(
         "Token1",
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -103,13 +103,13 @@ fn succeed_token() {
     );
 
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "Token1".to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: TERRASWAP_ROUTER.to_string(),
-                amount: Uint128(10000),
-                msg: Some(to_binary(&ExecuteMsg::ExecuteSwapOperations {
+                amount: Uint128::new(10000),
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                     operations: vec![
                         SwapOperation::TerraSwap {
                             offer_asset_info: AssetInfo::Token {
@@ -122,9 +122,9 @@ fn succeed_token() {
                     ],
                     minimum_receive: None,
                     to: None,
-                }).unwrap()),
+                }).unwrap(),
             }).unwrap(),
-        }),
+        })),
     ]);
 }
 
@@ -148,9 +148,9 @@ fn succeed_route() {
     );
 
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TERRASWAP_ROUTER.to_string(),
-            send: vec![coin(10000, "ukrw")],
+            funds: vec![coin(10000, "ukrw")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
                     SwapOperation::NativeSwap {
@@ -169,7 +169,7 @@ fn succeed_route() {
                 minimum_receive: None,
                 to: None,
             }).unwrap(),
-        }),
+        })),
     ]);
 }
 
@@ -245,7 +245,7 @@ fn failed_overflow() {
     ]);
     deps.querier.with_token_balances(&[(
         "Token1",
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -255,7 +255,7 @@ fn failed_overflow() {
         contract_env(),
         default_sender(),
         Denom::Native("ukrw".to_string()),
-        Some(Uint128(10001)),
+        Some(Uint128::new(10001)),
         None,
     );
     expect_generic_err(&result, "Insufficient balance");
@@ -265,7 +265,7 @@ fn failed_overflow() {
         contract_env(),
         default_sender(),
         Denom::Token("Token1".to_string()),
-        Some(Uint128(10001)),
+        Some(Uint128::new(10001)),
         None,
     );
     expect_generic_err(&result, "Insufficient balance");

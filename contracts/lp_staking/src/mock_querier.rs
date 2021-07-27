@@ -33,7 +33,7 @@ impl WasmMockQuerier {
         WasmMockQuerier {
             base,
             token_balance: Uint128::zero(),
-            tax: (Decimal::percent(1), Uint128(1000000)),
+            tax: (Decimal::percent(1), Uint128::new(1000000)),
         }
     }
 }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, coin, Decimal, Env, MessageInfo, Response, Uint128, CosmosMsg, WasmMsg, to_binary};
+use cosmwasm_std::{Addr, coin, Decimal, Env, MessageInfo, Response, Uint128, CosmosMsg, WasmMsg, to_binary, SubMsg};
 use cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
 
 use valkyrie::campaign::enumerations::Referrer;
@@ -162,7 +162,7 @@ fn succeed_with_booster() {
         Some(Referrer::Address(referrer.to_string())),
     );
 
-    let drop_booster = DROP_BOOSTER_AMOUNT.checked_div(Uint128(10)).unwrap();
+    let drop_booster = DROP_BOOSTER_AMOUNT.checked_div(Uint128::new(10)).unwrap();
     let activity_booster = activity_booster_multiplier * drop_booster;
 
     let referrer_participation = Participation::load(
@@ -242,13 +242,13 @@ fn succeed_insufficient_booster_reward_balance() {
     assert_eq!(participation.plus_booster_reward_amount, Uint128::zero());
 
     //finish boosting msg must be first.
-    assert_eq!(response.messages.first(), Some(&CosmosMsg::Wasm(WasmMsg::Execute {
+    assert_eq!(response.messages.first(), Some(&SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: CAMPAIGN_MANAGER.to_string(),
-        send: vec![],
+        funds: vec![],
         msg: to_binary(&ExecuteMsg::FinishBoosting {
             campaign: MOCK_CONTRACT_ADDR.to_string(),
         }).unwrap(),
-    })));
+    }))));
 }
 
 #[test]

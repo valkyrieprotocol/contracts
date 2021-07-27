@@ -1,4 +1,4 @@
-use cosmwasm_std::{CosmosMsg, Env, MessageInfo, ReplyOn, Response, to_binary, Uint128, WasmMsg, from_binary, Addr, Binary};
+use cosmwasm_std::{CosmosMsg, Env, MessageInfo, ReplyOn, Response, to_binary, Uint128, WasmMsg, Addr, Binary, SubMsg};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
@@ -17,7 +17,7 @@ pub const CAMPAIGN_DESCRIPTION: &str = "CampaignDescription";
 pub const CAMPAIGN_URL: &str = "https://campaign.url";
 pub const PARAMETER_KEY: &str = "vkr";
 pub const DISTRIBUTION_TOKEN: &str = "uusd";
-pub const DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128(100), Uint128(80), Uint128(20)];
+pub const DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128::new(100), Uint128::new(80), Uint128::new(20)];
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -76,47 +76,43 @@ fn succeed() {
 
     let (_, _, response) = default(&mut deps);
 
-    let submsg = response.submessages.first().unwrap();
-    assert_eq!(submsg.id, REPLY_CREATE_CAMPAIGN);
-    assert_eq!(submsg.gas_limit, None);
-    assert_eq!(submsg.reply_on, ReplyOn::Success);
-
-    match submsg.msg.clone() {
-        CosmosMsg::Wasm(WasmMsg::Instantiate { admin, code_id, msg, send: _, label: _ }) => {
-            assert_eq!(admin, Some(GOVERNANCE.to_string()));
-            assert_eq!(code_id, CAMPAIGN_CODE_ID);
-
-            let init_msg = from_binary::<CampaignInstantiateMsg>(&msg).unwrap();
-            assert_eq!(init_msg, CampaignInstantiateMsg {
-                governance: GOVERNANCE.to_string(),
-                campaign_manager: MOCK_CONTRACT_ADDR.to_string(),
-                fund_manager: FUND_MANAGER.to_string(),
-                admin: DEFAULT_SENDER.to_string(),
-                creator: DEFAULT_SENDER.to_string(),
-                proxies: vec![],
-                config_msg: to_binary(&CampaignConfigMsg {
-                    title: CAMPAIGN_TITLE.to_string(),
-                    description: CAMPAIGN_DESCRIPTION.to_string(),
-                    url: CAMPAIGN_URL.to_string(),
-                    parameter_key: PARAMETER_KEY.to_string(),
-                    distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-                    distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
-                }).unwrap(),
-                executions: vec![],
-            });
-        },
-        _ => panic!("Invalid msg"),
-    }
-
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg {
+            id: REPLY_CREATE_CAMPAIGN,
+            msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                admin: Some(GOVERNANCE.to_string()),
+                code_id: CAMPAIGN_CODE_ID,
+                msg: to_binary(&CampaignInstantiateMsg {
+                    governance: GOVERNANCE.to_string(),
+                    campaign_manager: MOCK_CONTRACT_ADDR.to_string(),
+                    fund_manager: FUND_MANAGER.to_string(),
+                    admin: DEFAULT_SENDER.to_string(),
+                    creator: DEFAULT_SENDER.to_string(),
+                    proxies: vec![],
+                    config_msg: to_binary(&CampaignConfigMsg {
+                        title: CAMPAIGN_TITLE.to_string(),
+                        description: CAMPAIGN_DESCRIPTION.to_string(),
+                        url: CAMPAIGN_URL.to_string(),
+                        parameter_key: PARAMETER_KEY.to_string(),
+                        distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
+                        distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+                    }).unwrap(),
+                    executions: vec![],
+                }).unwrap(),
+                funds: vec![],
+                label: String::new(),
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+        },
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TOKEN_CONTRACT.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
                 amount: CREATION_FEE_AMOUNT,
             }).unwrap(),
-        }),
+        })),
     ]);
 
     let context = CreateCampaignContext::load(&deps.storage).unwrap();
@@ -160,7 +156,36 @@ fn succeed_zero_creation_fee() {
         vec![],
     ).unwrap();
 
-    assert_eq!(response.messages, vec![]);
+    assert_eq!(response.messages, vec![
+        SubMsg {
+            id: REPLY_CREATE_CAMPAIGN,
+            msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                admin: Some(GOVERNANCE.to_string()),
+                code_id: CAMPAIGN_CODE_ID,
+                msg: to_binary(&CampaignInstantiateMsg {
+                    governance: GOVERNANCE.to_string(),
+                    campaign_manager: MOCK_CONTRACT_ADDR.to_string(),
+                    fund_manager: FUND_MANAGER.to_string(),
+                    admin: DEFAULT_SENDER.to_string(),
+                    creator: DEFAULT_SENDER.to_string(),
+                    proxies: vec![],
+                    config_msg: to_binary(&CampaignConfigMsg {
+                        title: CAMPAIGN_TITLE.to_string(),
+                        description: CAMPAIGN_DESCRIPTION.to_string(),
+                        url: CAMPAIGN_URL.to_string(),
+                        parameter_key: PARAMETER_KEY.to_string(),
+                        distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
+                        distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+                    }).unwrap(),
+                    executions: vec![],
+                }).unwrap(),
+                funds: vec![],
+                label: String::new(),
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+        },
+    ]);
 
     let context = CreateCampaignContext::load(&deps.storage).unwrap();
     assert_eq!(context, CreateCampaignContext {
@@ -180,7 +205,7 @@ fn failed_insufficient_creation_fee() {
         contract_env(),
         mock_info(TOKEN_CONTRACT, &[]),
         DEFAULT_SENDER.to_string(),
-        CREATION_FEE_AMOUNT.checked_sub(Uint128(1)).unwrap(),
+        CREATION_FEE_AMOUNT.checked_sub(Uint128::new(1)).unwrap(),
         to_binary(&CampaignConfigMsg {
             title: CAMPAIGN_TITLE.to_string(),
             description: CAMPAIGN_DESCRIPTION.to_string(),

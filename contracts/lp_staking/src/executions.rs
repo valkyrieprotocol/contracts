@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    attr, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    Addr, Coin, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper,
+    Response, StdError, StdResult, Uint128,
 };
 
 use crate::states::{Config, StakerInfo, State, UST};
@@ -11,8 +11,12 @@ use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
 use valkyrie::lp_staking::execute_msgs::ExecuteMsg;
+use valkyrie::utils::make_response;
+use valkyrie::message_factories;
 
 pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
+    let mut response = make_response("bond");
+
     let sender_addr_raw: Addr = deps.api.addr_validate(&sender_addr.as_str())?;
 
     let config: Config = Config::load(deps.storage)?;
@@ -29,16 +33,10 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     staker_info.save(deps.storage)?;
     state.save(deps.storage)?;
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "bond"),
-            attr("owner", sender_addr),
-            attr("amount", amount.to_string()),
-        ],
-        data: None,
-    })
+    response.add_attribute("owner", sender_addr);
+    response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
 }
 
 //CONTRACT: the executor must increase allowance of valkyrie token first before executing auto stake
@@ -49,6 +47,8 @@ pub fn auto_stake(
     token_amount: Uint128,
     slippage_tolerance: Option<Decimal>,
 ) -> StdResult<Response> {
+    let mut response = make_response("auto_stake");
+
     let config: Config = Config::load(deps.storage)?;
     let token_addr = &config.token.as_str().to_string();
     let liquidity_token_addr = &config.lp_token.as_str().to_string();
@@ -71,74 +71,62 @@ pub fn auto_stake(
 
     let tax_amount: Uint128 = compute_uusd_tax(&deps.querier, uusd_amount)?;
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![
-            // 1. Transfer token asset to staking contract
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: token_addr.clone(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.to_string(),
-                    recipient: env.contract.address.to_string(),
+    // 1. Transfer token asset to staking contract
+    response.add_message(message_factories::wasm_execute(
+        &config.token,
+        &Cw20ExecuteMsg::TransferFrom {
+            owner: info.sender.to_string(),
+            recipient: env.contract.address.to_string(),
+            amount: token_amount,
+        },
+    ));
+    // 2. Increase allowance of token for pair contract
+    response.add_message(message_factories::wasm_execute(
+        &config.token,
+        &Cw20ExecuteMsg::IncreaseAllowance {
+            spender: pair_addr.to_string(),
+            amount: token_amount,
+            expires: None,
+        },
+    ));
+    // 3. Provide liquidity
+    response.add_message(message_factories::wasm_execute_with_funds(
+        &config.pair,
+        vec![Coin {denom: UST.to_string(),amount: uusd_amount.checked_sub(tax_amount)?}],
+        &PairExecuteMsg::ProvideLiquidity {
+            assets: [
+                Asset {
+                    amount: (uusd_amount.checked_sub(tax_amount))?,
+                    info: AssetInfo::NativeToken {
+                        denom: UST.to_string(),
+                    },
+                },
+                Asset {
                     amount: token_amount,
-                })?,
-                send: vec![],
-            }),
-            // 2. Increase allowance of token for pair contract
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: token_addr.clone(),
-                msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                    spender: pair_addr.to_string(),
-                    amount: token_amount,
-                    expires: None,
-                })?,
-                send: vec![],
-            }),
-            // 3. Provide liquidity
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: pair_addr.to_string(),
-                msg: to_binary(&PairExecuteMsg::ProvideLiquidity {
-                    assets: [
-                        Asset {
-                            amount: (uusd_amount.checked_sub(tax_amount))?,
-                            info: AssetInfo::NativeToken {
-                                denom: UST.to_string(),
-                            },
-                        },
-                        Asset {
-                            amount: token_amount,
-                            info: AssetInfo::Token {
-                                contract_addr: deps.api.addr_validate(token_addr.as_str())?,
-                            },
-                        },
-                    ],
-                    slippage_tolerance,
-                })?,
-                send: vec![Coin {
-                    denom: UST.to_string(),
-                    amount: uusd_amount.checked_sub(tax_amount)?,
-                }],
-            }),
-            // 4. Execute staking hook, will stake in the name of the sender
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::AutoStakeHook {
-                    staker_addr: info.sender.to_string(),
-                    already_staked_amount,
-                })?,
-                send: vec![],
-            }),
-        ],
-        attributes: vec![
-            attr("action", "auto_stake"),
-            attr("tax_amount", tax_amount.to_string()),
-        ],
-        data: None,
-    })
+                    info: AssetInfo::Token {
+                        contract_addr: deps.api.addr_validate(token_addr.as_str())?,
+                    },
+                },
+            ],
+            slippage_tolerance,
+        },
+    ));
+    // 4. Execute staking hook, will stake in the name of the sender
+    response.add_message(message_factories::wasm_execute(
+        &env.contract.address,
+        &ExecuteMsg::AutoStakeHook {
+            staker_addr: info.sender.to_string(),
+            already_staked_amount,
+        },
+    ));
+
+    response.add_attribute("tax_amount", tax_amount.to_string());
+
+    Ok(response)
 }
 
 fn compute_uusd_tax(querier: &QuerierWrapper, amount: Uint128) -> StdResult<Uint128> {
-    const DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
+    const DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
     let amount = amount;
     let terra_querier = TerraQuerier::new(querier);
 
@@ -187,6 +175,8 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         return Err(StdError::generic_err("Cannot unbond more than bond amount"));
     }
 
+    let mut response = make_response("unbond");
+
     // Compute global reward & staker reward
     state.compute_reward(&config, env.block.height);
     staker_info.compute_staker_reward(&state)?;
@@ -204,27 +194,24 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         staker_info.save(deps.storage)?;
     }
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: config.lp_token.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: sender_addr_raw.to_string(),
-                amount,
-            })?,
-            send: vec![],
-        })],
-        attributes: vec![
-            attr("action", "unbond"),
-            attr("owner", sender_addr_raw.to_string()),
-            attr("amount", amount.to_string()),
-        ],
-        data: None,
-    })
+    response.add_message(message_factories::wasm_execute(
+        &config.lp_token,
+        &Cw20ExecuteMsg::Transfer {
+            recipient: sender_addr_raw.to_string(),
+            amount,
+        },
+    ));
+
+    response.add_attribute("owner", sender_addr_raw.to_string());
+    response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
 }
 
 // withdraw rewards to executor
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    let mut response = make_response("withdraw");
+
     let sender_addr_raw = info.sender;
 
     let config: Config = Config::load(deps.storage)?;
@@ -247,21 +234,16 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         staker_info.save(deps.storage)?;
     }
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: config.token.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: sender_addr_raw.to_string(),
-                amount,
-            })?,
-            send: vec![],
-        })],
-        attributes: vec![
-            attr("action", "withdraw"),
-            attr("owner", sender_addr_raw.to_string()),
-            attr("amount", amount.to_string()),
-        ],
-        data: None,
-    })
+    response.add_message(message_factories::wasm_execute(
+        &config.token,
+        &Cw20ExecuteMsg::Transfer {
+            recipient: sender_addr_raw.to_string(),
+            amount,
+        },
+    ));
+
+    response.add_attribute("owner", sender_addr_raw.to_string());
+    response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
 }

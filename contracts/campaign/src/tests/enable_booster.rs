@@ -7,9 +7,9 @@ use crate::tests::{CAMPAIGN_DISTRIBUTION_DENOM_NATIVE, CAMPAIGN_DISTRIBUTION_AMO
 use crate::states::{BoosterState, Booster, DropBooster, ActivityBooster, PlusBooster};
 use valkyrie::utils::{to_ratio_uint128, split_uint128};
 
-pub const DROP_BOOSTER_AMOUNT: Uint128 = Uint128(1000);
-pub const ACTIVITY_BOOSTER_AMOUNT: Uint128 = Uint128(8000);
-pub const PLUS_BOOSTER_AMOUNT: Uint128 = Uint128(1000);
+pub const DROP_BOOSTER_AMOUNT: Uint128 = Uint128::new(1000);
+pub const ACTIVITY_BOOSTER_AMOUNT: Uint128 = Uint128::new(8000);
+pub const PLUS_BOOSTER_AMOUNT: Uint128 = Uint128::new(1000);
 pub const ACTIVITY_BOOSTER_MULTIPLIER_PERCENT: u64 = 80u64;
 
 pub fn exec(

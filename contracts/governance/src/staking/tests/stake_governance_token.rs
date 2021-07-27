@@ -10,10 +10,10 @@ use crate::tests::{init_default, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{contract_env, expect_generic_err, expect_unauthorized_err};
 
 pub const STAKER1: &str = "Staker1";
-pub const STAKER1_STAKE_AMOUNT: Uint128 = Uint128(10u128);
+pub const STAKER1_STAKE_AMOUNT: Uint128 = Uint128::new(10u128);
 
 pub const STAKER2: &str = "Staker2";
-pub const STAKER2_STAKE_AMOUNT: Uint128 = Uint128(10u128);
+pub const STAKER2_STAKE_AMOUNT: Uint128 = Uint128::new(10u128);
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, sender: Addr, amount: Uint128) -> ContractResult<Response> {
     deps.querier.plus_token_balances(&[(

@@ -46,11 +46,11 @@ fn succeed() {
         Some(POLL_LINK),
         execution_msgs.clone(),
     );
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
     super::end_poll::will_success(&mut deps, poll_id);
 
     let sorted_execution_msgs = vec![
@@ -60,11 +60,11 @@ fn succeed() {
     ];
 
     let (env, _, response) = will_success(&mut deps, poll_id);
-    assert_eq!(response.submessages, vec![SubMsg {
+    assert_eq!(response.messages, vec![SubMsg {
         id: REPLY_EXECUTION,
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&ExecuteMsg::RunExecution {
                 executions: sorted_execution_msgs.clone(),
             }).unwrap(),
@@ -101,11 +101,11 @@ fn failed_not_passed() {
         Some(POLL_LINK),
         execution_msgs,
     );
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::No, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::No, Uint128::new(100));
     super::end_poll::will_success(&mut deps, poll_id);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
@@ -142,11 +142,11 @@ fn failed_in_execution_delay() {
         Some(POLL_LINK),
         execution_msgs,
     );
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
     let (env, _, _ ) = super::end_poll::will_success(&mut deps, poll_id);
 
     let result = exec(
@@ -166,11 +166,11 @@ fn failed_empty_execution() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
     super::end_poll::will_success(&mut deps, poll_id);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();

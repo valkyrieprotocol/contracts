@@ -42,7 +42,7 @@ pub fn calc_tax_one_plus(querier: &QuerierWrapper, denom: String, amount: Uint12
 
     let querier = TerraQuerier::new(querier);
     let rate = querier.query_tax_rate()?.rate;
-    let tax = Uint128::from(amount) * rate + Uint128(1);
+    let tax = Uint128::from(amount) * rate + Uint128::from(1u128);
 
     let cap = querier.query_tax_cap(denom)?.cap;
 

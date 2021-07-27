@@ -1,14 +1,16 @@
-use cosmwasm_std::{attr, to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg, StdError, Api, coin};
+use cosmwasm_std::{Api, coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128};
 use cw20::Cw20ExecuteMsg;
+use terraswap::asset::AssetInfo;
+use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
 
 use valkyrie::common::{ContractResult, Denom};
-use valkyrie::errors::ContractError;
-
-use terraswap::asset::AssetInfo;
-use terraswap::router::{SwapOperation, ExecuteMsg as TerraswapExecuteMsg};
 use valkyrie::cw20::query_balance;
-use crate::states::{ContractConfig, Allowance, ContractState};
+use valkyrie::errors::ContractError;
 use valkyrie::fund_manager::execute_msgs::InstantiateMsg;
+use valkyrie::message_factories;
+use valkyrie::utils::make_response;
+
+use crate::states::{Allowance, ContractConfig, ContractState};
 
 pub fn instantiate(
     deps: DepsMut,
@@ -16,6 +18,9 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
+    // Execute
+    let response = make_response("instantiate");
+
     ContractConfig {
         admins: msg.admins.iter().map(|v| deps.api.addr_validate(v).unwrap()).collect(),
         managing_token: deps.api.addr_validate(msg.managing_token.as_str())?,
@@ -26,14 +31,7 @@ pub fn instantiate(
         remain_allowance_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "instantiate"),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn update_config(
@@ -43,33 +41,30 @@ pub fn update_config(
     admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
 ) -> ContractResult<Response> {
+    // Validate
     let mut config = ContractConfig::load(deps.storage)?;
     if !config.is_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
+    // Execute
+    let mut response = make_response("update_config");
+
     if let Some(admins) = admins.as_ref() {
         config.admins = admins.iter()
             .map(|v| deps.api.addr_validate(v).unwrap())
             .collect();
+        response.add_attribute("is_updated_admins", "true");
     }
 
     if let Some(terraswap_router) = terraswap_router.as_ref() {
         config.terraswap_router = deps.api.addr_validate(terraswap_router.as_str())?;
+        response.add_attribute("is_updated_terraswap_router", "true");
     }
 
     config.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        submessages: vec![],
-        attributes: vec![
-            attr("action", "update_config"),
-            attr("is_updated_admins", admins.is_some().to_string()),
-            attr("is_updated_terraswap_router", terraswap_router.is_some().to_string()),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn increase_allowance(
@@ -79,8 +74,9 @@ pub fn increase_allowance(
     address: String,
     amount: Uint128,
 ) -> ContractResult<Response> {
+    // Validate
     if amount.is_zero() {
-        return Err(ContractError::InvalidZeroAmount {})
+        return Err(ContractError::InvalidZeroAmount {});
     }
 
     let config = ContractConfig::load(deps.storage)?;
@@ -94,6 +90,9 @@ pub fn increase_allowance(
         return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
     }
 
+    // Execute
+    let mut response = make_response("increase_allowance");
+
     let address = deps.api.addr_validate(address.as_str())?;
     let mut allowance = Allowance::load_or_default(deps.storage, &address)?;
 
@@ -103,18 +102,12 @@ pub fn increase_allowance(
     state.remain_allowance_amount += amount;
     state.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        submessages: vec![],
-        attributes: vec![
-            attr("action", "increase_allowance"),
-            attr("address", address.to_string()),
-            attr("amount", amount.clone()),
-            attr("allowed_amount", allowance.allowed_amount),
-            attr("remain_amount", allowance.remain_amount),
-        ],
-        data: None,
-    })
+    response.add_attribute("address", address.to_string());
+    response.add_attribute("amount", amount.clone());
+    response.add_attribute("allowed_amount", allowance.allowed_amount);
+    response.add_attribute("remain_amount", allowance.remain_amount);
+
+    Ok(response)
 }
 
 pub fn decrease_allowance(
@@ -124,10 +117,14 @@ pub fn decrease_allowance(
     address: String,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
+    // Validate
     let config = ContractConfig::load(deps.storage)?;
     if !config.is_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
+
+    // Execute
+    let mut response = make_response("decrease_allowance");
 
     let address = deps.api.addr_validate(address.as_str())?;
     let mut allowance = Allowance::load(deps.storage, &address)?;
@@ -149,18 +146,12 @@ pub fn decrease_allowance(
     state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(amount)?;
     state.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        submessages: vec![],
-        attributes: vec![
-            attr("action", "decrease_allowance"),
-            attr("address", address.to_string()),
-            attr("amount", amount.to_string()),
-            attr("allowed_amount", allowance.allowed_amount),
-            attr("remain_amount", allowance.remain_amount),
-        ],
-        data: None,
-    })
+    response.add_attribute("address", address.to_string());
+    response.add_attribute("amount", amount.to_string());
+    response.add_attribute("allowed_amount", allowance.allowed_amount);
+    response.add_attribute("remain_amount", allowance.remain_amount);
+
+    Ok(response)
 }
 
 pub fn transfer(
@@ -170,12 +161,16 @@ pub fn transfer(
     recipient: String,
     amount: Uint128,
 ) -> ContractResult<Response> {
+    // Validate
     let config = ContractConfig::load(deps.storage)?;
     let mut state = ContractState::load(deps.storage)?;
 
     if amount.is_zero() {
         return Err(ContractError::InvalidZeroAmount {});
     }
+
+    // Execute
+    let mut response = make_response("transfer");
 
     let remain_amount = if config.is_admin(&info.sender) {
         let balance = state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?;
@@ -205,25 +200,20 @@ pub fn transfer(
         }
     };
 
-    Ok(Response {
-        messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: config.managing_token.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: deps.api.addr_validate(&recipient)?.to_string(),
-                amount,
-            })?,
-            send: vec![],
-        })],
-        submessages: vec![],
-        attributes: vec![
-            attr("action", "transfer"),
-            attr("requester", info.sender.as_str()),
-            attr("recipient", recipient),
-            attr("amount", amount),
-            attr("remain_amount", remain_amount)
-        ],
-        data: None,
-    })
+    response.add_message(message_factories::wasm_execute(
+        &config.managing_token,
+        &Cw20ExecuteMsg::Transfer {
+            recipient: deps.api.addr_validate(&recipient)?.to_string(),
+            amount,
+        },
+    ));
+
+    response.add_attribute("requester", info.sender.as_str());
+    response.add_attribute("recipient", recipient);
+    response.add_attribute("amount", amount);
+    response.add_attribute("remain_amount", remain_amount);
+
+    Ok(response)
 }
 
 pub fn swap(
@@ -234,6 +224,7 @@ pub fn swap(
     amount: Option<Uint128>,
     route: Option<Vec<Denom>>,
 ) -> ContractResult<Response> {
+    // Validate
     let config = ContractConfig::load(deps.storage)?;
     let token_denom = Denom::Token(config.managing_token.to_string());
     let route = route.unwrap_or_else(|| vec![denom.clone(), token_denom.clone()]);
@@ -247,15 +238,18 @@ pub fn swap(
         )));
     }
 
+    // Execute
+    let mut response = make_response("swap");
+
     let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
         pair_to_terraswap_operation(pair, deps.api)
     }).collect();
 
-    let terraswap_msg_binary = to_binary(&TerraswapExecuteMsg::ExecuteSwapOperations {
+    let terraswap_msg = TerraswapExecuteMsg::ExecuteSwapOperations {
         operations,
         minimum_receive: None,
         to: None,
-    })?;
+    };
 
     let balance = query_balance(
         &deps.querier,
@@ -279,33 +273,27 @@ pub fn swap(
 
     let swap_msg = match denom {
         Denom::Native(denom) => {
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: config.terraswap_router.to_string(),
-                send: vec![coin(amount.u128(), denom)],
-                msg: terraswap_msg_binary,
-            })
+            message_factories::wasm_execute_with_funds(
+                &config.terraswap_router,
+                vec![coin(amount.u128(), denom)],
+                &terraswap_msg,
+            )
         }
         Denom::Token(address) => {
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: address,
-                send: vec![],
-                msg: to_binary(&Cw20ExecuteMsg::Send {
+            message_factories::wasm_execute(
+                &deps.api.addr_validate(&address)?,
+                &Cw20ExecuteMsg::Send {
                     contract: config.terraswap_router.to_string(),
-                    msg: Some(terraswap_msg_binary),
+                    msg: to_binary(&terraswap_msg)?,
                     amount,
-                }).unwrap(),
-            })
+                },
+            )
         }
     };
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![swap_msg],
-        attributes: vec![
-            attr("action", "swap"),
-        ],
-        data: None,
-    })
+    response.add_message(swap_msg);
+
+    Ok(response)
 }
 
 fn pair_to_terraswap_operation(pair: &[Denom], api: &dyn Api) -> SwapOperation {
@@ -317,7 +305,7 @@ fn pair_to_terraswap_operation(pair: &[Denom], api: &dyn Api) -> SwapOperation {
             return SwapOperation::NativeSwap {
                 offer_denom: left_denom,
                 ask_denom: right_denom,
-            }
+            };
         }
     }
 

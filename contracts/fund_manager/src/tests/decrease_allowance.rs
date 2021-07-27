@@ -47,25 +47,25 @@ fn succeed() {
     let mut deps = custom_deps(&[]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
 
     let address = Addr::unchecked("Address");
 
     super::instantiate::default(&mut deps);
-    super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128(1000));
+    super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128::new(1000));
 
-    will_success(&mut deps, address.to_string(), Some(Uint128(100)));
+    will_success(&mut deps, address.to_string(), Some(Uint128::new(100)));
 
     let allowance = Allowance::load(&deps.storage, &address).unwrap();
     assert_eq!(allowance, Allowance {
         address: address.clone(),
-        allowed_amount: Uint128(900),
-        remain_amount: Uint128(900),
+        allowed_amount: Uint128::new(900),
+        remain_amount: Uint128::new(900),
     });
 
     let state = ContractState::load(&deps.storage).unwrap();
-    assert_eq!(state.remain_allowance_amount, Uint128(900));
+    assert_eq!(state.remain_allowance_amount, Uint128::new(900));
 
     will_success(&mut deps, address.to_string(), None);
 
@@ -97,20 +97,20 @@ fn failed_insufficient_remain_amount() {
     let mut deps = custom_deps(&[]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
 
     let address = Addr::unchecked("Address");
 
     super::instantiate::default(&mut deps);
-    super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128(1000));
+    super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128::new(1000));
 
     let result = exec(
         &mut deps,
         contract_env(),
         campaign_manager_sender(),
         address.to_string(),
-        Some(Uint128(1001)),
+        Some(Uint128::new(1001)),
     );
 
     expect_generic_err(&result, "Insufficient remain amount");

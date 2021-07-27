@@ -14,7 +14,7 @@ pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
 pub const TOKEN_CONTRACT: &str = "TokenContract";
 pub const TERRASWAP_ROUTER: &str = "TerraswapRouter";
 pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
-// pub const ALLOWED_AMOUNT: Uint128 = Uint128(1000);
+// pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
 
 
 pub fn governance_sender() -> MessageInfo {

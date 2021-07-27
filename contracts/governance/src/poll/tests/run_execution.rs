@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg};
+use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg, SubMsg};
 use valkyrie::common::{ExecutionMsg, ContractResult};
 use crate::poll::executions::run_execution;
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
@@ -37,11 +37,11 @@ fn succeed() {
     ];
 
     let (_, _, response) = will_success(&mut deps, executions.clone());
-    assert_eq!(response.messages, executions.iter().map(|e| CosmosMsg::Wasm(WasmMsg::Execute {
+    assert_eq!(response.messages, executions.iter().map(|e| SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: e.contract.to_string(),
-        send: vec![],
+        funds: vec![],
         msg: e.msg.clone(),
-    })).collect::<Vec<CosmosMsg>>())
+    }))).collect::<Vec<SubMsg>>())
 }
 
 #[test]

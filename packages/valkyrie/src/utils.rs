@@ -1,6 +1,14 @@
-use cosmwasm_std::{Uint128, Decimal, Binary};
+use cosmwasm_std::{Uint128, Decimal, Binary, Response};
 use bigint::U256;
 use std::num::ParseIntError;
+
+pub fn make_response(action: &str) -> Response {
+    let mut response = Response::new();
+
+    response.add_attribute("action", action);
+
+    response
+}
 
 pub fn map_u128(value: Vec<Uint128>) -> Vec<u128> {
     value.iter().map(|v| v.u128()).collect()
@@ -31,7 +39,7 @@ pub fn to_ratio_uint128(values: &Vec<Uint128>) -> Vec<Decimal> {
 }
 
 pub fn parse_uint128(value: &str) -> Result<Uint128, ParseIntError> {
-    value.parse::<u128>().map(|v| Uint128(v))
+    value.parse::<u128>().map(|v| Uint128::from(v))
 }
 
 pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T)>(
@@ -61,7 +69,7 @@ pub fn find<T, P: Fn(&T) -> bool>(
     None
 }
 
-static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
+static DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
 pub fn calc_ratio_amount(value: Uint128, ratio: Decimal) -> (Uint128, Uint128) {
     let base = value.multiply_ratio(DECIMAL_FRACTION, DECIMAL_FRACTION * ratio + DECIMAL_FRACTION);
 

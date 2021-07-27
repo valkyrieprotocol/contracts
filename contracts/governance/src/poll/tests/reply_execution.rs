@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, ContractResult as CwContractResult, SubcallResponse, Response, Reply, Uint128};
+use cosmwasm_std::{Env, ContractResult as CwContractResult, Response, Reply, Uint128, SubMsgExecutionResponse};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::{reply_execution, REPLY_EXECUTION};
 use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT};
@@ -11,7 +11,7 @@ use crate::poll::states::{PollExecutionContext, Poll};
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
-    result: CwContractResult<SubcallResponse>,
+    result: CwContractResult<SubMsgExecutionResponse>,
 ) -> ContractResult<Response> {
     reply_execution(deps.as_mut(), env, Reply {
         id: REPLY_EXECUTION,
@@ -40,11 +40,11 @@ fn succeed_success_reply() {
         Some(POLL_LINK),
         execution_msgs.clone(),
     );
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
     super::end_poll::will_success(&mut deps, poll_id);
 
     let (env, _, _) = super::execute_poll::will_success(&mut deps, poll_id);
@@ -79,11 +79,11 @@ fn succeed_failed_reply() {
         Some(POLL_LINK),
         execution_msgs.clone(),
     );
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
-    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128(100));
+    super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
     super::end_poll::will_success(&mut deps, poll_id);
 
     let (env, _, _) = super::execute_poll::will_success(&mut deps, poll_id);
@@ -97,8 +97,8 @@ fn succeed_failed_reply() {
     assert_eq!(poll.status, PollStatus::Failed);
 }
 
-pub fn mock_subcall_response() -> SubcallResponse {
-    SubcallResponse {
+pub fn mock_subcall_response() -> SubMsgExecutionResponse {
+    SubMsgExecutionResponse {
         events: vec![],
         data: None,
     }

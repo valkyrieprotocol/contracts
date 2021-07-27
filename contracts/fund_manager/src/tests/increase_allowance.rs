@@ -49,13 +49,13 @@ fn succeed() {
     let mut deps = custom_deps(&[]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(10000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
     )]);
 
     super::instantiate::default(&mut deps);
 
     let address = Addr::unchecked("Addr1");
-    let amount = Uint128(100);
+    let amount = Uint128::new(100);
     will_success(&mut deps, address.to_string(), amount.clone());
 
     let allowance = Allowance::load(&deps.storage, &address).unwrap();
@@ -92,7 +92,7 @@ fn failed_invalid_permission() {
         contract_env(),
         default_sender(),
         "Address".to_string(),
-        Uint128(100),
+        Uint128::new(100),
     );
     expect_unauthorized_err(&result);
 }
@@ -102,19 +102,19 @@ fn failed_overflow_free_balance() {
     let mut deps = custom_deps(&[]);
     deps.querier.with_token_balances(&[(
         TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(1000))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(1000))],
     )]);
 
     super::instantiate::default(&mut deps);
 
-    will_success(&mut deps, "Address1".to_string(), Uint128(1000));
+    will_success(&mut deps, "Address1".to_string(), Uint128::new(1000));
 
     let result = exec(
         &mut deps,
         contract_env(),
         campaign_manager_sender(),
         "Address2".to_string(),
-        Uint128(1),
+        Uint128::new(1),
     );
     expect_generic_err(&result, "Insufficient balance");
 }

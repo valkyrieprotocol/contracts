@@ -3,10 +3,11 @@ use crate::queries::{query_config, query_staker_info, query_state};
 use crate::states::{Config, State};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, attr};
+use cosmwasm_std::{from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 use valkyrie::lp_staking::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::lp_staking::query_msgs::QueryMsg;
+use valkyrie::utils::make_response;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -15,6 +16,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    let response = make_response("instantiate");
+
     Config {
         token: deps.api.addr_validate(&msg.token.as_str())?,
         pair: deps.api.addr_validate(&msg.pair.as_str())?,
@@ -28,14 +31,7 @@ pub fn instantiate(
         global_reward_index: Decimal::zero(),
     }.save(deps.storage)?;
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "instantiate"),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

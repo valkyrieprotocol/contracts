@@ -13,17 +13,17 @@ fn share_calculation() {
 
     init_default(deps.as_mut());
 
-    super::stake_governance_token::will_success(&mut deps, STAKER1, Uint128(100));
+    super::stake_governance_token::will_success(&mut deps, STAKER1, Uint128::new(100));
 
     deps.querier.plus_token_balances(&[(
         GOVERNANCE_TOKEN,
-        &[(MOCK_CONTRACT_ADDR, &Uint128(100))],
+        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
     )]);
 
     let (_, _, response) = super::stake_governance_token::will_success(
         &mut deps,
         STAKER1,
-        Uint128(100),
+        Uint128::new(100),
     );
 
     assert_eq!(response.attributes, vec![
@@ -36,7 +36,7 @@ fn share_calculation() {
     let (_, _, response) = super::unstake_governance_token::will_success(
         &mut deps,
         STAKER1,
-        Some(Uint128(100)),
+        Some(Uint128::new(100)),
     );
 
     assert_eq!(response.attributes, vec![
@@ -46,6 +46,6 @@ fn share_calculation() {
     ]);
 
     let staker_state = get_staker_state(deps.as_ref(), mock_env(), STAKER1.to_string()).unwrap();
-    assert_eq!(staker_state.share, Uint128(100));
-    assert_eq!(staker_state.balance, Uint128(200));
+    assert_eq!(staker_state.share, Uint128::new(100));
+    assert_eq!(staker_state.balance, Uint128::new(200));
 }

@@ -62,12 +62,12 @@ fn succeed() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let voter_addr = Addr::unchecked(VOTER1);
     let poll_id = 1u64;
     let vote_option = VoteOption::Yes;
-    let vote_amount = Uint128(100);
+    let vote_amount = Uint128::new(100);
 
     will_success(&mut deps, VOTER1, poll_id, vote_option.clone(), vote_amount);
 
@@ -93,7 +93,7 @@ fn failed_cast_vote_not_enough_staked() {
 
     init_default(deps.as_mut());
 
-    let stake_amount = Uint128(100);
+    let stake_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, stake_amount);
@@ -104,7 +104,7 @@ fn failed_cast_vote_not_enough_staked() {
         mock_info(VOTER1, &[]),
         1,
         VoteOption::Yes,
-        stake_amount + Uint128(1),
+        stake_amount + Uint128::new(1),
     );
 
     expect_generic_err(&result, "User does not have enough staked tokens.");
@@ -116,7 +116,7 @@ fn failed_cast_vote_without_poll() {
 
     init_default(deps.as_mut());
 
-    let stake_amount = Uint128(100);
+    let stake_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, stake_amount);
@@ -140,7 +140,7 @@ fn failed_cast_vote_twice() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128(100));
+    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
@@ -149,7 +149,7 @@ fn failed_cast_vote_twice() {
         VOTER1,
         poll_id,
         VoteOption::Yes,
-        Uint128(10),
+        Uint128::new(10),
     );
 
     let result = exec(
@@ -158,7 +158,7 @@ fn failed_cast_vote_twice() {
         mock_info(VOTER1, &[]),
         poll_id,
         VoteOption::Yes,
-        Uint128(10),
+        Uint128::new(10),
     );
 
     expect_generic_err(&result, "User has already voted.");

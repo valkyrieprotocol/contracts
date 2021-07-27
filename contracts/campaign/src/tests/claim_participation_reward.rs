@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Addr, CosmosMsg, Uint128, coin, BankMsg};
+use cosmwasm_std::{Env, MessageInfo, Response, Addr, CosmosMsg, Uint128, coin, BankMsg, SubMsg};
 use valkyrie::common::ContractResult;
 use crate::executions::claim_participation_reward;
 use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, DEFAULT_SENDER};
@@ -34,13 +34,13 @@ fn succeed() {
 
     let (_, _, response) = will_success(&mut deps, participator.as_str());
     assert_eq!(response.messages, vec![
-        CosmosMsg::Bank(BankMsg::Send {
+        SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: participator.to_string(),
             amount: vec![coin(
                 CAMPAIGN_DISTRIBUTION_AMOUNTS[0].u128(),
                 CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string(),
             )]
-        }),
+        })),
     ]);
 
     let participation = Participation::load(&deps.storage, &participator).unwrap();

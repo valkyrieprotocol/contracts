@@ -1,10 +1,11 @@
-use cosmwasm_std::{Addr, attr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128};
 
 use valkyrie::common::{ContractResult, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use valkyrie::governance::execute_msgs::{ExecuteMsg, PollConfigInitMsg};
 use valkyrie::message_factories;
+use valkyrie::utils::make_response;
 
 use crate::common::states::{ContractConfig, load_available_balance};
 use crate::poll::states::{PollExecutionContext, PollResult};
@@ -30,6 +31,8 @@ pub fn instantiate(
     validate_threshold(msg.threshold)?;
 
     // Execute
+    let response = make_response("instantiate");
+
     let poll_config = PollConfig {
         quorum: msg.quorum,
         threshold: msg.threshold,
@@ -47,15 +50,7 @@ pub fn instantiate(
     poll_config.save(deps.storage)?;
     poll_state.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "instantiate"),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -76,51 +71,45 @@ pub fn update_poll_config(
     }
 
     // Execute
+    let mut response = make_response("update_poll_config");
+
     let mut poll_config = PollConfig::load(deps.storage)?;
 
     if let Some(quorum) = quorum {
         validate_quorum(quorum)?;
         poll_config.quorum = quorum;
+        response.add_attribute("is_updated_quorum", "true");
     }
 
     if let Some(threshold) = threshold {
         validate_threshold(threshold)?;
         poll_config.threshold = threshold;
+        response.add_attribute("is_updated_threshold", "true");
     }
 
     if let Some(voting_period) = voting_period {
         poll_config.voting_period = voting_period;
+        response.add_attribute("is_updated_voting_period", "true");
     }
 
     if let Some(execution_delay_period) = execution_delay_period {
         poll_config.execution_delay_period = execution_delay_period;
+        response.add_attribute("is_updated_execution_delay_period", "true");
     }
 
     if let Some(proposal_deposit) = proposal_deposit {
         poll_config.proposal_deposit = proposal_deposit;
+        response.add_attribute("is_updated_proposal_deposit", "true");
     }
 
     if let Some(period) = snapshot_period {
         poll_config.snapshot_period = period;
+        response.add_attribute("is_updated_period", "true");
     }
 
     poll_config.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "update_poll_config"),
-            attr("is_updated_quorum", quorum.is_some().to_string()),
-            attr("is_updated_threshold", threshold.is_some().to_string()),
-            attr("is_updated_voting_period", voting_period.is_some().to_string()),
-            attr("is_updated_execution_delay_period", execution_delay_period.is_some().to_string()),
-            attr("is_updated_proposal_deposit", proposal_deposit.is_some().to_string()),
-            attr("is_updated_snapshot_period", snapshot_period.is_some().to_string()),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -153,6 +142,8 @@ pub fn create_poll(
     }
 
     // Execute
+    let mut response = make_response("create_poll");
+
     let executions = executions.iter()
         .map(|execution| Execution::from(deps.api, execution))
         .collect();
@@ -177,18 +168,11 @@ pub fn create_poll(
 
     poll.save_with_index(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "create_poll"),
-            attr("creator", proposer.as_str()),
-            attr("poll_id", poll.id.to_string()),
-            attr("end_height", poll.end_height),
-        ],
-        data: None,
-    })
+    response.add_attribute("creator", proposer.as_str());
+    response.add_attribute("poll_id", poll.id.to_string());
+    response.add_attribute("end_height", poll.end_height.to_string());
+
+    Ok(response)
 }
 
 pub fn cast_vote(
@@ -225,26 +209,20 @@ pub fn cast_vote(
     }
 
     // Execute
+    let mut response = make_response("cast_vote");
+
     poll.vote(deps.storage, &mut staker_state, option.clone(), amount)?;
     poll.snapshot_staked_amount(deps.storage, env.block.height, contract_available_balance).ok(); //snapshot 실패하더라도 무시
 
     poll.save(deps.storage)?;
     staker_state.save(deps.storage)?;
 
+    response.add_attribute("poll_id", &poll_id.to_string());
+    response.add_attribute("amount", &amount.to_string());
+    response.add_attribute("voter", info.sender.as_str());
+    response.add_attribute("voter_option", option.to_string());
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "cast_vote"),
-            attr("poll_id", &poll_id.to_string()),
-            attr("amount", &amount.to_string()),
-            attr("voter", info.sender.as_str()),
-            attr("voter_option", option.to_string()),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn end_poll(
@@ -265,7 +243,7 @@ pub fn end_poll(
     }
 
     // Execute
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut response = make_response("end_poll");
 
     let contract_config = ContractConfig::load(deps.storage)?;
     let mut poll_state = PollState::load(deps.storage)?;
@@ -280,7 +258,7 @@ pub fn end_poll(
 
     // Refunds deposit only when quorum is reached
     if poll_result != PollResult::QuorumNotReached && !poll.deposit_amount.is_zero() {
-        messages.push(
+        response.add_message(
             message_factories::cw20_transfer(
                 &contract_config.governance_token,
                 &poll.creator,
@@ -297,18 +275,11 @@ pub fn end_poll(
     poll_state.total_deposit = poll_state.total_deposit.checked_sub(poll.deposit_amount)?;
     poll_state.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages,
-        attributes: vec![
-            attr("action", "end_poll"),
-            attr("poll_id", poll_id.to_string()),
-            attr("result", poll_result.to_string()),
-            attr("passed", (poll_result == PollResult::Passed).to_string()),
-        ],
-        data: None,
-    })
+    response.add_attribute("poll_id", poll_id.to_string());
+    response.add_attribute("result", poll_result.to_string());
+    response.add_attribute("passed", (poll_result == PollResult::Passed).to_string());
+
+    Ok(response)
 }
 
 pub const REPLY_EXECUTION: u64 = 1;
@@ -337,67 +308,58 @@ pub fn execute_poll(
     }
 
     // Execute
+    let mut response = make_response("execute_poll");
+
     executions.sort();
 
-    // Response
     PollExecutionContext {
         poll_id: poll.id,
         execution_count: executions.len() as u64,
     }.save(deps.storage)?;
 
-    let run_execution = SubMsg {
+    response.add_submessage(SubMsg {
         id: REPLY_EXECUTION,
-        msg: CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: env.contract.address.to_string(),
-            send: vec![],
-            msg: to_binary(&ExecuteMsg::RunExecution {
+        msg: message_factories::wasm_execute(
+            &env.contract.address,
+            &ExecuteMsg::RunExecution {
                 executions: executions.iter().map(|e| ExecutionMsg::from(e)).collect(),
-            })?,
-        }),
+            },
+        ),
         gas_limit: None,
         reply_on: ReplyOn::Always,
-    };
+    });
 
-    Ok(Response {
-        submessages: vec![run_execution],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "execute_poll"),
-            attr("poll_id", poll_id.to_string()),
-        ],
-        data: None,
-    })
+    response.add_attribute("poll_id", poll_id.to_string());
+
+    Ok(response)
 }
 
 pub fn run_execution(
-    _deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     mut executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
+    // Validate
     if env.contract.address != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
+    // Execute
+    let mut response = make_response("run_execution");
+
     executions.sort_by_key(|e| e.order);
 
-    let messages: Vec<CosmosMsg> = executions.iter().map(|e| {
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: e.contract.to_string(),
-            send: vec![],
-            msg: e.msg.clone(),
-        })
-    }).collect();
+    for execution in executions.iter() {
+        response.add_message(message_factories::wasm_execute_bin(
+            &deps.api.addr_validate(&execution.contract)?,
+            execution.msg.clone(),
+        ));
+    }
 
-    Ok(Response {
-        submessages: vec![],
-        messages,
-        attributes: vec![
-            attr("action", "execution_runner"),
-            attr("execution_count", executions.len()),
-        ],
-        data: None,
-    })
+    response.add_attribute("execution_count", executions.len().to_string());
+
+    Ok(response)
 }
 
 pub fn reply_execution(
@@ -405,12 +367,16 @@ pub fn reply_execution(
     _env: Env,
     msg: Reply,
 ) -> ContractResult<Response> {
+    // Validate
     let poll_execution_context = PollExecutionContext::load(deps.storage)?;
     let mut poll = Poll::load(deps.storage, &poll_execution_context.poll_id)?;
 
     if poll.status == PollStatus::Failed || poll.status == PollStatus::Executed {
         return Err(ContractError::Std(StdError::generic_err("Already executed")));
     }
+
+    // Execute
+    let mut response = make_response("reply_execution");
 
     poll.status = if msg.result.is_ok() {
         PollStatus::Executed
@@ -421,15 +387,9 @@ pub fn reply_execution(
     poll.save_with_index(deps.storage)?;
     PollExecutionContext::clear(deps.storage);
 
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "reply_execution"),
-            attr("poll_status", poll.status.to_string()),
-        ],
-        data: None,
-    })
+    response.add_attribute("poll_status", poll.status.to_string());
+
+    Ok(response)
 }
 
 pub fn snapshot_poll(
@@ -446,6 +406,8 @@ pub fn snapshot_poll(
     }
 
     // Execute
+    let mut response = make_response("snapshot_poll");
+
     let contract_available_balance = load_available_balance(deps.as_ref())?;
     let staked_amount = poll.snapshot_staked_amount(
         deps.storage,
@@ -454,17 +416,10 @@ pub fn snapshot_poll(
     )?;
     poll.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "snapshot_poll"),
-            attr("poll_id", poll_id.to_string()),
-            attr("staked_amount", staked_amount),
-        ],
-        data: None,
-    })
+    response.add_attribute("poll_id", poll_id.to_string());
+    response.add_attribute("staked_amount", staked_amount);
+
+    Ok(response)
 }
 
 // Validate_quorum returns an error if the quorum is invalid

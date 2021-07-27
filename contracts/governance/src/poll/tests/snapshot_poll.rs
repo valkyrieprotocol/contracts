@@ -35,8 +35,8 @@ fn succeed() {
 
     init_default(deps.as_mut());
 
-    let voter1_staked_amount = Uint128(100);
-    let voter2_staked_amount = Uint128(100);
+    let voter1_staked_amount = Uint128::new(100);
+    let voter2_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);
@@ -61,9 +61,9 @@ fn succeed_within_cast_vote() {
 
     init_default(deps.as_mut());
 
-    let voter1_staked_amount = Uint128(100);
-    let voter2_staked_amount = Uint128(100);
-    let voter3_staked_amount = Uint128(100);
+    let voter1_staked_amount = Uint128::new(100);
+    let voter2_staked_amount = Uint128::new(100);
+    let voter3_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);
@@ -82,7 +82,7 @@ fn succeed_within_cast_vote() {
         mock_info(VOTER2, &[]),
         poll_id,
         VoteOption::Yes,
-        Uint128(10),
+        Uint128::new(10),
     ).unwrap();
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
@@ -99,7 +99,7 @@ fn succeed_within_cast_vote() {
         mock_info(VOTER3, &[]),
         poll_id,
         VoteOption::No,
-        Uint128(50),
+        Uint128::new(50),
     ).unwrap();
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
@@ -112,8 +112,8 @@ fn failed_twice() {
 
     init_default(deps.as_mut());
 
-    let voter1_staked_amount = Uint128(100);
-    let voter2_staked_amount = Uint128(100);
+    let voter1_staked_amount = Uint128::new(100);
+    let voter2_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, voter1_staked_amount);

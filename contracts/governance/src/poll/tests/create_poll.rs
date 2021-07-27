@@ -179,7 +179,7 @@ fn failed_create_poll_invalid_deposit() {
         contract_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
-        POLL_PROPOSAL_DEPOSIT.checked_sub(Uint128(1)).unwrap(),
+        POLL_PROPOSAL_DEPOSIT.checked_sub(Uint128::new(1)).unwrap(),
         POLL_TITLE.to_string(),
         POLL_DESCRIPTION.to_string(),
         None,
@@ -296,7 +296,7 @@ pub fn mock_exec_msg(order: u64) -> ExecutionMsg {
         order,
         contract: format!("Contract{}", order),
         msg: to_binary(&Cw20ExecuteMsg::Burn {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
         }).unwrap(),
     }
 }

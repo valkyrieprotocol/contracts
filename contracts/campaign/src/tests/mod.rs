@@ -22,7 +22,7 @@ pub const CAMPAIGN_DESCRIPTION: &str = "CamapignDescription";
 pub const CAMPAIGN_URL: &str = "https://campaign.url";
 pub const CAMPAIGN_PARAMETER_KEY: &str = "vkr";
 pub const CAMPAIGN_DISTRIBUTION_DENOM_NATIVE: &str = "uusd";
-pub const CAMPAIGN_DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128(5), Uint128(3), Uint128(2)];
+pub const CAMPAIGN_DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
 pub const CAMPAIGN_ADMIN: &str = "CampaignAdmin";
 
 pub fn campaign_manager_sender() -> MessageInfo {

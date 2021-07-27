@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, ContractResult as CwContractResult, SubcallResponse, Response, Reply, Event, attr, Addr};
+use cosmwasm_std::{Env, ContractResult as CwContractResult, Response, Reply, Event, attr, Addr, SubMsgExecutionResponse};
 use valkyrie::common::ContractResult;
 use crate::executions::{created_campaign, REPLY_CREATE_CAMPAIGN};
 use valkyrie::test_utils::contract_env;
@@ -8,7 +8,7 @@ use crate::states::{CreateCampaignContext, Campaign};
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
-    result: CwContractResult<SubcallResponse>,
+    result: CwContractResult<SubMsgExecutionResponse>,
 ) -> ContractResult<Response> {
     created_campaign(deps.as_mut(), env, Reply {
         id: REPLY_CREATE_CAMPAIGN,
@@ -31,10 +31,10 @@ fn succeed_success_reply() {
     let result = exec(
         &mut deps,
         env.clone(),
-        CwContractResult::Ok(SubcallResponse {
+        CwContractResult::Ok(SubMsgExecutionResponse {
             events: vec![
                 Event {
-                    kind: "instantiate_contract".to_string(),
+                    ty: "instantiate_contract".to_string(),
                     attributes: vec![
                         attr("contract_address", campaign_address.to_string()),
                     ],

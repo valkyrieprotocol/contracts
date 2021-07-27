@@ -67,7 +67,7 @@ impl State {
             let num_blocks = s.1 - s.0;
             let distribution_amount_per_block: Decimal = Decimal::from_ratio(s.2, num_blocks);
             // distribution_amount_per_block = distribution amount of this schedule / blocks count of this schedule.
-            distributed_amount += distribution_amount_per_block * Uint128(passed_blocks as u128);
+            distributed_amount += distribution_amount_per_block * Uint128::new(passed_blocks as u128);
         }
 
         self.last_distributed = block_height;

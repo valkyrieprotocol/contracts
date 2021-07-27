@@ -39,7 +39,7 @@ fn succeed() {
     super::stake_governance_token::will_success(&mut deps, STAKER2, STAKER2_STAKE_AMOUNT);
 
     let increased_balance = (STAKER1_STAKE_AMOUNT + STAKER2_STAKE_AMOUNT)
-        .checked_mul(Uint128(2))
+        .checked_mul(Uint128::new(2))
         .unwrap();
 
     deps.querier.with_token_balances(&[(
@@ -68,7 +68,7 @@ fn succeed() {
     let staking_state = StakingState::load(&deps.storage).unwrap();
     let staker_state = StakerState::load(&deps.storage, &Addr::unchecked(STAKER1)).unwrap();
 
-    assert_eq!(unstake_amount, STAKER1_STAKE_AMOUNT.checked_mul(Uint128(2)).unwrap());
+    assert_eq!(unstake_amount, STAKER1_STAKE_AMOUNT.checked_mul(Uint128::new(2)).unwrap());
     assert_eq!(unstake_share, STAKER1_STAKE_AMOUNT);
     assert_eq!(staking_state.total_share, STAKER2_STAKE_AMOUNT);
     assert_eq!(staker_state.share, Uint128::zero());
@@ -91,7 +91,7 @@ fn failed_overflow() {
         &mut deps,
         contract_env(),
         mock_info(STAKER1, &[]),
-        Some(STAKER1_STAKE_AMOUNT + Uint128(1)),
+        Some(STAKER1_STAKE_AMOUNT + Uint128::new(1)),
     );
 
     expect_generic_err(&result, "User is trying to unstake too many tokens.")

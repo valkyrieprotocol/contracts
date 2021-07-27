@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Uint128, CosmosMsg, WasmMsg, to_binary};
+use cosmwasm_std::{Env, MessageInfo, Response, Uint128, CosmosMsg, WasmMsg, to_binary, SubMsg};
 use valkyrie::common::ContractResult;
 use crate::executions::finish_boosting;
 use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
@@ -47,7 +47,7 @@ fn succeed() {
         is_pending: false,
     });
 
-    let (env, _, _) = super::boost_campaign::will_success(&mut deps, campaign.to_string(), Uint128(1));
+    let (env, _, _) = super::boost_campaign::will_success(&mut deps, campaign.to_string(), Uint128::new(1));
     deps.querier.with_active_booster(campaign.to_string(), Some(BoosterResponse {
         drop_booster: DropBoosterResponse {
             assigned_amount: Uint128::from(100u64),
@@ -73,19 +73,19 @@ fn succeed() {
     let (_, _, response) = will_success(&mut deps, campaign.to_string());
 
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: FUND_MANAGER.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&FundExecuteMsg::DecreaseAllowance {
                 address: campaign.to_string(),
                 amount: Some(Uint128::from(1000u64)),
             }).unwrap(),
-        }),
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: campaign.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&CampaignExecuteMsg::DisableBooster {}).unwrap(),
-        }),
+        })),
     ]);
 }
 
@@ -105,7 +105,7 @@ fn succeed_zero_release_amount() {
         is_pending: false,
     });
 
-    let (env, _, _) = super::boost_campaign::will_success(&mut deps, campaign.to_string(), Uint128(1));
+    let (env, _, _) = super::boost_campaign::will_success(&mut deps, campaign.to_string(), Uint128::new(1));
     deps.querier.with_active_booster(campaign.to_string(), Some(BoosterResponse {
         drop_booster: DropBoosterResponse {
             assigned_amount: Uint128::from(100u64),
@@ -131,11 +131,11 @@ fn succeed_zero_release_amount() {
     let (_, _, response) = will_success(&mut deps, campaign.to_string());
 
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: campaign.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&CampaignExecuteMsg::DisableBooster {}).unwrap(),
-        }),
+        })),
     ]);
 }
 

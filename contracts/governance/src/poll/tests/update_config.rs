@@ -68,7 +68,7 @@ fn succeed() {
     let threshold = Decimal::percent(POLL_THRESHOLD_PERCENT / 2);
     let voting_period = POLL_VOTING_PERIOD + 100;
     let execution_delay_period = POLL_EXECUTION_DELAY_PERIOD + 100;
-    let proposal_deposit = POLL_PROPOSAL_DEPOSIT + Uint128(100);
+    let proposal_deposit = POLL_PROPOSAL_DEPOSIT + Uint128::new(100);
     let snapshot_period = POLL_SNAPSHOT_PERIOD + 100;
 
     will_success(

@@ -33,20 +33,20 @@ fn succeed() {
     let (env, _, _) = super::stake_governance_token::will_success(
         &mut deps,
         STAKER1,
-        Uint128(100),
+        Uint128::new(100),
     );
 
     let mut env = env.clone();
     let info = mock_info(STAKER1, &[]);
 
     plus_height(&mut env, 2);
-    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128::new(10))).unwrap();
 
     plus_height(&mut env, 2);
-    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128::new(10))).unwrap();
 
     plus_height(&mut env, 2);
-    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128(10))).unwrap();
+    super::unstake_governance_token::exec(&mut deps, env.clone(), info.clone(), Some(Uint128::new(10))).unwrap();
 
     plus_height(&mut env, WITHDRAW_DELAY - 2);
 
@@ -68,8 +68,8 @@ fn succeed() {
         }
     }
 
-    match &response.messages[0] {
-        CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: _, send: _, msg }) => {
+    match &response.messages[0].msg {
+        CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: _, funds: _, msg }) => {
             match from_binary(msg).unwrap() {
                 Cw20ExecuteMsg::Transfer { recipient, amount } => {
                     assert_eq!(recipient, info.sender.to_string());

@@ -68,7 +68,7 @@ fn succeed() {
     super::instantiate::default(&mut deps);
 
     let creation_fee_token = "ChangedFeeToken";
-    let creation_fee_amount = Uint128(1);
+    let creation_fee_amount = Uint128::new(1);
     let creation_fee_recipient = "ChangedFeeRecipient";
     let code_id = 100u64;
     let withdraw_fee_rate = Decimal::percent(99);

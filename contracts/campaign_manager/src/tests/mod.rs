@@ -16,7 +16,7 @@ pub mod finish_boosting;
 pub const GOVERNANCE: &str = "GovernanceContract";
 pub const FUND_MANAGER: &str = "FundManager";
 pub const TOKEN_CONTRACT: &str = "TokenContract";
-pub const CREATION_FEE_AMOUNT: Uint128 = Uint128(100000000);
+pub const CREATION_FEE_AMOUNT: Uint128 = Uint128::new(100000000);
 pub const CAMPAIGN_CODE_ID: u64 = 1;
 pub const DISTRIBUTION_DENOM_WHITELIST_NATIVE: &str = "uusd";
 pub const DISTRIBUTION_DENOM_WHITELIST_TOKEN: &str = TOKEN_CONTRACT;

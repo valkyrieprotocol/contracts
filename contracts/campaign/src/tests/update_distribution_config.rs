@@ -44,7 +44,7 @@ fn succeed() {
     super::instantiate::default(&mut deps);
 
     let denom = Denom::Token(TOKEN_CONTRACT.to_string());
-    let amounts = vec![Uint128(100), Uint128(50), Uint128(50)];
+    let amounts = vec![Uint128::new(100), Uint128::new(50), Uint128::new(50)];
     will_success(&mut deps, denom.clone(), amounts.clone());
 
     let config = DistributionConfig::load(&deps.storage).unwrap();

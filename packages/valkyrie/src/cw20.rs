@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery};
+use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery, SubMsg};
 use cw20::Denom;
 
 use crate::message_factories;
@@ -44,9 +44,9 @@ pub fn create_send_msg_response(
     action: &str,
 ) -> Response {
     Response {
-        submessages: vec![],
-        messages: vec![message_factories::cw20_transfer(token, recipient, amount)],
+        messages: vec![SubMsg::new(message_factories::cw20_transfer(token, recipient, amount))],
         attributes: create_send_attr(recipient, amount, action),
+        events: vec![],
         data: None,
     }
 }

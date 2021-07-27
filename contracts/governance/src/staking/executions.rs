@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use cosmwasm_std::{Addr, attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::cw20::create_send_msg_response;
@@ -11,6 +11,7 @@ use crate::common::states::{ContractConfig, load_available_balance};
 use crate::staking::states::StakingConfig;
 
 use super::states::{StakerState, StakingState};
+use valkyrie::utils::make_response;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -19,6 +20,8 @@ pub fn instantiate(
     msg: StakingConfigInitMsg,
 ) -> ContractResult<Response> {
     // Execute
+    let response = make_response("instantiate");
+
     StakingConfig {
         withdraw_delay: msg.withdraw_delay,
     }.save(deps.storage)?;
@@ -28,15 +31,7 @@ pub fn instantiate(
         unstaking_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "instantiate"),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn update_config(
@@ -51,24 +46,18 @@ pub fn update_config(
     }
 
     // Execute
+    let mut response = make_response("update_config");
+
     let mut config = StakingConfig::load(deps.storage)?;
 
     if let Some(withdraw_delay) = withdraw_delay {
         config.withdraw_delay = withdraw_delay;
+        response.add_attribute("is_updated_withdraw_delay", "true");
     }
 
     config.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "update_config"),
-            attr("is_updated_withdraw_delay", withdraw_delay.is_some().to_string()),
-        ],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn stake_governance_token(
@@ -89,6 +78,8 @@ pub fn stake_governance_token(
     }
 
     // Execute
+    let mut response = make_response("stake_governance_token");
+
     let mut staking_state = StakingState::load(deps.storage)?;
     let mut staker_state = StakerState::load_safe(deps.storage, &sender)?;
 
@@ -107,18 +98,11 @@ pub fn stake_governance_token(
     staker_state.share += share;
     staker_state.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "stake_governance_token"),
-            attr("sender", sender.as_str()),
-            attr("share", share.to_string()),
-            attr("amount", amount.to_string()),
-        ],
-        data: None,
-    })
+    response.add_attribute("sender", sender.as_str());
+    response.add_attribute("share", share.to_string());
+    response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
 }
 
 // Withdraw amount if not staked. By default all funds will be withdrawn.
@@ -128,11 +112,15 @@ pub fn unstake_governance_token(
     info: MessageInfo,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
+    // Validate
     let staker_state = StakerState::may_load(deps.storage, &info.sender)?;
 
     if staker_state.is_none() {
         return Err(ContractError::Std(StdError::generic_err("Nothing staked")));
     }
+
+    // Execute
+    let mut response = make_response("unstake_governance_token");
 
     let staking_config = StakingConfig::load(deps.storage)?;
     let mut staker_state = staker_state.unwrap();
@@ -174,17 +162,10 @@ pub fn unstake_governance_token(
     staking_state.unstaking_amount += withdraw_amount;
     staking_state.save(deps.storage)?;
 
-    // Response
-    Ok(Response {
-        submessages: vec![],
-        messages: vec![],
-        attributes: vec![
-            attr("action", "unstake_governance_token"),
-            attr("unstake_amount", withdraw_amount),
-            attr("unstake_share", withdraw_share),
-        ],
-        data: None,
-    })
+    response.add_attribute("unstake_amount", withdraw_amount);
+    response.add_attribute("unstake_share", withdraw_share);
+
+    Ok(response)
 }
 
 pub fn withdraw_governance_token(
@@ -206,7 +187,6 @@ pub fn withdraw_governance_token(
     staking_state.unstaking_amount = staking_state.unstaking_amount.checked_sub(withdraw_amount)?;
     staking_state.save(deps.storage)?;
 
-    // Response
     let contract_config = ContractConfig::load(deps.storage)?;
     Ok(create_send_msg_response(
         &contract_config.governance_token,

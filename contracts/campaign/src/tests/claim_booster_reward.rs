@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Addr, coin, CosmosMsg, WasmMsg, to_binary, Uint128, Decimal};
+use cosmwasm_std::{Env, MessageInfo, Response, Addr, coin, CosmosMsg, WasmMsg, to_binary, Uint128, Decimal, SubMsg};
 use valkyrie::common::ContractResult;
 use crate::executions::claim_booster_reward;
 use valkyrie::test_utils::{contract_env, expect_generic_err, expect_not_found_err};
@@ -225,13 +225,13 @@ fn failed_not_boosted() {
 
 fn expect_transfer(response: &Response, recipient: &str, amount: Uint128) {
     assert_eq!(response.messages, vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: FUND_MANAGER.to_string(),
-            send: vec![],
+            funds: vec![],
             msg: to_binary(&ExecuteMsg::Transfer {
                 recipient: recipient.to_string(),
                 amount,
             }).unwrap(),
-        }),
+        })),
     ]);
 }
