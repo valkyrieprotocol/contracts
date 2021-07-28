@@ -35,14 +35,14 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cw20 = { version = "0.7.0" }
-cosmwasm-std = { version = "0.15.1", features = ["iterator"] }
+cosmwasm-std = { version = "0.15.2" }
 cw-storage-plus = { version = "0.7.0", features = ["iterator"] }
 valkyrie = { version = "0.1.0", path = "../../packages/valkyrie" }
 schemars = "0.8.3"
 terraswap = "2.3.0"
 terra-cosmwasm = { version = "2.1.0" }
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
-cosmwasm-schema = "0.15.1"
-cosmwasm-storage = { version = "0.15.1", features = ["iterator"] }
+cosmwasm-schema = "0.15.2"
+cosmwasm-storage = { version = "0.15.2", features = ["iterator"] }
