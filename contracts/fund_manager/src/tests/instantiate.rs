@@ -1,11 +1,12 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Addr, Uint128, Api};
+use cosmwasm_std::{Addr, Api, Env, MessageInfo, Response, Uint128};
+
 use valkyrie::common::ContractResult;
-use crate::executions::instantiate;
 use valkyrie::fund_manager::execute_msgs::InstantiateMsg;
-use cosmwasm_std::testing::mock_env;
-use valkyrie::test_utils::default_sender;
-use crate::tests::{ADMINS, TOKEN_CONTRACT, TERRASWAP_ROUTER};
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER};
+use valkyrie::test_constants::fund_manager::{ADMINS, fund_manager_env, MANAGING_TOKEN};
+
+use crate::executions::instantiate;
 use crate::states::{ContractConfig, ContractState};
 
 pub fn exec(
@@ -26,7 +27,7 @@ pub fn exec(
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = mock_env();
+    let env = fund_manager_env();
     let info = default_sender();
 
     let response = exec(
@@ -34,7 +35,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         env.clone(),
         info.clone(),
         ADMINS.iter().map(|v| v.to_string()).collect(),
-        TOKEN_CONTRACT.to_string(),
+        MANAGING_TOKEN.to_string(),
         TERRASWAP_ROUTER.to_string(),
     ).unwrap();
 
@@ -43,15 +44,15 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     default(&mut deps);
 
     let config = ContractConfig::load(&deps.storage).unwrap();
     assert_eq!(config, ContractConfig {
         admins: ADMINS.iter().map(|v| deps.api.addr_validate(v).unwrap()).collect(),
-        managing_token: Addr::unchecked(TOKEN_CONTRACT),
-        terraswap_router: Addr::unchecked(TERRASWAP_ROUTER)
+        managing_token: Addr::unchecked(MANAGING_TOKEN),
+        terraswap_router: Addr::unchecked(TERRASWAP_ROUTER),
     });
 
     let state = ContractState::load(&deps.storage).unwrap();

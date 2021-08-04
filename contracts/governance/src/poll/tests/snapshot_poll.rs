@@ -1,13 +1,17 @@
-use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use crate::tests::{init_default, POLL_SNAPSHOT_PERIOD};
-use cosmwasm_std::{Uint128, Env, MessageInfo, Response, attr};
-use crate::poll::tests::cast_vote::{VOTER1, VOTER2, VOTER3};
-use valkyrie::governance::enumerations::VoteOption;
-use crate::poll::states::Poll;
+use cosmwasm_std::{attr, Env, MessageInfo, Response, Uint128};
 use cosmwasm_std::testing::mock_info;
+
 use valkyrie::common::ContractResult;
+use valkyrie::governance::enumerations::VoteOption;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::{governance_env_height, governance_env, POLL_SNAPSHOT_PERIOD};
+use valkyrie::test_utils::expect_generic_err;
+
 use crate::poll::executions::snapshot_poll;
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, contract_env_height};
+use crate::poll::states::Poll;
+use crate::poll::tests::cast_vote::{VOTER1, VOTER2, VOTER3};
+use crate::tests::init_default;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -20,7 +24,7 @@ pub fn exec(
 
 pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, Response) {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let env = contract_env_height(poll.end_height - 1);
+    let env = governance_env_height(poll.end_height - 1);
 
     let info = default_sender();
 
@@ -31,7 +35,7 @@ pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, R
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -44,7 +48,7 @@ fn succeed() {
 
     let poll_id = 1;
 
-    let result = exec(&mut deps, contract_env(), default_sender(), poll_id);
+    let result = exec(&mut deps, governance_env(), default_sender(), poll_id);
     expect_generic_err(&result, "Cannot snapshot at this height");
 
     let (_, _, response) = will_success(&mut deps, poll_id);
@@ -57,7 +61,7 @@ fn succeed() {
 
 #[test]
 fn succeed_within_cast_vote() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -74,7 +78,7 @@ fn succeed_within_cast_vote() {
     super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, voter1_staked_amount);
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let env = contract_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
+    let env = governance_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
 
     super::cast_vote::exec(
         &mut deps,
@@ -108,7 +112,7 @@ fn succeed_within_cast_vote() {
 
 #[test]
 fn failed_twice() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -121,7 +125,7 @@ fn failed_twice() {
 
     let poll_id = 1;
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let env = contract_env_height(poll.end_height - 1);
+    let env = governance_env_height(poll.end_height - 1);
 
     let response = exec(&mut deps, env.clone(), default_sender(), poll_id).unwrap();
     assert_eq!(response.attributes, vec![

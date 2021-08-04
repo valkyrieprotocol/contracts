@@ -1,44 +1,27 @@
 use cosmwasm_std::{Deps, Env};
+
+use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse, ConfigResponse};
 use valkyrie::common::{ContractResult, Denom, OrderBy};
-use crate::states::{ContractConfig, CampaignConfig, BoosterConfig, Campaign};
-use valkyrie::campaign_manager::query_msgs::{ContractConfigResponse, CampaignConfigResponse, BoosterConfigResponse, CampaignResponse, CampaignsResponse};
 
-pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigResponse> {
-    let config = ContractConfig::load(deps.storage)?;
+use crate::states::*;
 
-    Ok(ContractConfigResponse{
+pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
+    let config = Config::load(deps.storage)?;
+
+    Ok(ConfigResponse {
         governance: config.governance.to_string(),
         fund_manager: config.fund_manager.to_string(),
-    })
-}
-
-pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConfigResponse> {
-    let config = CampaignConfig::load(deps.storage)?;
-
-    Ok(CampaignConfigResponse {
+        terraswap_router: config.terraswap_router.to_string(),
         creation_fee_token: config.creation_fee_token.to_string(),
         creation_fee_amount: config.creation_fee_amount,
         creation_fee_recipient: config.creation_fee_recipient.to_string(),
         code_id: config.code_id,
-        distribution_denom_whitelist: config.distribution_denom_whitelist.iter()
-            .map(|d| Denom::from_cw20(d.clone()))
-            .collect(),
         withdraw_fee_rate: config.withdraw_fee_rate,
         withdraw_fee_recipient: config.withdraw_fee_recipient.to_string(),
         deactivate_period: config.deactivate_period,
-    })
-}
-
-pub fn get_booster_config(deps: Deps, _env: Env) -> ContractResult<BoosterConfigResponse> {
-    let config = BoosterConfig::load(deps.storage)?;
-
-    Ok(BoosterConfigResponse {
-        booster_token: config.booster_token.to_string(),
-        drop_booster_ratio: config.drop_ratio,
-        activity_booster_ratio: config.activity_ratio,
-        plus_booster_ratio: config.plus_ratio,
-        activity_booster_multiplier: config.activity_multiplier,
-        min_participation_count: config.min_participation_count,
+        key_denom: Denom::from_cw20(config.key_denom),
+        referral_reward_token: config.referral_reward_token.to_string(),
+        min_referral_reward_deposit_rate: config.min_referral_reward_deposit_rate,
     })
 }
 

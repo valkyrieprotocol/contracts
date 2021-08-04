@@ -1,112 +1,72 @@
 use cosmwasm_std::{Deps, Env};
 
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::campaign::query_msgs::{CampaignInfoResponse, CampaignStateResponse, DistributionConfigResponse, GetAddressFromReferrerResponse, ParticipationResponse, ParticipationsResponse, ShareUrlResponse, BoosterResponse, ContractConfigResponse, PrevBoostersResponse, ActiveBoosterResponse};
-use valkyrie::common::{ContractResult, OrderBy, ExecutionMsg, Denom};
+use valkyrie::campaign::query_msgs::*;
+use valkyrie::common::{ContractResult, Denom, ExecutionMsg, OrderBy};
 use valkyrie::utils::{compress_addr, put_query_parameter};
 
-use crate::states::{CampaignInfo, CampaignState, DistributionConfig, Participation, BoosterState, ContractConfig, Booster};
-use valkyrie::cw20::query_balance;
+use crate::states::*;
 
-pub fn get_contract_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigResponse> {
-    let config = ContractConfig::load(deps.storage)?;
+pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConfigResponse> {
+    let campaign_config = CampaignConfig::load(deps.storage)?;
 
-    Ok(ContractConfigResponse {
-        admin: config.admin.to_string(),
-        governance: config.governance.to_string(),
-        campaign_manager: config.campaign_manager.to_string(),
-        fund_manager: config.fund_manager.to_string(),
-        proxies: config.proxies.iter().map(|v| v.to_string()).collect(),
-    })
-}
-
-pub fn get_campaign_info(deps: Deps, _env: Env) -> ContractResult<CampaignInfoResponse> {
-    let campaign_info = CampaignInfo::load(deps.storage)?;
-
-    Ok(CampaignInfoResponse {
-        title: campaign_info.title,
-        description: campaign_info.description,
-        url: campaign_info.url,
-        parameter_key: campaign_info.parameter_key,
-        executions: campaign_info.executions.iter()
+    Ok(CampaignConfigResponse {
+        governance: campaign_config.governance.to_string(),
+        campaign_manager: campaign_config.campaign_manager.to_string(),
+        fund_manager: campaign_config.fund_manager.to_string(),
+        title: campaign_config.title,
+        description: campaign_config.description,
+        url: campaign_config.url,
+        parameter_key: campaign_config.parameter_key,
+        ticket_amount: campaign_config.ticket_amount,
+        qualifier: campaign_config.qualifier.map(|e| e.to_string()),
+        executions: campaign_config.executions.iter()
             .map(|v| ExecutionMsg::from(v))
             .collect(),
-        creator: campaign_info.creator.to_string(),
-        created_at: campaign_info.created_at,
+        admin: campaign_config.admin.to_string(),
+        creator: campaign_config.creator.to_string(),
+        created_at: campaign_config.created_at,
     })
 }
 
-pub fn get_distribution_config(
+pub fn get_reward_config(
     deps: Deps,
     _env: Env,
-) -> ContractResult<DistributionConfigResponse> {
-    let distribution_config = DistributionConfig::load(deps.storage)?;
+) -> ContractResult<RewardConfigResponse> {
+    let reward_config = RewardConfig::load(deps.storage)?;
 
-    Ok(DistributionConfigResponse {
-        denom: Denom::from_cw20(distribution_config.denom),
-        amounts: distribution_config.amounts,
+    Ok(RewardConfigResponse {
+        participation_reward_denom: Denom::from_cw20(reward_config.participation_reward_denom),
+        participation_reward_amount: reward_config.participation_reward_amount,
+        referral_reward_token: reward_config.referral_reward_token.to_string(),
+        referral_reward_amounts: reward_config.referral_reward_amounts,
     })
 }
 
 pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateResponse> {
-    let distribution_config = DistributionConfig::load(deps.storage)?;
+    let campaign_config = CampaignConfig::load(deps.storage)?;
     let state = CampaignState::load(deps.storage)?;
-    let balance = query_balance(
-        &deps.querier,
-        deps.api,
-        distribution_config.denom,
-        env.contract.address,
-    )?;
 
     Ok(CampaignStateResponse {
-        participation_count: state.participation_count,
-        cumulative_distribution_amount: state.cumulative_distribution_amount,
-        locked_balance: state.locked_balance,
-        balance,
-        is_active: state.is_active(deps.storage, &deps.querier, &env.block)?,
+        actor_count: state.actor_count,
+        participation_count: state.actor_count,
+        cumulative_participation_reward_amount: state.cumulative_participation_reward_amount,
+        cumulative_referral_reward_amount: state.cumulative_referral_reward_amount,
+        locked_balances: state.locked_balances.iter()
+            .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), amount.clone()))
+            .collect(),
+        balances: state.balances.iter()
+            .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), amount.clone()))
+            .collect(),
+        is_active: state.is_active(& campaign_config, &deps.querier, &env.block)?,
         is_pending: state.is_pending(),
-    })
-}
-
-pub fn get_active_booster(deps: Deps, _env: Env) -> ContractResult<ActiveBoosterResponse> {
-    let booster = Booster::may_load_active(deps.storage)?
-        .as_ref()
-        .map(Booster::to_response);
-
-    Ok(ActiveBoosterResponse {
-        active_booster: booster,
-    })
-}
-
-pub fn get_prev_booster(deps: Deps, _env: Env, booster_id: u64) -> ContractResult<BoosterResponse> {
-    let booster = Booster::load_prev(deps.storage, booster_id)?;
-
-    Ok(booster.to_response())
-}
-
-pub fn query_prev_boosters(
-    deps: Deps,
-    _env: Env,
-    start_after: Option<u64>,
-    limit: Option<u32>,
-    order_by: Option<OrderBy>,
-) -> ContractResult<PrevBoostersResponse> {
-    let result = Booster::query(
-        deps.storage,
-        start_after,
-        limit,
-        order_by,
-    )?;
-
-    Ok(PrevBoostersResponse {
-        prev_boosters: result,
     })
 }
 
 pub fn get_share_url(deps: Deps, _env: Env, address: String) -> ContractResult<ShareUrlResponse> {
     deps.api.addr_validate(&address)?;
 
-    let campaign_info = CampaignInfo::load(deps.storage)?;
+    let campaign_info = CampaignConfig::load(deps.storage)?;
     let compressed = compress_addr(&address);
     let url = put_query_parameter(
         &campaign_info.url,
@@ -131,28 +91,24 @@ pub fn get_address_from_referrer(
     })
 }
 
-pub fn get_participation(
+pub fn get_actor(
     deps: Deps,
     _env: Env,
     address: String,
-) -> ContractResult<ParticipationResponse> {
-    let booster_state = BoosterState::load(deps.storage)?;
-    let participation = Participation::load(
+) -> ContractResult<ActorResponse> {
+    let actor = Actor::load(
         deps.storage,
         &deps.api.addr_validate(&address)?,
     )?;
 
-    Ok(ParticipationResponse {
-        actor_address: participation.actor_address.to_string(),
-        referrer_address: participation.referrer_address.as_ref().map(|v| v.to_string()),
-        reward_amount: participation.reward_amount,
-        drop_booster_amount: participation.calc_drop_booster_amount(
-            deps.storage,
-            booster_state.recent_booster_id,
-        )?,
-        activity_booster_amount: participation.activity_booster_reward_amount,
-        plus_booster_amount: participation.plus_booster_reward_amount,
-        participated_at: participation.participated_at,
+    Ok(ActorResponse {
+        address: actor.address.to_string(),
+        referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
+        participation_reward_amount: actor.participation_reward_amount,
+        referral_reward_amount: actor.referral_reward_amount,
+        participation_count: actor.participation_count,
+        referral_count: actor.referral_count,
+        last_participated_at: actor.last_participated_at,
     })
 }
 
@@ -162,26 +118,22 @@ pub fn query_participations(
     start_after: Option<String>,
     limit: Option<u32>,
     order_by: Option<OrderBy>,
-) -> ContractResult<ParticipationsResponse> {
+) -> ContractResult<ActorsResponse> {
     let start_after = start_after.map(|v| deps.api.addr_validate(&v).unwrap());
-    let booster_state = BoosterState::load(deps.storage)?;
-    let participations = Participation::query(deps.storage, start_after, limit, order_by)?
+    let participations = Actor::query(deps.storage, start_after, limit, order_by)?
         .iter()
-        .map(|v| {
-            ParticipationResponse {
-                actor_address: v.actor_address.to_string(),
-                referrer_address: v.referrer_address.as_ref().map(|v| v.to_string()),
-                reward_amount: v.reward_amount,
-                drop_booster_amount: v.calc_drop_booster_amount(
-                    deps.storage,
-                    booster_state.recent_booster_id,
-                ).unwrap(),
-                activity_booster_amount: v.activity_booster_reward_amount,
-                plus_booster_amount: v.plus_booster_reward_amount,
-                participated_at: v.participated_at,
+        .map(|actor| {
+            ActorResponse {
+                address: actor.address.to_string(),
+                referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
+                participation_reward_amount: actor.participation_reward_amount,
+                referral_reward_amount: actor.referral_reward_amount,
+                participation_count: actor.participation_count,
+                referral_count: actor.referral_count,
+                last_participated_at: actor.last_participated_at,
             }
         })
         .collect();
 
-    Ok(ParticipationsResponse { participations })
+    Ok(ActorsResponse { actors: participations })
 }

@@ -1,15 +1,17 @@
 use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
+use cosmwasm_std::testing::mock_info;
 use cw20::Cw20ExecuteMsg;
 
-use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
+use valkyrie::common::{ContractResult, Execution, ExecutionMsg};
 use valkyrie::governance::enumerations::PollStatus;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::*;
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
 use crate::poll::executions::create_poll;
 use crate::poll::states::Poll;
-use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT, POLL_VOTING_PERIOD, GOVERNANCE_TOKEN};
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
+use crate::tests::init_default;
 
 pub const PROPOSER1: &str = "Proposer1";
 
@@ -30,7 +32,7 @@ pub fn exec(
 ) -> ContractResult<Response> {
     deps.querier.plus_token_balances(&[(
         GOVERNANCE_TOKEN,
-        &[(MOCK_CONTRACT_ADDR, &deposit_amount)],
+        &[(GOVERNANCE, &deposit_amount)],
     )]);
 
     create_poll(
@@ -55,7 +57,7 @@ pub fn will_success(
     link: Option<&str>,
     execution_msgs: Vec<ExecutionMsg>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = governance_env();
     let info = mock_info(GOVERNANCE_TOKEN, &[]);
 
     let response = exec(
@@ -87,7 +89,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -149,13 +151,13 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -170,13 +172,13 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_create_poll_invalid_deposit() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT.checked_sub(Uint128::new(1)).unwrap(),
@@ -194,13 +196,13 @@ fn failed_create_poll_invalid_deposit() {
 
 #[test]
 fn failed_create_poll_invalid_title() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -213,7 +215,7 @@ fn failed_create_poll_invalid_title() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -227,13 +229,13 @@ fn failed_create_poll_invalid_title() {
 
 #[test]
 fn failed_create_poll_invalid_description() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -246,7 +248,7 @@ fn failed_create_poll_invalid_description() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -260,13 +262,13 @@ fn failed_create_poll_invalid_description() {
 
 #[test]
 fn failed_create_poll_invalid_link() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,
@@ -279,7 +281,7 @@ fn failed_create_poll_invalid_link() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(GOVERNANCE_TOKEN, &[]),
         Addr::unchecked(PROPOSER1),
         POLL_PROPOSAL_DEPOSIT,

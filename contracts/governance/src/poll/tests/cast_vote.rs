@@ -4,7 +4,8 @@ use cosmwasm_std::testing::mock_info;
 use valkyrie::common::ContractResult;
 use valkyrie::governance::enumerations::VoteOption;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, expect_generic_err};
+use valkyrie::test_constants::governance::governance_env;
+use valkyrie::test_utils::expect_generic_err;
 
 use crate::poll::executions::cast_vote;
 use crate::poll::states::{Poll, VoteInfo};
@@ -40,7 +41,7 @@ pub fn will_success(
     option: VoteOption,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = governance_env();
     let info = mock_info(voter, &[]);
 
     let response = exec(
@@ -57,7 +58,7 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -89,7 +90,7 @@ fn succeed() {
 
 #[test]
 fn failed_cast_vote_not_enough_staked() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -100,7 +101,7 @@ fn failed_cast_vote_not_enough_staked() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(VOTER1, &[]),
         1,
         VoteOption::Yes,
@@ -112,7 +113,7 @@ fn failed_cast_vote_not_enough_staked() {
 
 #[test]
 fn failed_cast_vote_without_poll() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -123,7 +124,7 @@ fn failed_cast_vote_without_poll() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(VOTER1, &[]),
         0,
         VoteOption::Yes,
@@ -135,7 +136,7 @@ fn failed_cast_vote_without_poll() {
 
 #[test]
 fn failed_cast_vote_twice() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -154,7 +155,7 @@ fn failed_cast_vote_twice() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(VOTER1, &[]),
         poll_id,
         VoteOption::Yes,

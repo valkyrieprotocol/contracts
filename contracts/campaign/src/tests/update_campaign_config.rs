@@ -2,11 +2,12 @@ use cosmwasm_std::{Env, MessageInfo, Response, to_binary, Addr};
 
 use valkyrie::common::{ContractResult, ExecutionMsg, Execution};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err, expect_unauthorized_err};
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
-use crate::executions::{update_campaign_info, MIN_TITLE_LENGTH, MAX_TITLE_LENGTH, MIN_DESC_LENGTH, MAX_DESC_LENGTH, MIN_URL_LENGTH, MAX_URL_LENGTH, MIN_PARAM_KEY_LENGTH, MAX_PARAM_KEY_LENGTH};
-use crate::states::CampaignInfo;
-use crate::tests::campaign_admin_sender;
+use crate::executions::{update_campaign_config, MIN_TITLE_LENGTH, MAX_TITLE_LENGTH, MIN_DESC_LENGTH, MAX_DESC_LENGTH, MIN_URL_LENGTH, MAX_URL_LENGTH, MIN_PARAM_KEY_LENGTH, MAX_PARAM_KEY_LENGTH};
+use crate::states::CampaignConfig;
+use valkyrie::test_constants::campaign::{campaign_admin_sender, campaign_env};
+use valkyrie::test_constants::default_sender;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -16,9 +17,12 @@ pub fn exec(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
+    ticket_amount: Option<u64>,
+    qualifier: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
+    admin: Option<String>,
 ) -> ContractResult<Response> {
-    update_campaign_info(
+    update_campaign_config(
         deps.as_mut(),
         env,
         info,
@@ -26,7 +30,10 @@ pub fn exec(
         description,
         url,
         parameter_key,
+        ticket_amount,
+        qualifier,
         executions,
+        admin,
     )
 }
 
@@ -36,9 +43,12 @@ pub fn will_success(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
+    ticket_amount: Option<u64>,
+    qualifier: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
+    admin: Option<String>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = campaign_env();
     let info = campaign_admin_sender();
 
     let response = exec(
@@ -49,7 +59,10 @@ pub fn will_success(
         description,
         url,
         parameter_key,
+        ticket_amount,
+        qualifier,
         executions,
+        admin,
     ).unwrap();
 
     (env, info, response)
@@ -57,7 +70,7 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -65,6 +78,8 @@ fn succeed() {
     let description = "Desc2".to_string();
     let url = "https://url2.url".to_string();
     let parameter_key = "vkr2".to_string();
+    let ticket_amount = 2u64;
+    let qualifier = "Qualifier2".to_string();
     let executions = vec![
         ExecutionMsg {
             order: 1,
@@ -72,6 +87,7 @@ fn succeed() {
             msg: to_binary("").unwrap(),
         },
     ];
+    let admin = "Admin2".to_string();
 
     will_success(
         &mut deps,
@@ -79,24 +95,30 @@ fn succeed() {
         Some(description.clone()),
         Some(url.clone()),
         Some(parameter_key.clone()),
+        Some(ticket_amount),
+        Some(qualifier.clone()),
         Some(executions.clone()),
+        Some(admin.clone()),
     );
 
-    let campaign_info = CampaignInfo::load(&deps.storage).unwrap();
-    assert_eq!(campaign_info.title, title);
-    assert_eq!(campaign_info.description, description);
-    assert_eq!(campaign_info.url, url);
-    assert_eq!(campaign_info.parameter_key, parameter_key);
-    assert_eq!(campaign_info.executions, executions.iter().map(|e| Execution {
+    let campaign_config = CampaignConfig::load(&deps.storage).unwrap();
+    assert_eq!(campaign_config.title, title);
+    assert_eq!(campaign_config.description, description);
+    assert_eq!(campaign_config.url, url);
+    assert_eq!(campaign_config.parameter_key, parameter_key);
+    assert_eq!(campaign_config.ticket_amount, ticket_amount);
+    assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
+    assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
         contract: Addr::unchecked(e.contract.as_str()),
         msg: e.msg.clone(),
     }).collect::<Vec<Execution>>());
+    assert_eq!(campaign_config.admin, admin);
 }
 
 #[test]
 fn succeed_update_info_after_activation() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -104,6 +126,8 @@ fn succeed_update_info_after_activation() {
 
     let title = "Title2".to_string();
     let description = "Desc2".to_string();
+    let ticket_amount = 2u64;
+    let qualifier = "Qualifier2".to_string();
     let executions = vec![
         ExecutionMsg {
             order: 1,
@@ -111,6 +135,7 @@ fn succeed_update_info_after_activation() {
             msg: to_binary("").unwrap(),
         },
     ];
+    let admin = "Admin2".to_string();
 
     will_success(
         &mut deps,
@@ -118,22 +143,28 @@ fn succeed_update_info_after_activation() {
         Some(description.clone()),
         None,
         None,
+        Some(ticket_amount),
+        Some(qualifier.clone()),
         Some(executions.clone()),
+        Some(admin.clone()),
     );
 
-    let campaign_info = CampaignInfo::load(&deps.storage).unwrap();
-    assert_eq!(campaign_info.title, title);
-    assert_eq!(campaign_info.description, description);
-    assert_eq!(campaign_info.executions, executions.iter().map(|e| Execution {
+    let campaign_config = CampaignConfig::load(&deps.storage).unwrap();
+    assert_eq!(campaign_config.title, title);
+    assert_eq!(campaign_config.description, description);
+    assert_eq!(campaign_config.ticket_amount, ticket_amount);
+    assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
+    assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
         contract: Addr::unchecked(e.contract.as_str()),
         msg: e.msg.clone(),
     }).collect::<Vec<Execution>>());
+    assert_eq!(campaign_config.admin, admin);
 }
 
 #[test]
 fn failed_update_url_after_activation() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -141,11 +172,14 @@ fn failed_update_url_after_activation() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         Some("https://url2.url".to_string()),
+        None,
+        None,
+        None,
         None,
         None,
     );
@@ -154,12 +188,15 @@ fn failed_update_url_after_activation() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         None,
         Some("vkr2".to_string()),
+        None,
+        None,
+        None,
         None,
     );
 
@@ -168,14 +205,17 @@ fn failed_update_url_after_activation() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         default_sender(),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -188,15 +228,18 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_invalid_title() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         Some(std::iter::repeat('b').take(MIN_TITLE_LENGTH - 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -206,9 +249,12 @@ fn failed_invalid_title() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         Some(std::iter::repeat('b').take(MAX_TITLE_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -219,16 +265,19 @@ fn failed_invalid_title() {
 
 #[test]
 fn failed_invalid_description() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         Some(std::iter::repeat('b').take(MIN_DESC_LENGTH - 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -237,10 +286,13 @@ fn failed_invalid_description() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         Some(std::iter::repeat('b').take(MAX_DESC_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -250,17 +302,20 @@ fn failed_invalid_description() {
 
 #[test]
 fn failed_invalid_url() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         Some(std::iter::repeat('b').take(MIN_URL_LENGTH - 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
     );
@@ -268,11 +323,14 @@ fn failed_invalid_url() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_URL_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
         None,
         None,
     );
@@ -281,30 +339,36 @@ fn failed_invalid_url() {
 
 #[test]
 fn failed_invalid_parameter_key() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         None,
         Some(std::iter::repeat('b').take(MIN_PARAM_KEY_LENGTH - 1).collect()),
         None,
+        None,
+        None,
+        None,
     );
     expect_generic_err(&result, "ParameterKey too short");
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         None,
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_PARAM_KEY_LENGTH + 1).collect()),
+        None,
+        None,
+        None,
         None,
     );
     expect_generic_err(&result, "ParameterKey too long");
@@ -312,7 +376,7 @@ fn failed_invalid_parameter_key() {
 
 #[test]
 fn test_execution_order() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -340,10 +404,13 @@ fn test_execution_order() {
         None,
         None,
         None,
+        None,
+        None,
         Some(executions),
+        None,
     );
 
-    let campaign = CampaignInfo::load(&deps.storage).unwrap();
+    let campaign = CampaignConfig::load(&deps.storage).unwrap();
     assert_eq!(campaign.executions, vec![
         Execution {
             order: 1,

@@ -1,12 +1,15 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, ContractResult as CwContractResult, Response, Reply, Uint128, SubMsgExecutionResponse};
+use cosmwasm_std::{ContractResult as CwContractResult, Env, Reply, Response, SubMsgExecutionResponse, Uint128};
+
 use valkyrie::common::ContractResult;
+use valkyrie::governance::enumerations::{PollStatus, VoteOption};
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::governance::POLL_PROPOSAL_DEPOSIT;
+
 use crate::poll::executions::{reply_execution, REPLY_EXECUTION};
-use crate::tests::{init_default, POLL_PROPOSAL_DEPOSIT};
-use crate::poll::tests::create_poll::{mock_exec_msg, PROPOSER1, POLL_TITLE, POLL_DESCRIPTION, POLL_LINK};
+use crate::poll::states::{Poll, PollExecutionContext};
 use crate::poll::tests::cast_vote::VOTER1;
-use valkyrie::governance::enumerations::{VoteOption, PollStatus};
-use crate::poll::states::{PollExecutionContext, Poll};
+use crate::poll::tests::create_poll::{mock_exec_msg, POLL_DESCRIPTION, POLL_LINK, POLL_TITLE, PROPOSER1};
+use crate::tests::init_default;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -21,7 +24,7 @@ pub fn exec(
 
 #[test]
 fn succeed_success_reply() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -60,7 +63,7 @@ fn succeed_success_reply() {
 
 #[test]
 fn succeed_failed_reply() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 

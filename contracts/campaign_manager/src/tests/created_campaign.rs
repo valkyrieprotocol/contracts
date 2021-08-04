@@ -1,9 +1,11 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, ContractResult as CwContractResult, Response, Reply, Event, attr, Addr, SubMsgExecutionResponse};
+use cosmwasm_std::{Addr, attr, ContractResult as CwContractResult, Env, Event, Reply, Response, SubMsgExecutionResponse};
+
 use valkyrie::common::ContractResult;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::campaign_manager::campaign_manager_env;
+
 use crate::executions::{created_campaign, REPLY_CREATE_CAMPAIGN};
-use valkyrie::test_utils::contract_env;
-use crate::states::{CreateCampaignContext, Campaign};
+use crate::states::{Campaign, CreateCampaignContext};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -18,7 +20,7 @@ pub fn exec(
 
 #[test]
 fn succeed_success_reply() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
     super::create_campaign::default(&mut deps);
@@ -27,7 +29,7 @@ fn succeed_success_reply() {
 
     let campaign_address = Addr::unchecked("CampaignContractAddress");
 
-    let env = contract_env();
+    let env = campaign_manager_env();
     let result = exec(
         &mut deps,
         env.clone(),

@@ -30,11 +30,10 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateContractConfig {
+        ExecuteMsg::UpdateConfig {
             governance,
             fund_manager,
-        } => executions::update_contract_config(deps, env, info, governance, fund_manager),
-        ExecuteMsg::UpdateCampaignConfig {
+            terraswap_router,
             creation_fee_token,
             creation_fee_amount,
             creation_fee_recipient,
@@ -42,10 +41,16 @@ pub fn execute(
             withdraw_fee_rate,
             withdraw_fee_recipient,
             deactivate_period,
-        } => executions::update_campaign_config(
+            key_denom,
+            referral_reward_token,
+            min_referral_reward_deposit_rate,
+        } => executions::update_config(
             deps,
             env,
             info,
+            governance,
+            fund_manager,
+            terraswap_router,
             creation_fee_token,
             creation_fee_amount,
             creation_fee_recipient,
@@ -53,44 +58,10 @@ pub fn execute(
             withdraw_fee_rate,
             withdraw_fee_recipient,
             deactivate_period,
+            key_denom,
+            referral_reward_token,
+            min_referral_reward_deposit_rate,
         ),
-        ExecuteMsg::UpdateBoosterConfig {
-            booster_token,
-            drop_booster_ratio,
-            activity_booster_ratio,
-            plus_booster_ratio,
-            activity_booster_multiplier,
-            min_participation_count,
-        } => executions::update_booster_config(
-            deps,
-            env,
-            info,
-            booster_token,
-            drop_booster_ratio,
-            activity_booster_ratio,
-            plus_booster_ratio,
-            activity_booster_multiplier,
-            min_participation_count,
-        ),
-        ExecuteMsg::AddDistributionDenom {
-            denom,
-        } => executions::add_distribution_denom(deps, env, info, denom),
-        ExecuteMsg::RemoveDistributionDenom {
-            denom,
-        } => executions::remove_distribution_denom(deps, env, info, denom),
-        ExecuteMsg::BoostCampaign {
-            campaign,
-            amount,
-        } => executions::boost_campaign(
-            deps,
-            env,
-            info,
-            campaign,
-            amount,
-        ),
-        ExecuteMsg::FinishBoosting {
-            campaign,
-        } => executions::finish_boosting(deps, env, info, campaign),
     }
 }
 
@@ -103,7 +74,8 @@ pub fn receive_cw20(
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::CreateCampaign {
             config_msg,
-            proxies,
+            ticket_amount,
+            qualifier,
             executions,
         } => executions::create_campaign(
             deps,
@@ -112,7 +84,8 @@ pub fn receive_cw20(
             cw20_msg.sender,
             cw20_msg.amount,
             config_msg,
-            proxies,
+            ticket_amount,
+            qualifier,
             executions,
         ),
     }
@@ -138,14 +111,8 @@ pub fn query(
     msg: QueryMsg,
 ) -> ContractResult<Binary> {
     let result = match msg {
-        QueryMsg::ContractConfig {} => to_binary(
-            &queries::get_contract_config(deps, env)?
-        ),
-        QueryMsg::CampaignConfig {} => to_binary(
-            &queries::get_campaign_config(deps, env)?
-        ),
-        QueryMsg::BoosterConfig {} => to_binary(
-            &queries::get_booster_config(deps, env)?
+        QueryMsg::Config {} => to_binary(
+            &queries::get_config(deps, env)?
         ),
         QueryMsg::Campaign { address } => to_binary(
             &queries::get_campaign(deps, env, address)?

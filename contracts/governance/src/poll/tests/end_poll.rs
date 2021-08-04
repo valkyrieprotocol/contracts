@@ -2,15 +2,17 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg, Uint128, attr, to_binary, SubMsg};
 use valkyrie::common::ContractResult;
 use crate::poll::executions::end_poll;
-use crate::tests::{init_default, GOVERNANCE_TOKEN, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
+use crate::tests::init_default;
 use cw20::Cw20ExecuteMsg;
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
+use cosmwasm_std::testing::mock_info;
 use crate::poll::states::{Poll, PollResult};
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
 use crate::poll::tests::cast_vote::{VOTER1, VOTER2, VOTER3};
 use valkyrie::message_matchers;
 use crate::poll::tests::create_poll::PROPOSER1;
-use valkyrie::test_utils::{expect_generic_err, default_sender, contract_env_height, contract_env};
+use valkyrie::test_utils::expect_generic_err;
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::*;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) -> ContractResult<Response> {
     let response = end_poll(deps.as_mut(), env, info, poll_id)?;
@@ -18,7 +20,7 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) ->
     for msg in message_matchers::cw20_transfer(&response.messages) {
         deps.querier.minus_token_balances(&[(
             &msg.contract_addr,
-            &[(MOCK_CONTRACT_ADDR, &msg.amount)],
+            &[(GOVERNANCE, &msg.amount)],
         )]);
         deps.querier.plus_token_balances(&[(
             &msg.contract_addr,
@@ -31,7 +33,7 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, poll_id: u64) ->
 
 pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, Response) {
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let env = contract_env_height(poll.end_height + 1);
+    let env = governance_env_height(poll.end_height + 1);
 
     let info = default_sender();
 
@@ -42,7 +44,7 @@ pub fn will_success(deps: &mut CustomDeps, poll_id: u64) -> (Env, MessageInfo, R
 
 #[test]
 fn succeed_passed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -79,7 +81,7 @@ fn succeed_passed() {
 
 #[test]
 fn succeed_rejected_threshold_not_reached() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -122,7 +124,7 @@ fn succeed_rejected_threshold_not_reached() {
 
 #[test]
 fn succeed_rejected_quorum_not_reached() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -154,7 +156,7 @@ fn succeed_rejected_quorum_not_reached() {
 
 #[test]
 fn succeed_rejected_zero_quorum() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -189,7 +191,7 @@ fn succeed_end_poll_with_controlled_quorum() {
 
 #[test]
 fn succeed_rejected_nothing_staked() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -212,7 +214,7 @@ fn succeed_rejected_nothing_staked() {
 
 #[test]
 fn failed_before_end_height() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -222,7 +224,7 @@ fn failed_before_end_height() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         poll_id,
     );
@@ -232,7 +234,7 @@ fn failed_before_end_height() {
 
 #[test]
 fn failed_quorum_inflation_without_snapshot_poll() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -246,7 +248,7 @@ fn failed_quorum_inflation_without_snapshot_poll() {
     crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, Uint128::new(1000));
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
-    let env = contract_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
+    let env = governance_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);
 
     super::cast_vote::exec(
         &mut deps,

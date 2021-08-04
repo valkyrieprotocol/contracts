@@ -1,11 +1,15 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, CosmosMsg, WasmMsg, to_binary, Addr, SubMsg};
-use valkyrie::common::ContractResult;
-use crate::executions::transfer;
-use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, default_sender, expect_unauthorized_err, expect_exceed_limit_err, expect_generic_err};
-use cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
-use crate::tests::{ALLOWED_ADDRESS, TOKEN_CONTRACT, GOVERNANCE, governance_sender};
+use cosmwasm_std::{Addr, CosmosMsg, Env, MessageInfo, Response, SubMsg, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::testing::mock_info;
 use cw20::Cw20ExecuteMsg;
+
+use valkyrie::common::ContractResult;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
+use valkyrie::test_constants::fund_manager::{ALLOWED_ADDRESS, fund_manager_env, MANAGING_TOKEN, FUND_MANAGER};
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_sender};
+use valkyrie::test_utils::{expect_exceed_limit_err, expect_generic_err, expect_unauthorized_err};
+
+use crate::executions::transfer;
 use crate::states::Allowance;
 
 pub fn exec(
@@ -24,7 +28,7 @@ pub fn will_success(
     recipient: String,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = fund_manager_env();
     let info = mock_info(sender, &[]);
 
     let response = exec(
@@ -40,10 +44,10 @@ pub fn will_success(
 
 #[test]
 fn succeed_allowed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(100))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -62,7 +66,7 @@ fn succeed_allowed() {
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: MANAGING_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: DEFAULT_SENDER.to_string(),
                 amount: Uint128::new(1),
@@ -74,10 +78,10 @@ fn succeed_allowed() {
 
 #[test]
 fn succeed_governance() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(100))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -90,7 +94,7 @@ fn succeed_governance() {
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: MANAGING_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: DEFAULT_SENDER.to_string(),
                 amount: Uint128::new(100),
@@ -102,13 +106,13 @@ fn succeed_governance() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         DEFAULT_SENDER.to_string(),
         Uint128::new(1),
@@ -119,10 +123,10 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_exceed_limit() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(100))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -142,7 +146,7 @@ fn failed_exceed_limit() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         mock_info(ALLOWED_ADDRESS, &[]),
         DEFAULT_SENDER.to_string(),
         Uint128::new(2),
@@ -153,10 +157,10 @@ fn failed_exceed_limit() {
 
 #[test]
 fn delete_after_exceed_limit() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(100))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -183,10 +187,10 @@ fn delete_after_exceed_limit() {
 
 #[test]
 fn failed_insufficient_free_balance() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(100))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -199,7 +203,7 @@ fn failed_insufficient_free_balance() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         governance_sender(),
         DEFAULT_SENDER.to_string(),
         Uint128::new(1),

@@ -1,11 +1,15 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Decimal, Uint128, Response};
+use cosmwasm_std::{Decimal, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::testing::mock_info;
+
 use valkyrie::common::ContractResult;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::*;
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
+
 use crate::poll::executions::update_poll_config;
-use crate::tests::{init_default, POLL_QUORUM_PERCENT, POLL_THRESHOLD_PERCENT, POLL_VOTING_PERIOD, POLL_EXECUTION_DELAY_PERIOD, POLL_PROPOSAL_DEPOSIT, POLL_SNAPSHOT_PERIOD};
 use crate::poll::states::PollConfig;
-use cosmwasm_std::testing::{mock_info, MOCK_CONTRACT_ADDR};
-use valkyrie::test_utils::{contract_env, expect_generic_err, default_sender, expect_unauthorized_err};
+use crate::tests::init_default;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -40,8 +44,8 @@ pub fn will_success(
     proposal_deposit: Option<Uint128>,
     snapshot_period: Option<u64>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
-    let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
+    let env = governance_env();
+    let info = mock_info(GOVERNANCE, &[]);
 
     let response = exec(
         deps,
@@ -60,7 +64,7 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -98,14 +102,14 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_threshold() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
-        mock_info(MOCK_CONTRACT_ADDR, &[]),
+        governance_env(),
+        mock_info(GOVERNANCE, &[]),
         Some(Decimal::percent(101)),
         Some(Decimal::percent(POLL_THRESHOLD_PERCENT)),
         Some(POLL_VOTING_PERIOD),
@@ -119,14 +123,14 @@ fn failed_invalid_threshold() {
 
 #[test]
 fn failed_invalid_quorum() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
-        mock_info(MOCK_CONTRACT_ADDR, &[]),
+        governance_env(),
+        mock_info(GOVERNANCE, &[]),
         Some(Decimal::percent(POLL_QUORUM_PERCENT)),
         Some(Decimal::percent(101)),
         Some(POLL_VOTING_PERIOD),
@@ -140,13 +144,13 @@ fn failed_invalid_quorum() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         None,
         None,

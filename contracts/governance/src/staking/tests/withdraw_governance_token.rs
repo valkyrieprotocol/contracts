@@ -4,19 +4,20 @@ use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::governance::{governance_env_height, WITHDRAW_DELAY};
+use valkyrie::test_utils::plus_height;
 
 use crate::staking::executions::withdraw_governance_token;
 use crate::staking::states::StakerState;
 use crate::staking::tests::stake_governance_token::STAKER1;
-use crate::tests::{init_default, WITHDRAW_DELAY};
-use valkyrie::test_utils::{plus_height, contract_env_height};
+use crate::tests::init_default;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResult<Response> {
     withdraw_governance_token(deps.as_mut(), env, info)
 }
 
 pub fn will_success(deps: &mut CustomDeps, block_height: u64, staker: &str) -> (Env, MessageInfo, Response) {
-    let env = contract_env_height(block_height);
+    let env = governance_env_height(block_height);
     let info = mock_info(staker, &[]);
 
     let response = exec(deps, env.clone(), info.clone()).unwrap();
@@ -26,7 +27,7 @@ pub fn will_success(deps: &mut CustomDeps, block_height: u64, staker: &str) -> (
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 

@@ -1,22 +1,24 @@
 use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
+use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::governance::{GOVERNANCE, GOVERNANCE_TOKEN, governance_env};
+use valkyrie::test_utils::expect_generic_err;
 use valkyrie::utils::parse_uint128;
 
 use crate::staking::executions::unstake_governance_token;
 use crate::staking::states::{StakerState, StakingState};
 use crate::staking::tests::stake_governance_token::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
-use crate::tests::{init_default, GOVERNANCE_TOKEN};
-use valkyrie::test_utils::{contract_env, expect_generic_err, default_sender};
+use crate::tests::init_default;
+use valkyrie::test_constants::default_sender;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, amount: Option<Uint128>) -> ContractResult<Response> {
     unstake_governance_token(deps.as_mut(), env, info, amount)
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Option<Uint128>) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = governance_env();
     let info = mock_info(staker, &[]);
 
     let response = exec(
@@ -31,7 +33,7 @@ pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Option<Uint128>
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -44,7 +46,7 @@ fn succeed() {
 
     deps.querier.with_token_balances(&[(
         GOVERNANCE_TOKEN,
-        &[(MOCK_CONTRACT_ADDR, &increased_balance)]
+        &[(GOVERNANCE, &increased_balance)]
     )]);
 
     let (_, _, response) = will_success(&mut deps, STAKER1, None);
@@ -81,7 +83,7 @@ fn remove_completed_vote() {
 
 #[test]
 fn failed_overflow() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -89,7 +91,7 @@ fn failed_overflow() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         mock_info(STAKER1, &[]),
         Some(STAKER1_STAKE_AMOUNT + Uint128::new(1)),
     );
@@ -99,13 +101,13 @@ fn failed_overflow() {
 
 #[test]
 fn failed_no_staked() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         None,
     );

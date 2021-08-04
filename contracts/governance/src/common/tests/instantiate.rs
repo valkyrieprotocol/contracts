@@ -1,14 +1,13 @@
 use cosmwasm_std::{Env, MessageInfo, Response};
-use cosmwasm_std::testing::mock_env;
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::execute_msgs::ContractConfigInitMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::default_sender;
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::{governance_env, GOVERNANCE_TOKEN};
 
 use crate::common::executions;
 use crate::common::states::ContractConfig;
-use crate::tests::GOVERNANCE_TOKEN;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -25,7 +24,7 @@ pub fn exec(
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = mock_env();
+    let env = governance_env();
     let info = default_sender();
 
     let response = exec(
@@ -41,7 +40,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
 #[test]
 fn succeed() {
     // Initialize
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     let (env, _, _) = default(&mut deps);
 

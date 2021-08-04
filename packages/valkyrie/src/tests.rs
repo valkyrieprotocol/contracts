@@ -4,7 +4,7 @@ use crate::mock_querier::custom_deps;
 
 #[test]
 fn query_cw20_balance() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     deps.querier.with_token_balances(&[(
         &"liquidity0000".to_string(),

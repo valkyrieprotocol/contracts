@@ -1,21 +1,23 @@
 use cosmwasm_std::{Env, MessageInfo, Response};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
+use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, WITHDRAW_DELAY};
+use valkyrie::test_utils::expect_unauthorized_err;
 
 use crate::staking::executions::update_config;
 use crate::staking::states::StakingConfig;
-use crate::tests::{init_default, WITHDRAW_DELAY};
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
+use crate::tests::init_default;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, withdraw_delay: Option<u64>) -> ContractResult<Response> {
     update_config(deps.as_mut(), env, info, withdraw_delay)
 }
 
 pub fn will_success(deps: &mut CustomDeps, withdraw_delay: Option<u64>) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
-    let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
+    let env = governance_env();
+    let info = mock_info(GOVERNANCE, &[]);
 
     let response = exec(
         deps,
@@ -29,7 +31,7 @@ pub fn will_success(deps: &mut CustomDeps, withdraw_delay: Option<u64>) -> (Env,
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -44,11 +46,11 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
-    let env = contract_env();
+    let env = governance_env();
     let info = default_sender();
 
     let result = exec(&mut deps, env, info, None);

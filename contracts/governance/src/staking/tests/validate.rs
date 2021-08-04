@@ -1,15 +1,15 @@
 use cosmwasm_std::{attr, Uint128};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env};
 
 use valkyrie::mock_querier::custom_deps;
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN};
 
 use crate::staking::queries::get_staker_state;
 use crate::staking::tests::stake_governance_token::STAKER1;
-use crate::tests::{init_default, GOVERNANCE_TOKEN};
+use crate::tests::init_default;
 
 #[test]
 fn share_calculation() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     init_default(deps.as_mut());
 
@@ -17,7 +17,7 @@ fn share_calculation() {
 
     deps.querier.plus_token_balances(&[(
         GOVERNANCE_TOKEN,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(100))],
+        &[(GOVERNANCE, &Uint128::new(100))],
     )]);
 
     let (_, _, response) = super::stake_governance_token::will_success(
@@ -45,7 +45,7 @@ fn share_calculation() {
         attr("unstake_share", "50")
     ]);
 
-    let staker_state = get_staker_state(deps.as_ref(), mock_env(), STAKER1.to_string()).unwrap();
+    let staker_state = get_staker_state(deps.as_ref(), governance_env(), STAKER1.to_string()).unwrap();
     assert_eq!(staker_state.share, Uint128::new(100));
     assert_eq!(staker_state.balance, Uint128::new(200));
 }

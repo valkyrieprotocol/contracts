@@ -1,9 +1,13 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, CosmosMsg, WasmMsg, SubMsg};
-use valkyrie::common::{ExecutionMsg, ContractResult};
-use crate::poll::executions::run_execution;
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
+use cosmwasm_std::{CosmosMsg, Env, MessageInfo, Response, SubMsg, WasmMsg};
 use cosmwasm_std::testing::mock_info;
+
+use valkyrie::common::{ContractResult, ExecutionMsg};
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::governance_env;
+use valkyrie::test_utils::expect_unauthorized_err;
+
+use crate::poll::executions::run_execution;
 use crate::poll::tests::create_poll::mock_exec_msg;
 
 pub fn exec(
@@ -19,7 +23,7 @@ pub fn will_success(
     deps: &mut CustomDeps,
     executions: Vec<ExecutionMsg>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = governance_env();
     let info = mock_info(env.contract.address.as_str(), &[]);
 
     let response = exec(deps, env.clone(), info.clone(), executions).unwrap();
@@ -29,7 +33,7 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     let executions = vec![
         mock_exec_msg(1),
@@ -46,11 +50,11 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         vec![],
     );

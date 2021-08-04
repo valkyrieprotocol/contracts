@@ -1,66 +1,35 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Decimal, StdError, StdResult, Uint128, Binary};
+use cosmwasm_std::{Decimal, Uint128, Binary};
 use crate::common::{Denom, ExecutionMsg};
 use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub contract_config: ContractConfigInitMsg,
-    pub campaign_config: CampaignConfigInitMsg,
-    pub booster_config: BoosterConfigInitMsg,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
-pub struct ContractConfigInitMsg {
     pub governance: String,
     pub fund_manager: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
-pub struct CampaignConfigInitMsg {
+    pub terraswap_router: String,
     pub creation_fee_token: String,
     pub creation_fee_amount: Uint128,
     pub creation_fee_recipient: String,
     pub code_id: u64,
-    pub distribution_denom_whitelist: Vec<Denom>,
     pub withdraw_fee_rate: Decimal,
     pub withdraw_fee_recipient: String,
     pub deactivate_period: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
-pub struct BoosterConfigInitMsg {
-    pub booster_token: String,
-    pub drop_booster_ratio: Decimal,
-    pub activity_booster_ratio: Decimal,
-    pub plus_booster_ratio: Decimal,
-    pub activity_booster_multiplier: Decimal,
-    pub min_participation_count: u64,
-}
-
-impl BoosterConfigInitMsg {
-    pub fn validate(&self) -> StdResult<()> {
-        if self.drop_booster_ratio + self.activity_booster_ratio + self.plus_booster_ratio
-            != Decimal::one()
-        {
-            Err(StdError::generic_err("invalid boost_config"))
-        } else {
-            Ok(())
-        }
-    }
+    pub key_denom: Denom,
+    pub referral_reward_token: String,
+    pub min_referral_reward_deposit_rate: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    UpdateContractConfig {
+    UpdateConfig {
         governance: Option<String>,
         fund_manager: Option<String>,
-    },
-    UpdateCampaignConfig {
+        terraswap_router: Option<String>,
         creation_fee_token: Option<String>,
         creation_fee_amount: Option<Uint128>,
         creation_fee_recipient: Option<String>,
@@ -68,27 +37,9 @@ pub enum ExecuteMsg {
         withdraw_fee_rate: Option<Decimal>,
         withdraw_fee_recipient: Option<String>,
         deactivate_period: Option<u64>,
-    },
-    UpdateBoosterConfig {
-        booster_token: Option<String>,
-        drop_booster_ratio: Option<Decimal>,
-        activity_booster_ratio: Option<Decimal>,
-        plus_booster_ratio: Option<Decimal>,
-        activity_booster_multiplier: Option<Decimal>,
-        min_participation_count: Option<u64>,
-    },
-    AddDistributionDenom {
-        denom: Denom,
-    },
-    RemoveDistributionDenom {
-        denom: Denom,
-    },
-    BoostCampaign {
-        campaign: String,
-        amount: Uint128,
-    },
-    FinishBoosting {
-        campaign: String,
+        key_denom: Option<Denom>,
+        referral_reward_token: Option<String>,
+        min_referral_reward_deposit_rate: Option<Decimal>,
     },
 }
 
@@ -97,7 +48,8 @@ pub enum ExecuteMsg {
 pub enum Cw20HookMsg {
     CreateCampaign {
         config_msg: Binary,
-        proxies: Vec<String>,
+        ticket_amount: u64,
+        qualifier: Option<String>,
         executions: Vec<ExecutionMsg>,
     },
 }
@@ -112,7 +64,9 @@ pub struct CampaignInstantiateMsg {
     pub fund_manager: String,
     pub admin: String,
     pub creator: String,
-    pub proxies: Vec<String>,
     pub config_msg: Binary,
+    pub ticket_amount: u64,
+    pub qualifier: Option<String>,
     pub executions: Vec<ExecutionMsg>,
+    pub referral_reward_token: String,
 }

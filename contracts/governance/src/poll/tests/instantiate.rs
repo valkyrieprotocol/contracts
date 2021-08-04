@@ -1,14 +1,14 @@
 use cosmwasm_std::{Decimal, Env, MessageInfo, Response, Uint128};
-use cosmwasm_std::testing::mock_env;
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::execute_msgs::PollConfigInitMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::governance::*;
+use valkyrie::test_utils::expect_generic_err;
 
 use crate::poll::executions::instantiate;
 use crate::poll::states::{PollConfig, PollState};
-use crate::tests::{POLL_EXECUTION_DELAY_PERIOD, POLL_PROPOSAL_DEPOSIT, POLL_QUORUM_PERCENT, POLL_SNAPSHOT_PERIOD, POLL_THRESHOLD_PERCENT, POLL_VOTING_PERIOD};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -34,7 +34,7 @@ pub fn exec(
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = mock_env();
+    let env = governance_env();
     let info = default_sender();
 
     let response = exec(
@@ -55,7 +55,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     default(&mut deps);
 
@@ -74,11 +74,11 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_threshold() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         Decimal::percent(101),
         Decimal::percent(POLL_THRESHOLD_PERCENT),
@@ -93,11 +93,11 @@ fn failed_invalid_threshold() {
 
 #[test]
 fn failed_invalid_quorum() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        governance_env(),
         default_sender(),
         Decimal::percent(POLL_QUORUM_PERCENT),
         Decimal::percent(101),

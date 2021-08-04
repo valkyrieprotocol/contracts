@@ -1,23 +1,19 @@
-use cosmwasm_std::{CosmosMsg, Env, MessageInfo, ReplyOn, Response, to_binary, Uint128, WasmMsg, Addr, Binary, SubMsg};
+use cosmwasm_std::{Addr, Binary, CosmosMsg, Env, MessageInfo, ReplyOn, Response, SubMsg, to_binary, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
+use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::{contract_env, DEFAULT_SENDER, expect_generic_err, default_sender};
+use valkyrie::test_constants::{DEFAULT_SENDER, default_sender};
+use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS};
+use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env, CREATION_FEE_AMOUNT, REFERRAL_REWARD_TOKEN, CREATION_FEE_TOKEN, creation_fee_token};
+use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::governance::GOVERNANCE;
+use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::{create_campaign, REPLY_CREATE_CAMPAIGN};
 use crate::states::CreateCampaignContext;
-use crate::tests::{CAMPAIGN_CODE_ID, CREATION_FEE_AMOUNT, GOVERNANCE, TOKEN_CONTRACT, FUND_MANAGER};
-use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_info};
-
-pub const CAMPAIGN_TITLE: &str = "CampaignTitle";
-pub const CAMPAIGN_DESCRIPTION: &str = "CampaignDescription";
-pub const CAMPAIGN_URL: &str = "https://campaign.url";
-pub const PARAMETER_KEY: &str = "vkr";
-pub const DISTRIBUTION_TOKEN: &str = "uusd";
-pub const DISTRIBUTION_AMOUNTS: [Uint128; 3] = [Uint128::new(100), Uint128::new(80), Uint128::new(20)];
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -26,7 +22,8 @@ pub fn exec(
     sender: String,
     amount: Uint128,
     config_msg: Binary,
-    proxies: Vec<String>,
+    ticket_count: u64,
+    qualifier: Option<String>,
     executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     create_campaign(
@@ -36,22 +33,24 @@ pub fn exec(
         sender,
         amount,
         config_msg,
-        proxies,
+        ticket_count,
+        qualifier,
         executions,
     )
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
-    let info = mock_info(TOKEN_CONTRACT, &[]);
+    let env = campaign_manager_env();
+    let info = creation_fee_token();
 
     let campaign_config_msg = CampaignConfigMsg {
         title: CAMPAIGN_TITLE.to_string(),
         description: CAMPAIGN_DESCRIPTION.to_string(),
         url: CAMPAIGN_URL.to_string(),
-        parameter_key: PARAMETER_KEY.to_string(),
-        distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-        distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec()
+        parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+        participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+        referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
     };
 
     let response = exec(
@@ -61,7 +60,8 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         DEFAULT_SENDER.to_string(),
         CREATION_FEE_AMOUNT,
         to_binary(&campaign_config_msg).unwrap(),
-        vec![],
+        1,
+        None,
         vec![],
     ).unwrap();
 
@@ -70,7 +70,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -84,20 +84,23 @@ fn succeed() {
                 code_id: CAMPAIGN_CODE_ID,
                 msg: to_binary(&CampaignInstantiateMsg {
                     governance: GOVERNANCE.to_string(),
-                    campaign_manager: MOCK_CONTRACT_ADDR.to_string(),
                     fund_manager: FUND_MANAGER.to_string(),
+                    campaign_manager: CAMPAIGN_MANAGER.to_string(),
                     admin: DEFAULT_SENDER.to_string(),
                     creator: DEFAULT_SENDER.to_string(),
-                    proxies: vec![],
                     config_msg: to_binary(&CampaignConfigMsg {
                         title: CAMPAIGN_TITLE.to_string(),
                         description: CAMPAIGN_DESCRIPTION.to_string(),
                         url: CAMPAIGN_URL.to_string(),
-                        parameter_key: PARAMETER_KEY.to_string(),
-                        distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-                        distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+                        parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+                        participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+                        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+                        referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                     }).unwrap(),
+                    ticket_amount: 1,
+                    qualifier: None,
                     executions: vec![],
+                    referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
                 }).unwrap(),
                 funds: vec![],
                 label: String::new(),
@@ -106,7 +109,7 @@ fn succeed() {
             reply_on: ReplyOn::Success,
         },
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: CREATION_FEE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
@@ -124,13 +127,19 @@ fn succeed() {
 
 #[test]
 fn succeed_zero_creation_fee() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
-    super::update_campaign_config::will_success(
+    super::update_config::will_success(
         &mut deps,
         None,
+        None,
+        None,
+        None,
         Some(Uint128::zero()),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -140,19 +149,21 @@ fn succeed_zero_creation_fee() {
 
     let response = exec(
         &mut deps,
-        contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        campaign_manager_env(),
+        creation_fee_token(),
         DEFAULT_SENDER.to_string(),
         Uint128::zero(),
         to_binary(&CampaignConfigMsg {
             title: CAMPAIGN_TITLE.to_string(),
             description: CAMPAIGN_DESCRIPTION.to_string(),
             url: CAMPAIGN_URL.to_string(),
-            parameter_key: PARAMETER_KEY.to_string(),
-            distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-            distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+            parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+            participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+            participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+            referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        vec![],
+        1,
+        None,
         vec![],
     ).unwrap();
 
@@ -164,20 +175,23 @@ fn succeed_zero_creation_fee() {
                 code_id: CAMPAIGN_CODE_ID,
                 msg: to_binary(&CampaignInstantiateMsg {
                     governance: GOVERNANCE.to_string(),
-                    campaign_manager: MOCK_CONTRACT_ADDR.to_string(),
+                    campaign_manager: CAMPAIGN_MANAGER.to_string(),
                     fund_manager: FUND_MANAGER.to_string(),
                     admin: DEFAULT_SENDER.to_string(),
                     creator: DEFAULT_SENDER.to_string(),
-                    proxies: vec![],
                     config_msg: to_binary(&CampaignConfigMsg {
                         title: CAMPAIGN_TITLE.to_string(),
                         description: CAMPAIGN_DESCRIPTION.to_string(),
                         url: CAMPAIGN_URL.to_string(),
-                        parameter_key: PARAMETER_KEY.to_string(),
-                        distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-                        distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+                        parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+                        participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+                        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+                        referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                     }).unwrap(),
+                    ticket_amount: 1,
+                    qualifier: None,
                     executions: vec![],
+                    referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
                 }).unwrap(),
                 funds: vec![],
                 label: String::new(),
@@ -196,25 +210,27 @@ fn succeed_zero_creation_fee() {
 
 #[test]
 fn failed_insufficient_creation_fee() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
-        mock_info(TOKEN_CONTRACT, &[]),
+        campaign_manager_env(),
+        creation_fee_token(),
         DEFAULT_SENDER.to_string(),
         CREATION_FEE_AMOUNT.checked_sub(Uint128::new(1)).unwrap(),
         to_binary(&CampaignConfigMsg {
             title: CAMPAIGN_TITLE.to_string(),
             description: CAMPAIGN_DESCRIPTION.to_string(),
             url: CAMPAIGN_URL.to_string(),
-            parameter_key: PARAMETER_KEY.to_string(),
-            distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-            distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+            parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+            participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+            participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+            referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        vec![],
+        1,
+        None,
         vec![],
     );
 
@@ -226,13 +242,13 @@ fn failed_insufficient_creation_fee() {
 
 #[test]
 fn failed_invalid_creation_token() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_manager_env(),
         default_sender(),
         DEFAULT_SENDER.to_string(),
         CREATION_FEE_AMOUNT,
@@ -240,11 +256,13 @@ fn failed_invalid_creation_token() {
             title: CAMPAIGN_TITLE.to_string(),
             description: CAMPAIGN_DESCRIPTION.to_string(),
             url: CAMPAIGN_URL.to_string(),
-            parameter_key: PARAMETER_KEY.to_string(),
-            distribution_denom: Denom::Native(DISTRIBUTION_TOKEN.to_string()),
-            distribution_amounts: DISTRIBUTION_AMOUNTS.to_vec(),
+            parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
+            participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+            participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+            referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        vec![],
+        1,
+        None,
         vec![],
     );
     expect_generic_err(&result, "Invalid creation fee token");

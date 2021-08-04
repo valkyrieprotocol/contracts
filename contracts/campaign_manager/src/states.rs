@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128, StdError};
+use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
 use cw20::Denom;
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
@@ -8,21 +8,32 @@ use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse
 use valkyrie::common::OrderBy;
 use valkyrie::pagination::addr_range_option;
 
-const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
+const CONFIG: Item<Config> = Item::new("config");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ContractConfig {
+pub struct Config {
     pub governance: Addr,
     pub fund_manager: Addr,
+    pub terraswap_router: Addr,
+    pub creation_fee_token: Addr,
+    pub creation_fee_amount: Uint128,
+    pub creation_fee_recipient: Addr,
+    pub code_id: u64,
+    pub withdraw_fee_rate: Decimal,
+    pub withdraw_fee_recipient: Addr,
+    pub deactivate_period: u64,
+    pub key_denom: Denom,
+    pub referral_reward_token: Addr,
+    pub min_referral_reward_deposit_rate: Decimal,
 }
 
-impl ContractConfig {
+impl Config {
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        CONTRACT_CONFIG.save(storage, self)
+        CONFIG.save(storage, self)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<ContractConfig> {
-        CONTRACT_CONFIG.load(storage)
+    pub fn load(storage: &dyn Storage) -> StdResult<Config> {
+        CONFIG.load(storage)
     }
 
     pub fn is_governance(&self, address: &Addr) -> bool {
@@ -30,66 +41,8 @@ impl ContractConfig {
     }
 }
 
-pub fn is_governance(storage: &dyn Storage, address: &Addr) -> bool {
-    ContractConfig::load(storage).unwrap().is_governance(address)
-}
 
-const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign-config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CampaignConfig {
-    pub creation_fee_token: Addr,
-    pub creation_fee_amount: Uint128,
-    pub creation_fee_recipient: Addr,
-    pub code_id: u64,
-    pub distribution_denom_whitelist: Vec<Denom>,
-    pub withdraw_fee_rate: Decimal,
-    pub withdraw_fee_recipient: Addr,
-    pub deactivate_period: u64,
-}
-
-impl CampaignConfig {
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        CAMPAIGN_CONFIG.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<CampaignConfig> {
-        CAMPAIGN_CONFIG.load(storage)
-    }
-}
-
-const BOOSTER_CONFIG: Item<BoosterConfig> = Item::new("booster-config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct BoosterConfig {
-    pub booster_token: Addr,
-    pub drop_ratio: Decimal,
-    pub activity_ratio: Decimal,
-    pub plus_ratio: Decimal,
-    pub activity_multiplier: Decimal,
-    pub min_participation_count: u64,
-}
-
-impl BoosterConfig {
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        self.validate()?;
-        BOOSTER_CONFIG.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<BoosterConfig> {
-        BOOSTER_CONFIG.load(storage)
-    }
-
-    pub fn validate(&self) -> StdResult<()> {
-        if self.drop_ratio + self.activity_ratio + self.plus_ratio != Decimal::one() {
-            return Err(StdError::generic_err("Invalid booster ratio"));
-        }
-
-        Ok(())
-    }
-}
-
-const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignContext> = Item::new("create-campaign-context");
+const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignContext> = Item::new("create_campaign_context");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CreateCampaignContext {

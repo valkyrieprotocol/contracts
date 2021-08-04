@@ -6,17 +6,18 @@ use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse};
 use crate::terra::calc_tax_one_plus;
-use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg, BoosterResponse, ActiveBoosterResponse};
-use crate::campaign_manager::query_msgs::{CampaignConfigResponse, BoosterConfigResponse, QueryMsg as CampaignManagerQueryMsg};
-use crate::common::Denom;
+use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg};
+use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse};
+
+use terraswap::router::{QueryMsg as TerraswapRouterQueryMsg, SwapOperation, SimulateSwapOperationsResponse};
 
 pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
-pub fn custom_deps(contract_balance: &[Coin]) -> CustomDeps {
+pub fn custom_deps() -> CustomDeps {
     let custom_querier = WasmMockQuerier::new(
-        MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]),
+        MockQuerier::new(&[(MOCK_CONTRACT_ADDR, &[])]),
     );
 
     OwnedDeps {
@@ -34,6 +35,7 @@ pub struct WasmMockQuerier {
     campaign_manager_config_querier: CampaignManagerConfigQuerier,
     gov_config_querier: GovConfigQuerier,
     campaign_state_querier: CampaignStateQuerier,
+    terraswap_router_querier: TerraswapRouterQuerier,
 }
 
 #[derive(Clone, Default)]
@@ -59,18 +61,15 @@ pub(crate) fn powers_to_map(powers: &[(&String, &Decimal)]) -> HashMap<String, D
 
 #[derive(Clone, Default)]
 pub struct CampaignManagerConfigQuerier {
-    campaign_config: CampaignConfigResponse,
-    booster_config: BoosterConfigResponse,
+    config: ConfigResponse,
 }
 
 impl CampaignManagerConfigQuerier {
     pub fn new(
-        campaign_config: CampaignConfigResponse,
-        booster_config: BoosterConfigResponse,
+        config: ConfigResponse,
     ) -> Self {
         CampaignManagerConfigQuerier {
-            campaign_config,
-            booster_config,
+            config,
         }
     }
 }
@@ -93,14 +92,25 @@ impl GovConfigQuerier {
 #[derive(Clone, Default)]
 pub struct CampaignStateQuerier {
     states: HashMap<String, CampaignStateResponse>,
-    active_boosters: HashMap<String, Option<BoosterResponse>>,
 }
 
 impl CampaignStateQuerier {
     pub fn new() -> Self {
         CampaignStateQuerier {
             states: HashMap::new(),
-            active_boosters: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct TerraswapRouterQuerier {
+    prices: HashMap<(String, String), f64>,
+}
+
+impl TerraswapRouterQuerier {
+    pub fn new() -> Self {
+        TerraswapRouterQuerier {
+            prices: HashMap::new(),
         }
     }
 }
@@ -238,6 +248,10 @@ impl WasmMockQuerier {
         }
 
         if result.is_none() {
+            result = self.handle_wasm_smart_terraswap_router(contract_addr, msg);
+        }
+
+        if result.is_none() {
             return QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart".to_string(),
             });
@@ -248,14 +262,9 @@ impl WasmMockQuerier {
 
     fn handle_wasm_smart_campaign_manager(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
         match from_binary(msg) {
-            Ok(CampaignManagerQueryMsg::CampaignConfig {}) => {
+            Ok(CampaignManagerQueryMsg::Config {}) => {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
-                    &self.campaign_manager_config_querier.campaign_config,
-                ))))
-            },
-            Ok(CampaignManagerQueryMsg::BoosterConfig {}) => {
-                Some(SystemResult::Ok(ContractResult::from(to_binary(
-                    &self.campaign_manager_config_querier.booster_config,
+                    &self.campaign_manager_config_querier.config,
                 ))))
             },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
@@ -307,11 +316,29 @@ impl WasmMockQuerier {
                     &self.campaign_state_querier.states[contract_addr],
                 ))))
             },
-            Ok(QueryMsg::ActiveBooster {}) => {
+            Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
+                kind: "handle_wasm_smart".to_string(),
+            })),
+            Err(_) => None,
+        }
+    }
+
+    fn handle_wasm_smart_terraswap_router(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        match from_binary(msg) {
+            Ok(TerraswapRouterQueryMsg::SimulateSwapOperations { offer_amount, operations }) => {
+                let mut amount = offer_amount.u128();
+                for operation  in operations.iter() {
+                    let price = self.terraswap_router_querier.prices
+                        .get(&terraswap_operation_to_string(operation))
+                        .unwrap();
+
+                    amount = (amount as f64 * *price) as u128;
+                }
+
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
-                    &ActiveBoosterResponse {
-                        active_booster: self.campaign_state_querier.active_boosters[contract_addr].clone()
-                    },
+                    &SimulateSwapOperationsResponse {
+                        amount: Uint128::new(amount),
+                    }
                 ))))
             },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
@@ -433,6 +460,7 @@ impl WasmMockQuerier {
             voting_powers_querier: VotingPowerQuerier::default(),
             gov_config_querier: GovConfigQuerier::default(),
             campaign_state_querier: CampaignStateQuerier::default(),
+            terraswap_router_querier: TerraswapRouterQuerier::default(),
         }
     }
 
@@ -443,25 +471,9 @@ impl WasmMockQuerier {
 
     pub fn with_global_campaign_config(
         &mut self,
-        creation_fee_token: String,
-        creation_fee_amount: Uint128,
-        creation_fee_recipient: String,
-        code_id: u64,
-        distribution_denom_whitelist: Vec<Denom>,
-        withdraw_fee_rate: Decimal,
-        withdraw_fee_recipient: String,
-        deactivate_period: u64,
+        config: ConfigResponse,
     ) {
-        self.campaign_manager_config_querier.campaign_config = CampaignConfigResponse {
-            creation_fee_token,
-            creation_fee_amount,
-            creation_fee_recipient,
-            code_id,
-            distribution_denom_whitelist,
-            withdraw_fee_rate,
-            withdraw_fee_recipient,
-            deactivate_period,
-        };
+        self.campaign_manager_config_querier.config = config;
     }
 
     pub fn with_gov_config(
@@ -475,39 +487,12 @@ impl WasmMockQuerier {
         self.voting_powers_querier = VotingPowerQuerier::new(powers);
     }
 
-    pub fn with_booster_config(
-        &mut self,
-        booster_token: String,
-        drop_booster_ratio: Decimal,
-        activity_booster_ratio: Decimal,
-        plus_booster_ratio: Decimal,
-        activity_booster_multiplier: Decimal,
-        min_participation_count: u64,
-    ) {
-        self.campaign_manager_config_querier.booster_config = BoosterConfigResponse {
-            booster_token,
-            drop_booster_ratio,
-            activity_booster_ratio,
-            plus_booster_ratio,
-            activity_booster_multiplier,
-            min_participation_count,
-        }
-    }
-
     pub fn with_campaign_state(
         &mut self,
         campaign: String,
         state: CampaignStateResponse,
     ) {
         self.campaign_state_querier.states.insert(campaign, state);
-    }
-
-    pub fn with_active_booster(
-        &mut self,
-        campaign: String,
-        booster: Option<BoosterResponse>,
-    ) {
-        self.campaign_state_querier.active_boosters.insert(campaign, booster);
     }
 
     pub fn plus_token_balances(&mut self, balances: &[(&str, &[(&str, &Uint128)])]) {
@@ -616,6 +601,10 @@ impl WasmMockQuerier {
             self.base.update_balance(Addr::unchecked(addr.to_string()), balance.to_vec());
         }
     }
+
+    pub fn with_terraswap_price(&mut self, offer: String, ask: String, price: f64) {
+        self.terraswap_router_querier.prices.insert((offer, ask), price);
+    }
 }
 
 // Copy from cosmwasm-storage v0.14.1
@@ -633,4 +622,15 @@ fn encode_length(namespace: &[u8]) -> [u8; 2] {
     }
     let length_bytes = (namespace.len() as u32).to_be_bytes();
     [length_bytes[2], length_bytes[3]]
+}
+
+fn terraswap_operation_to_string(operation: &SwapOperation) -> (String, String) {
+    match operation {
+        SwapOperation::NativeSwap { offer_denom, ask_denom } => {
+            (offer_denom.to_string(), ask_denom.to_string())
+        }
+        SwapOperation::TerraSwap { offer_asset_info, ask_asset_info } => {
+            (offer_asset_info.to_string(), ask_asset_info.to_string())
+        }
+    }
 }

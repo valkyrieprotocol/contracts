@@ -3,12 +3,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::common::{OrderBy, Denom};
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::test_constants::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::test_constants::campaign_manager::*;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    ContractConfig {},
-    CampaignConfig {},
-    BoosterConfig {},
+    Config {},
     Campaign {
         address: String,
     },
@@ -20,31 +24,41 @@ pub enum QueryMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-pub struct ContractConfigResponse {
+pub struct ConfigResponse {
     pub governance: String,
     pub fund_manager: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Default, JsonSchema)]
-pub struct CampaignConfigResponse {
+    pub terraswap_router: String,
     pub creation_fee_token: String,
     pub creation_fee_amount: Uint128,
     pub creation_fee_recipient: String,
     pub code_id: u64,
-    pub distribution_denom_whitelist: Vec<Denom>,
     pub withdraw_fee_rate: Decimal,
     pub withdraw_fee_recipient: String,
     pub deactivate_period: u64,
+    pub key_denom: Denom,
+    pub referral_reward_token: String,
+    pub min_referral_reward_deposit_rate: Decimal,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
-pub struct BoosterConfigResponse {
-    pub booster_token: String,
-    pub drop_booster_ratio: Decimal,
-    pub activity_booster_ratio: Decimal,
-    pub plus_booster_ratio: Decimal,
-    pub activity_booster_multiplier: Decimal,
-    pub min_participation_count: u64,
+#[cfg(not(target_arch = "wasm32"))]
+impl Default for ConfigResponse {
+    fn default() -> Self {
+        ConfigResponse {
+            governance: governance::GOVERNANCE.to_string(),
+            fund_manager: fund_manager::FUND_MANAGER.to_string(),
+            terraswap_router: TERRASWAP_ROUTER.to_string(),
+            creation_fee_token: CREATION_FEE_TOKEN.to_string(),
+            creation_fee_amount: CREATION_FEE_AMOUNT,
+            creation_fee_recipient: fund_manager::FUND_MANAGER.to_string(),
+            code_id: CAMPAIGN_CODE_ID,
+            withdraw_fee_rate: Decimal::percent(WITHDRAW_FEE_RATE_PERCENT),
+            withdraw_fee_recipient: fund_manager::FUND_MANAGER.to_string(),
+            deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
+            key_denom: Denom::Native(KEY_DENOM_NATIVE.to_string()),
+            referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
+            min_referral_reward_deposit_rate: Decimal::percent(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

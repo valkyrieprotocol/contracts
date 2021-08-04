@@ -1,10 +1,13 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, Addr};
+use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128};
+
 use valkyrie::common::ContractResult;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_constants::campaign_manager::campaign_manager_sender;
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::fund_manager::{FUND_MANAGER, fund_manager_env, MANAGING_TOKEN};
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
+
 use crate::executions::decrease_allowance;
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
-use crate::tests::{campaign_manager_sender, TOKEN_CONTRACT};
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use crate::states::{Allowance, ContractState};
 
 pub fn exec(
@@ -28,7 +31,7 @@ pub fn will_success(
     address: String,
     amount: Option<Uint128>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = fund_manager_env();
     let info = campaign_manager_sender();
 
     let response = exec(
@@ -44,10 +47,10 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(10000))],
     )]);
 
     let address = Addr::unchecked("Address");
@@ -78,13 +81,13 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         "Address".to_string(),
         None,
@@ -94,10 +97,10 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_insufficient_remain_amount() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
+        MANAGING_TOKEN,
+        &[(FUND_MANAGER, &Uint128::new(10000))],
     )]);
 
     let address = Addr::unchecked("Address");
@@ -107,7 +110,7 @@ fn failed_insufficient_remain_amount() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         campaign_manager_sender(),
         address.to_string(),
         Some(Uint128::new(1001)),

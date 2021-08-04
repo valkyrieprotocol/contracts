@@ -2,9 +2,11 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Response, Addr};
 use valkyrie::common::ContractResult;
 use crate::executions::update_config;
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err};
-use crate::tests::governance_sender;
+use valkyrie::test_utils::expect_unauthorized_err;
 use crate::states::ContractConfig;
+use valkyrie::test_constants::fund_manager::fund_manager_env;
+use valkyrie::test_constants::governance::governance_sender;
+use valkyrie::test_constants::default_sender;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -21,7 +23,7 @@ pub fn will_success(
     admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = fund_manager_env();
     let info = governance_sender();
 
     let response = exec(
@@ -37,7 +39,7 @@ pub fn will_success(
 
 #[test]
 fn succeed() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
@@ -53,13 +55,13 @@ fn succeed() {
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         None,
         None,

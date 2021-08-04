@@ -182,6 +182,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw2"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e638c86268e6b58bb7464c70b38abc4da19d31f64bb71efe0ac93bd8b9aeee6"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cw20"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -605,6 +617,7 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
+ "terraswap",
  "thiserror",
 ]
 
@@ -614,12 +627,15 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
  "schemars",
  "serde",
  "terra-cosmwasm",
+ "terraswap",
  "valkyrie",
+ "valkyrie-qualifier",
 ]
 
 [[package]]
@@ -659,6 +675,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
  "schemars",
@@ -681,6 +698,49 @@ dependencies = [
  "terra-cosmwasm",
  "terraswap",
  "valkyrie",
+]
+
+[[package]]
+name = "valkyrie-qualifier"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "thiserror",
+]
+
+[[package]]
+name = "valkyrie-qualifier-base"
+version = "0.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "thiserror",
+ "valkyrie-qualifier",
+]
+
+[[package]]
+name = "valkyrie-ticket"
+version = "0.7.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw0",
+ "cw2",
+ "cw20",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

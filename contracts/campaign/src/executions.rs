@@ -1,17 +1,19 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128, from_binary, Decimal, SubMsg};
-use cw20::Denom as Cw20Denom;
+use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api};
+use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
+use terraswap::asset::AssetInfo;
+use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
 
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::campaign::execute_msgs::{DistributeResult, Distribution, CampaignConfigMsg, MigrateMsg};
+use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, MigrateMsg, ReferralReward};
+use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
-use valkyrie::cw20::query_balance;
-use valkyrie::fund_manager::execute_msgs::{ExecuteMsg as FundExecuteMsg};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::{calc_ratio_amount, make_response};
+use valkyrie_qualifier::{QualificationMsg, QualificationResult};
+use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
 
-use crate::states::{BoosterState, CampaignInfo, CampaignState, ContractConfig, DistributionConfig, is_admin, is_pending, Participation, load_global_campaign_config, Booster, get_booster_id, DropBooster, ActivityBooster, PlusBooster, load_voting_power};
-use valkyrie::campaign_manager::execute_msgs::{CampaignInstantiateMsg, ExecuteMsg};
+use crate::states::*;
 
 pub const MIN_TITLE_LENGTH: usize = 4;
 pub const MAX_TITLE_LENGTH: usize = 64;
@@ -39,50 +41,35 @@ pub fn instantiate(
     // Execute
     let response = make_response("instantiate");
 
-    ContractConfig {
-        chain_id: env.block.chain_id,
-        admin: deps.api.addr_validate(&msg.admin)?,
-        governance: deps.api.addr_validate(&msg.governance)?,
-        campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
-        fund_manager: deps.api.addr_validate(&msg.fund_manager)?,
-        proxies: msg.proxies.iter()
-            .map(|v| deps.api.addr_validate(v).unwrap())
-            .collect(),
-    }.save(deps.storage)?;
-
     let mut executions: Vec<Execution> = msg.executions.iter()
         .map(|e| Execution::from(deps.api, e))
         .collect();
 
     executions.sort_by_key(|e| e.order);
 
-    CampaignInfo {
+    CampaignConfig {
+        governance: deps.api.addr_validate(&msg.governance)?,
+        campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
+        fund_manager: deps.api.addr_validate(&msg.fund_manager)?,
         title: campaign_config.title,
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
+        ticket_amount: msg.ticket_amount,
+        qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str()).unwrap()),
         executions,
+        admin: deps.api.addr_validate(&msg.admin)?,
         creator: deps.api.addr_validate(&msg.creator)?,
         created_at: env.block.time,
-        created_height: env.block.height,
     }.save(deps.storage)?;
 
-    CampaignState {
-        participation_count: 0,
-        distance_counts: vec![],
-        cumulative_distribution_amount: Uint128::zero(),
-        locked_balance: Uint128::zero(),
-        active_flag: false,
-        last_active_height: None,
-    }.save(deps.storage)?;
+    CampaignState::new(env.block.chain_id).save(deps.storage)?;
 
-    DistributionConfig {
-        denom: campaign_config.distribution_denom.to_cw20(deps.api),
-        amounts: campaign_config.distribution_amounts,
-    }.save(deps.storage)?;
-
-    BoosterState {
-        recent_booster_id: 0u64,
+    RewardConfig {
+        participation_reward_denom: campaign_config.participation_reward_denom.to_cw20(deps.api),
+        participation_reward_amount: campaign_config.participation_reward_amount,
+        referral_reward_token: deps.api.addr_validate(msg.referral_reward_token.as_str())?,
+        referral_reward_amounts: campaign_config.referral_reward_amounts,
     }.save(deps.storage)?;
 
     Ok(response)
@@ -97,50 +84,16 @@ pub fn migrate(
     let mut response = make_response("migrate");
     response.add_attribute("chain_id", env.block.chain_id.clone());
 
-    let mut contract_config = ContractConfig::load(deps.storage)?;
+    let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    contract_config.chain_id = env.block.chain_id;
+    campaign_state.chain_id = env.block.chain_id;
 
-    contract_config.save(deps.storage)?;
-
-    Ok(response)
-}
-
-pub fn update_contract_config(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    admin: Option<String>,
-    proxies: Option<Vec<String>>,
-) -> ContractResult<Response> {
-    // Validate
-    if !is_admin(deps.storage, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Execute
-    let mut response = make_response("update_contract_config");
-
-    let mut contract_config = ContractConfig::load(deps.storage)?;
-
-    if let Some(admin) = admin.as_ref() {
-        contract_config.admin = deps.api.addr_validate(admin)?;
-        response.add_attribute("is_updated_admin", "true");
-    }
-
-    if let Some(proxies) = proxies.as_ref() {
-        contract_config.proxies = proxies.iter()
-            .map(|v| deps.api.addr_validate(v).unwrap())
-            .collect();
-        response.add_attribute("is_updated_proxies", "true");
-    }
-
-    contract_config.save(deps.storage)?;
+    campaign_state.save(deps.storage)?;
 
     Ok(response)
 }
 
-pub fn update_campaign_info(
+pub fn update_campaign_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -148,27 +101,29 @@ pub fn update_campaign_info(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
+    ticket_amount: Option<u64>,
+    qualifier: Option<String>,
     mut executions: Option<Vec<ExecutionMsg>>,
+    admin: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
-    if !is_admin(deps.storage, &info.sender) {
+    let mut campaign_config = CampaignConfig::load(deps.storage)?;
+    if !campaign_config.is_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
     // Execute
-    let mut response = make_response("update_campaign_info");
-
-    let mut campaign_info = CampaignInfo::load(deps.storage)?;
+    let mut response = make_response("update_campaign_config");
 
     if let Some(title) = title.as_ref() {
         validate_title(title)?;
-        campaign_info.title = title.clone();
+        campaign_config.title = title.clone();
         response.add_attribute("is_updated_title", "true");
     }
 
     if let Some(description) = description.as_ref() {
         validate_description(description)?;
-        campaign_info.description = description.clone();
+        campaign_config.description = description.clone();
         response.add_attribute("is_updated_description", "true");
     }
 
@@ -181,7 +136,7 @@ pub fn update_campaign_info(
             )));
         }
 
-        campaign_info.url = url.clone();
+        campaign_config.url = url.clone();
         response.add_attribute("is_updated_url", "true");
     }
 
@@ -194,32 +149,47 @@ pub fn update_campaign_info(
             )));
         }
 
-        campaign_info.parameter_key = parameter_key.clone();
+        campaign_config.parameter_key = parameter_key.clone();
         response.add_attribute("is_updated_parameter_key", "true");
+    }
+
+    if let Some(ticket_amount) = ticket_amount.as_ref() {
+        campaign_config.ticket_amount = *ticket_amount;
+        response.add_attribute("is_updated_ticket_amount", "true");
+    }
+
+    if let Some(qualifier) = qualifier.as_ref() {
+        campaign_config.qualifier = Some(deps.api.addr_validate(qualifier)?);
+        response.add_attribute("is_updated_qualifier", "true");
     }
 
     if let Some(executions) = executions.as_mut() {
         executions.sort_by_key(|e| e.order);
-        campaign_info.executions = executions.iter()
+        campaign_config.executions = executions.iter()
             .map(|e| Execution::from(deps.api, e))
             .collect();
         response.add_attribute("is_updated_executions", "true");
     }
 
-    campaign_info.save(deps.storage)?;
+    if let Some(admin) = admin.as_ref() {
+        campaign_config.admin = deps.api.addr_validate(admin)?;
+        response.add_attribute("is_updated_admin", "true");
+    }
+
+    campaign_config.save(deps.storage)?;
 
     Ok(response)
 }
 
-pub fn update_distribution_config(
+pub fn update_reward_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    denom: Denom,
-    amounts: Vec<Uint128>,
+    participation_reward_amount: Option<Uint128>,
+    referral_reward_amounts: Option<Vec<Uint128>>,
 ) -> ContractResult<Response> {
     // Validate
-    if !is_admin(deps.storage, &info.sender) {
+    if !is_admin(deps.storage, &info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -230,14 +200,43 @@ pub fn update_distribution_config(
     }
 
     // Execute
-    let response = make_response("update_distribution_config");
+    let mut response = make_response("update_reward_config");
 
-    let mut distribution_config = DistributionConfig::load(deps.storage)?;
+    let mut reward_config = RewardConfig::load(deps.storage)?;
 
-    distribution_config.denom = denom.to_cw20(deps.api);
-    distribution_config.amounts = amounts;
+    if let Some(participation_reward_amount) = participation_reward_amount {
+        reward_config.participation_reward_amount = participation_reward_amount;
+        response.add_attribute("is_updated_participation_reward_amount", "true");
+    }
 
-    distribution_config.save(deps.storage)?;
+    if let Some(referral_reward_amounts) = referral_reward_amounts {
+        reward_config.referral_reward_amounts = referral_reward_amounts;
+        response.add_attribute("is_updated_referral_reward_amounts", "true");
+    }
+
+    reward_config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn set_no_qualification(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+) -> ContractResult<Response> {
+    // Validate
+    let mut campaign_config = CampaignConfig::load(deps.storage)?;
+    if !campaign_config.is_admin(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("set_no_qualification");
+
+    campaign_config.qualifier = None;
+    response.add_attribute("is_updated_qualifier", "true");
+
+    campaign_config.save(deps.storage)?;
 
     Ok(response)
 }
@@ -249,20 +248,18 @@ pub fn update_activation(
     is_active: bool,
 ) -> ContractResult<Response> {
     // Validate
-    if !is_admin(deps.storage, &info.sender) {
+    if !is_admin(deps.storage, &info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
 
-    let contract_config = ContractConfig::load(deps.storage)?;
+    let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    if contract_config.chain_id != env.block.chain_id {
+    if campaign_state.chain_id != env.block.chain_id {
         return Err(ContractError::Std(StdError::generic_err("Different chain_id. Required migrate contract.")));
     }
 
     // Execute
     let mut response = make_response("update_activation");
-
-    let mut campaign_state = CampaignState::load(deps.storage)?;
 
     campaign_state.active_flag = is_active;
 
@@ -272,38 +269,217 @@ pub fn update_activation(
 
     campaign_state.save(deps.storage)?;
 
-        response.add_attribute(
-            "last_active_height",
-            campaign_state.last_active_height
-                .map_or(String::new(), |v| v.to_string()),
-        );
+    response.add_attribute(
+        "last_active_height",
+        campaign_state.last_active_height
+            .map_or(String::new(), |v| v.to_string()),
+    );
 
     Ok(response)
 }
 
-pub fn withdraw(
+pub fn deposit(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
+    participation_reward_amount: Uint128,
+    referral_reward_amount: Uint128,
+) -> ContractResult<Response> {
+    // Validate
+    let reward_config = RewardConfig::load(deps.storage)?;
+
+    if let cw20::Denom::Native(denom) = &reward_config.participation_reward_denom {
+        validate_native_send(&info, denom, &participation_reward_amount)?;
+    }
+
+    let campaign_config = CampaignConfig::load(deps.storage)?;
+    let (key_denom, referral_reward_pool_ratio) = validate_reward_pool_weight(
+        &deps.querier,
+        deps.api,
+        &campaign_config,
+        &reward_config,
+        participation_reward_amount,
+        referral_reward_amount,
+    )?;
+
+    // Execute
+    let mut response = make_response("deposit");
+
+    let mut campaign_state = CampaignState::load(deps.storage)?;
+
+    campaign_state.deposit(
+        &reward_config.participation_reward_denom,
+        &participation_reward_amount,
+    );
+    campaign_state.deposit(
+        &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
+        &referral_reward_amount,
+    );
+
+    campaign_state.save(deps.storage)?;
+
+    // If participation reward denom is native, It will be send with this execute_msg.
+    if let cw20::Denom::Cw20(token) = &reward_config.participation_reward_denom {
+        response.add_message(message_factories::wasm_execute(
+            token,
+            &Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: participation_reward_amount.clone(),
+            },
+        ))
+    }
+
+    response.add_message(message_factories::wasm_execute(
+        &reward_config.referral_reward_token,
+        &Cw20ExecuteMsg::TransferFrom {
+            owner: info.sender.to_string(),
+            recipient: env.contract.address.to_string(),
+            amount: referral_reward_amount.clone(),
+        },
+    ));
+
+    response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
+    response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
+
+    Ok(response)
+}
+
+fn validate_native_send(
+    info: &MessageInfo,
+    denom: &String,
+    amount: &Uint128,
+) -> StdResult<()> {
+    match info.funds.len() {
+        0 => return Err(StdError::generic_err("Empty funds")),
+        1 => {
+            if info.funds[0].denom != *denom {
+                Err(StdError::generic_err("Invalid funds"))
+            } else if info.funds[0].amount != *amount {
+                Err(StdError::generic_err("Different funds and message"))
+            } else {
+                Ok(())
+            }
+        }
+        _ => Err(StdError::generic_err("Too many funds")),
+    }
+}
+
+fn validate_reward_pool_weight(
+    querier: &QuerierWrapper,
+    api: &dyn Api,
+    campaign_config: &CampaignConfig,
+    reward_config: &RewardConfig,
+    participation_reward_amount: Uint128,
+    referral_reward_amount: Uint128,
+) -> StdResult<(cw20::Denom, Decimal)> {
+    let global_campaign_config = load_global_campaign_config(
+        &querier,
+        &campaign_config.campaign_manager,
+    )?;
+    let key_denom = global_campaign_config.key_denom.to_cw20(api);
+
+    let participation_reward_value = swap_simulate(
+        &querier,
+        &global_campaign_config.terraswap_router,
+        reward_config.participation_reward_denom.clone(),
+        key_denom.clone(),
+        participation_reward_amount,
+    )?;
+
+    let referral_reward_value = swap_simulate(
+        &querier,
+        &global_campaign_config.terraswap_router,
+        cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
+        key_denom.clone(),
+        referral_reward_amount,
+    )?;
+
+    let referral_reward_pool_rate = Decimal::from_ratio(
+        referral_reward_value,
+        participation_reward_value + referral_reward_value,
+    );
+
+    if referral_reward_pool_rate < global_campaign_config.min_referral_reward_deposit_rate {
+        return Err(StdError::generic_err(format!(
+            "Referral reward rate must be greater than {}",
+            global_campaign_config.min_referral_reward_deposit_rate.to_string(),
+        )));
+    }
+
+    Ok((key_denom, referral_reward_pool_rate))
+}
+
+fn swap_simulate(
+    querier: &QuerierWrapper,
+    terraswap_router: &String,
+    offer: cw20::Denom,
+    ask: cw20::Denom,
+    amount: Uint128,
+) -> StdResult<Uint128> {
+    if offer == ask {
+        return Ok(amount);
+    }
+
+    let response: SimulateSwapOperationsResponse = querier.query_wasm_smart(
+        terraswap_router,
+        &QueryMsg::SimulateSwapOperations {
+            offer_amount: amount,
+            operations: vec![swap_operation(offer, ask)],
+        },
+    )?;
+
+    Ok(response.amount)
+}
+
+fn swap_operation(offer: cw20::Denom, ask: cw20::Denom) -> SwapOperation {
+    match offer {
+        cw20::Denom::Native(offer_denom) => {
+            match ask {
+                cw20::Denom::Native(ask_denom) => SwapOperation::NativeSwap {
+                    offer_denom,
+                    ask_denom,
+                },
+                cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
+                    offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
+                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token },
+                },
+            }
+        }
+        cw20::Denom::Cw20(offer_token) => {
+            match ask {
+                cw20::Denom::Native(ask_denom) => SwapOperation::TerraSwap {
+                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token },
+                    ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
+                },
+                cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
+                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token },
+                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token },
+                },
+            }
+        }
+    }
+}
+
+pub fn withdraw(
+    deps: DepsMut,
+    _env: Env,
     info: MessageInfo,
     denom: Denom,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
-    let contract_config = ContractConfig::load(deps.storage)?;
-    if !contract_config.is_admin(&info.sender) {
+    let campaign_config = CampaignConfig::load(deps.storage)?;
+    if !campaign_config.is_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
-    let distribution_config = DistributionConfig::load(deps.storage)?;
-    let campaign_state = CampaignState::load(deps.storage)?;
+    let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    let campaign_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
     let denom_cw20 = denom.to_cw20(deps.api);
-    let locked_balance = if distribution_config.denom == denom_cw20 {
-        campaign_state.locked_balance
-    } else {
-        Uint128::zero()
-    };
+    let balance = campaign_state.balance(&denom_cw20);
+    let campaign_balance = balance.total;
+    let locked_balance = balance.locked;
     let free_balance = campaign_balance.checked_sub(locked_balance)?;
     let withdraw_amount = amount.unwrap_or(free_balance);
 
@@ -323,7 +499,7 @@ pub fn withdraw(
     if !campaign_state.is_pending() {
         let global_campaign_config = load_global_campaign_config(
             &deps.querier,
-            &contract_config.campaign_manager,
+            &campaign_config.campaign_manager,
         )?;
 
         //destructuring assignments are unstable (https://github.com/rust-lang/rust/issues/71126)
@@ -334,6 +510,7 @@ pub fn withdraw(
         withdraw_fee_amount = _withdraw_fee_amount;
         receive_amount = _receive_amount;
 
+        campaign_state.withdraw(&denom_cw20, &withdraw_fee_amount)?;
         response.add_message(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
@@ -342,6 +519,7 @@ pub fn withdraw(
         )?);
     }
 
+    campaign_state.withdraw(&denom_cw20, &receive_amount)?;
     response.add_message(make_send_msg(
         &deps.querier,
         denom_cw20,
@@ -349,15 +527,54 @@ pub fn withdraw(
         &info.sender,
     )?);
 
+    campaign_state.validate_balance()?;
+    campaign_state.save(deps.storage)?;
+
     response.add_attribute("receive_amount", receive_amount);
     response.add_attribute("withdraw_fee_amount", withdraw_fee_amount);
 
     Ok(response)
 }
 
+pub fn withdraw_irregular(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    denom: Denom,
+) -> ContractResult<Response> {
+    // Validate
+    if !is_admin(deps.storage, &info.sender)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let campaign_state = CampaignState::load(deps.storage)?;
+    let denom_cw20 = denom.to_cw20(deps.api);
+
+    let contract_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
+    let expect_balance = campaign_state.balance(&denom_cw20).total;
+
+    if contract_balance == expect_balance {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    // Execute
+    let mut response = make_response("withdraw_irregular");
+
+    let diff = contract_balance.checked_sub(expect_balance)?;
+
+    response.add_message(make_send_msg(
+        &deps.querier,
+        denom_cw20,
+        diff,
+        &info.sender,
+    )?);
+
+    Ok(response)
+}
+
 pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let participation = Participation::may_load(deps.storage, &info.sender)?;
+    let participation = Actor::may_load(deps.storage, &info.sender)?;
 
     if participation.is_none() {
         return Err(ContractError::NotFound {});
@@ -365,40 +582,45 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
 
     let mut participation = participation.unwrap();
 
-    if !participation.has_reward() {
+    if !participation.has_participation_reward() {
         return Err(ContractError::Std(StdError::generic_err("Not exist participation reward")));
     }
 
     // Execute
     let mut response = make_response("claim_participation_reward");
 
-    let distribution_config = DistributionConfig::load(deps.storage)?;
+    let reward_config = RewardConfig::load(deps.storage)?;
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    let reward_amount = participation.receive_reward(&mut campaign_state)?;
+    let reward_amount = participation.participation_reward_amount;
 
-    campaign_state.save(deps.storage)?;
+    participation.participation_reward_amount = Uint128::zero();
+    campaign_state.unlock_balance(&reward_config.participation_reward_denom, &reward_amount)?;
+
     participation.save(deps.storage)?;
+    campaign_state.save(deps.storage)?;
 
     response.add_message(make_send_msg(
         &deps.querier,
-        distribution_config.denom.clone(),
+        reward_config.participation_reward_denom.clone(),
         reward_amount,
-        &participation.actor_address,
+        &participation.address,
     )?);
-    response.add_attribute("amount", format!("{}{}", reward_amount, Denom::from_cw20(distribution_config.denom)));
+    response.add_attribute(
+        "amount",
+        format!(
+            "{}{}",
+            reward_amount,
+            Denom::from_cw20(reward_config.participation_reward_denom),
+        ),
+    );
 
     Ok(response)
 }
 
-pub fn claim_booster_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
+pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let booster_state = BoosterState::load(deps.storage)?;
-    if booster_state.recent_booster_id == 0 {
-        return Err(ContractError::Std(StdError::generic_err("Not boosted campaign")));
-    }
-
-    let participation = Participation::may_load(deps.storage, &info.sender)?;
+    let participation = Actor::may_load(deps.storage, &info.sender)?;
 
     if participation.is_none() {
         return Err(ContractError::NotFound {});
@@ -406,33 +628,39 @@ pub fn claim_booster_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Cont
 
     let mut participation = participation.unwrap();
 
-    if !participation.has_booster_reward(booster_state.recent_booster_id) {
-        return Err(ContractError::Std(StdError::generic_err("Not exist booster reward")));
+    if !participation.has_referral_reward() {
+        return Err(ContractError::Std(StdError::generic_err("Not exist referral reward")));
     }
 
     // Execute
-    let mut response = make_response("claim_booster_reward");
+    let mut response = make_response("claim_referral_reward");
 
-    let contract_config = ContractConfig::load(deps.storage)?;
+    let reward_config = RewardConfig::load(deps.storage)?;
+    let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    let reward_amount = participation.receive_booster_reward(
-        deps.storage,
-        booster_state.recent_booster_id,
+    let reward_amount = participation.referral_reward_amount;
+
+    participation.referral_reward_amount = Uint128::zero();
+    campaign_state.unlock_balance(
+        &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
+        &reward_amount,
     )?;
 
     participation.save(deps.storage)?;
+    campaign_state.save(deps.storage)?;
 
-    response.add_message(message_factories::wasm_execute(
-        &contract_config.fund_manager,
-        &FundExecuteMsg::Transfer {
-            recipient: participation.actor_address.to_string(),
-            amount: reward_amount,
-        }
-    ));
+    response.add_message(make_send_msg(
+        &deps.querier,
+        cw20::Denom::Cw20(reward_config.referral_reward_token),
+        reward_amount,
+        &participation.address,
+    )?);
     response.add_attribute("amount", reward_amount);
 
     Ok(response)
 }
+
+pub const REPLY_QUALIFY_PARTICIPATION: u64 = 1;
 
 pub fn participate(
     deps: DepsMut,
@@ -442,282 +670,253 @@ pub fn participate(
     referrer: Option<Referrer>,
 ) -> ContractResult<Response> {
     // Validate
-    let contract_config = ContractConfig::load(deps.storage)?;
     let actor = deps.api.addr_validate(&actor)?;
 
-    if !contract_config.can_participate_execution(&info.sender, &actor) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let mut campaign_state = CampaignState::load(deps.storage)?;
-    if !campaign_state.is_active(deps.storage, &deps.querier, &env.block)? {
+    let campaign_config = CampaignConfig::load(deps.storage)?;
+    let campaign_state = CampaignState::load(deps.storage)?;
+    if !campaign_state.is_active(&campaign_config, &deps.querier, &env.block)? {
         return Err(ContractError::Std(StdError::generic_err(
             "Inactive campaign",
         )));
     }
 
-    if Participation::load(deps.storage, &actor).is_ok() {
+    // Execute
+    let mut response = make_response("participate");
+    response.add_attribute("actor", actor.to_string());
+
+    let referrer_address = referrer.and_then(|v| v.to_address(deps.api).ok());
+
+    if let Some(qualifier) = campaign_config.qualifier {
+        response.add_submessage(SubMsg {
+            id: REPLY_QUALIFY_PARTICIPATION,
+            msg: message_factories::wasm_execute(
+                &qualifier,
+                &QualifierExecuteMsg::Qualify(QualificationMsg {
+                    campaign: env.contract.address.to_string(),
+                    sender: info.sender.to_string(),
+                    actor: actor.to_string(),
+                    referrer: referrer_address.as_ref().map(|v| v.to_string()),
+                }),
+            ),
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+        });
+
+        QualifyParticipationContext {
+            actor: info.sender.clone(),
+            referrer: referrer_address,
+        }.save(deps.storage)?;
+    } else {
+        _participate(
+            deps.storage,
+            &env,
+            &mut response,
+            actor,
+            referrer_address,
+        )?;
+
+        for execution in campaign_config.executions.iter() {
+            response.add_message(message_factories::wasm_execute_bin(
+                &execution.contract,
+                execution.msg.clone(),
+            ));
+        }
+    }
+
+    Ok(response)
+}
+
+pub fn participate_qualify_result(
+    deps: DepsMut,
+    env: Env,
+    reply: Reply,
+) -> ContractResult<Response> {
+    let mut response = make_response("participate_qualify_result");
+
+    let result: QualificationResult = from_binary(&reply.result.unwrap().data.unwrap())?;
+    let continue_option = result.continue_option;
+
+    if continue_option.is_error() {
         return Err(ContractError::Std(StdError::generic_err(
-            "Already participated",
+            format!("Failed to qualify participation ({})", result.reason.unwrap_or_default()),
         )));
     }
 
-    // Execute
-    let mut response = make_response("participate");
-
-    let distribution_config = DistributionConfig::load(deps.storage)?;
-    let booster_state = BoosterState::load(deps.storage)?;
-    let next_booster_id = booster_state.recent_booster_id + 1;
-    let mut active_booster = Booster::may_load_active(deps.storage)?;
-
-    let mut my_participation = Participation {
-        actor_address: actor.clone(),
-        referrer_address: referrer.and_then(|v| v.to_address(deps.api).ok()),
-        reward_amount: Uint128::zero(),
-        participated_at: env.block.time.clone(),
-        drop_booster_claimable: vec![(next_booster_id, true)],
-        drop_booster_distance_counts: vec![],
-        activity_booster_reward_amount: Uint128::zero(),
-        plus_booster_reward_amount: Uint128::zero(),
-    };
-
-    let mut participations = my_participation.load_referrers(
-        deps.storage,
-        distribution_config.amounts.len() - 1,
-    )?;
-    if participations.is_empty() {
-        my_participation.referrer_address = None;
+    let context = QualifyParticipationContext::load(deps.storage)?;
+    if continue_option.can_participate() {
+        _participate(
+            deps.storage,
+            &env,
+            &mut response,
+            context.actor,
+            context.referrer,
+        )?;
     }
-    participations.insert(0, my_participation);
 
-    let mut total_reward_amount = Uint128::zero();
-    let mut total_activity_booster_amount = Uint128::zero();
-    let mut total_plus_booster_amount = Uint128::zero();
-    let distribution_denom = Denom::from_cw20(distribution_config.denom.clone());
+    if continue_option.can_execute() {
+        let campaign_config = CampaignConfig::load(deps.storage)?;
 
-    let mut distributions_response: Vec<Distribution> = vec![];
-    let participation_rewards = participations.iter_mut()
-        .zip(distribution_config.amounts.clone())
-        .enumerate();
-
-    for (distance, (participation, reward_amount)) in participation_rewards {
-        //Distribute reward
-        participation.reward_amount += reward_amount;
-        participation.increase_distance_count(next_booster_id, distance as u64);
-        campaign_state.increase_distance_count(distance as u64);
-        campaign_state.plus_distribution(reward_amount);
-        total_reward_amount += reward_amount;
-
-        //Distribute booster
-        let mut activity_booster_amount = Uint128::zero();
-        let mut plus_booster_amount = Uint128::zero();
-
-        if let Some(booster) = active_booster.as_mut() {
-            activity_booster_amount = booster.activity_booster.boost(
-                participation,
-                distance as u64,
-            );
-
-            total_activity_booster_amount += activity_booster_amount;
-
-            if distance == 0 {
-                plus_booster_amount = booster.plus_booster.boost(
-                    participation,
-                    load_voting_power(
-                        &deps.querier,
-                        &contract_config.governance,
-                        &participation.actor_address,
-                    ),
-                );
-
-                total_plus_booster_amount += plus_booster_amount;
-            }
+        for execution in campaign_config.executions.iter() {
+            response.add_message(message_factories::wasm_execute_bin(
+                &execution.contract,
+                execution.msg.clone(),
+            ));
         }
+    }
 
-        //Save
-        participation.save(deps.storage)?;
+    QualifyParticipationContext::clear(deps.storage);
 
-        distributions_response.push(Distribution {
-            address: participation.actor_address.to_string(),
-            distance: distance as u64,
-            reward_denom: distribution_denom.clone(),
-            reward_amount,
-            activity_boost_amount: activity_booster_amount,
-            plus_boost_amount: plus_booster_amount,
-        });
+    Ok(response)
+}
+
+fn _participate(
+    storage: &mut dyn Storage,
+    env: &Env,
+    response: &mut Response,
+    actor: Addr,
+    referrer: Option<Addr>,
+) -> ContractResult<()> {
+    let mut my_participation = Actor::may_load(storage, &actor)?
+        .unwrap_or_else(|| Actor::new(
+            actor.clone(),
+            referrer,
+            &env.block,
+        ));
+
+    let mut campaign_state = CampaignState::load(storage)?;
+    let reward_config = RewardConfig::load(storage)?;
+
+    let distributed_participation_reward_amount = distribute_participation_reward(
+        &mut my_participation,
+        &mut campaign_state,
+        &reward_config,
+    )?;
+
+    let (distributed_referral_reward_amount, referral_rewards) = distribute_referral_reward(
+        &mut my_participation,
+        &mut campaign_state,
+        &reward_config,
+        storage,
+    )?;
+
+    //Check balance after distribute
+    campaign_state.validate_balance().map_err(|_| StdError::generic_err("Insufficient balance"))?;
+    let participation_reward_denom = Denom::from_cw20(reward_config.participation_reward_denom);
+
+    response.set_data(to_binary(&DistributeResult {
+        participation_reward_denom: participation_reward_denom.clone(),
+        participation_reward_amount: distributed_participation_reward_amount,
+        referral_rewards,
+    })?);
+
+    response.add_attribute(
+        "configured_participation_reward_amount",
+        format!("{}{}",
+                reward_config.participation_reward_amount.to_string(),
+                participation_reward_denom.to_string(),
+        ),
+    );
+    response.add_attribute(
+        "distributed_participation_reward_amount",
+        format!("{}{}",
+                distributed_participation_reward_amount.to_string(),
+                participation_reward_denom.to_string(),
+        ),
+    );
+    response.add_attribute(
+        "configured_referral_reward_amount",
+        format!("{}{}",
+                reward_config.referral_reward_amounts.iter().sum::<Uint128>().to_string(),
+                reward_config.referral_reward_token.to_string(),
+        ),
+    );
+    response.add_attribute(
+        "distributed_referral_reward_amount",
+        format!("{}{}",
+                distributed_referral_reward_amount.to_string(),
+                reward_config.referral_reward_token.to_string(),
+        ),
+    );
+
+    if my_participation.participation_count == 1 {
+        campaign_state.actor_count += 1;
     }
 
     campaign_state.participation_count += 1;
     campaign_state.last_active_height = Some(env.block.height);
-    campaign_state.save(deps.storage)?;
+    campaign_state.save(storage)?;
+    my_participation.save(storage)?;
 
-    let finish_booster = if let Some(active_booster) = active_booster {
-        active_booster.save(deps.storage)?;
-        !active_booster.can_boost()
-    } else {
-        false
-    };
+    response.add_attribute(
+        "cumulative_participation_reward_amount",
+        campaign_state.cumulative_participation_reward_amount,
+    );
+    response.add_attribute(
+        "cumulative_referral_reward_amount",
+        campaign_state.cumulative_referral_reward_amount,
+    );
+    response.add_attribute("participation_count", campaign_state.actor_count.to_string());
+    response.add_attribute("participate_count", campaign_state.participation_count.to_string());
 
-    //Check balance after distribute
-    let campaign_balance = query_balance(
-        &deps.querier,
-        deps.api,
-        distribution_config.denom.clone(),
-        env.contract.address.clone(),
+    Ok(())
+}
+
+fn distribute_participation_reward(
+    participation: &mut Actor,
+    campaign_state: &mut CampaignState,
+    reward_config: &RewardConfig,
+) -> StdResult<Uint128> {
+    participation.participation_count += 1;
+    participation.participation_reward_amount += reward_config.participation_reward_amount;
+    campaign_state.lock_balance(
+        &reward_config.participation_reward_denom,
+        &reward_config.participation_reward_amount,
+    );
+
+    Ok(reward_config.participation_reward_amount)
+}
+
+fn distribute_referral_reward(
+    participation: &mut Actor,
+    campaign_state: &mut CampaignState,
+    reward_config: &RewardConfig,
+    storage: &mut dyn Storage,
+) -> StdResult<(Uint128, Vec<ReferralReward>)> {
+    let mut referrers = participation.load_referrers(
+        storage,
+        reward_config.referral_reward_amounts.len(),
     )?;
 
-    if campaign_state.locked_balance > campaign_balance {
-        return Err(ContractError::Std(StdError::generic_err(
-            "Insufficient balance",
-        )));
+    if referrers.is_empty() {
+        participation.referrer = None;
+
+        return Ok((Uint128::zero(), vec![]));
     }
 
-    let campaign_info = CampaignInfo::load(deps.storage)?;
-    for execution in campaign_info.executions.iter() {
-        response.add_message(message_factories::wasm_execute_bin(
-            &execution.contract,
-            execution.msg.clone(),
-        ));
+    let mut distributed_amount = Uint128::zero();
+    let mut referral_rewards: Vec<ReferralReward> = vec![];
+
+    let referrer_reward_pairs = referrers.iter_mut()
+        .zip(&reward_config.referral_reward_amounts)
+        .enumerate();
+
+    let referral_reward_denom = cw20::Denom::Cw20(reward_config.referral_reward_token.clone());
+    for (distance, (participation, reward_amount)) in referrer_reward_pairs {
+        participation.referral_count += 1;
+        participation.referral_reward_amount += *reward_amount;
+        campaign_state.lock_balance(&referral_reward_denom, reward_amount);
+        distributed_amount += *reward_amount;
+
+        participation.save(storage)?;
+
+        referral_rewards.push(ReferralReward {
+            address: participation.address.to_string(),
+            distance: (distance + 1) as u64,
+            amount: *reward_amount,
+        });
     }
 
-    if finish_booster {
-        response.messages.insert(0, SubMsg::new(message_factories::wasm_execute(
-            &contract_config.campaign_manager,
-            &ExecuteMsg::FinishBoosting {
-                campaign: env.contract.address.to_string(),
-            },
-        )));
-    }
-
-    let configured_reward = format!(
-        "{}{}",
-        distribution_config.amounts_sum().to_string(),
-        Denom::from_cw20(distribution_config.denom.clone()).to_string()
-    );
-
-    let distributed_reward = format!(
-        "{}{}",
-        total_reward_amount.to_string(),
-        Denom::from_cw20(distribution_config.denom.clone()).to_string()
-    );
-
-    response.add_attribute("actor", actor.to_string());
-    response.add_attribute("booster_id", booster_state.recent_booster_id.to_string());
-    response.add_attribute("configured_reward_amount", configured_reward);
-    response.add_attribute("distributed_reward_amount", distributed_reward);
-    response.add_attribute("activity_boost_amount", total_activity_booster_amount);
-    response.add_attribute("plus_boost_amount", total_plus_booster_amount);
-    response.add_attribute("distribution_length", distributions_response.len().to_string());
-    response.add_attribute("participation_count", campaign_state.participation_count.to_string());
-    response.add_attribute("cumulative_distribution_amount", campaign_state.cumulative_distribution_amount);
-    response.add_attribute("finish_booster", finish_booster.to_string());
-
-    response.set_data(to_binary(&DistributeResult {
-        distributions: distributions_response,
-    })?);
-
-    Ok(response)
-}
-
-pub fn enable_booster(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    drop_booster_assigned_amount: Uint128,
-    activity_booster_assigned_amount: Uint128,
-    plus_booster_assigned_amount: Uint128,
-    activity_booster_multiplier: Decimal,
-) -> ContractResult<Response> {
-    // Validate
-    if drop_booster_assigned_amount.is_zero() || activity_booster_assigned_amount.is_zero() {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if !contract_config.is_campaign_manager(&info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if Booster::is_boosting(deps.storage)? {
-        return Err(ContractError::AlreadyExists {});
-    }
-
-    let distribution_config = DistributionConfig::load(deps.storage)?;
-    let campaign_state: CampaignState = CampaignState::load(deps.storage)?;
-
-    if campaign_state.participation_count == 0 {
-        return Err(ContractError::Std(StdError::generic_err("participation_count must be greater than 0")));
-    }
-
-    // Execute
-    let mut response = make_response("enable_booster");
-
-    let booster_id = get_booster_id(deps.storage)?;
-
-    let drop_booster = DropBooster::new(
-        drop_booster_assigned_amount,
-        distribution_config.amounts.clone(),
-        campaign_state.participation_count,
-        campaign_state.distance_counts,
-    );
-
-    let activity_booster = ActivityBooster::new(
-        activity_booster_assigned_amount,
-        distribution_config.amounts.clone(),
-        drop_booster.reward_amount.clone(),
-        activity_booster_multiplier,
-    );
-
-    let plus_booster = PlusBooster::new(
-        plus_booster_assigned_amount,
-    );
-
-    Booster {
-        id: booster_id,
-        drop_booster,
-        activity_booster,
-        plus_booster,
-        boosted_at: env.block.time,
-        finished_at: None,
-    }.save(deps.storage)?;
-
-    response.add_attribute("booster_id", booster_id.to_string());
-    response.add_attribute("drop_booster_amount", drop_booster_assigned_amount);
-    response.add_attribute("activity_booster_amount", activity_booster_assigned_amount);
-    response.add_attribute("plus_booster_amount", plus_booster_assigned_amount);
-    response.add_attribute("activity_booster_multiplier", activity_booster_multiplier.to_string());
-    response.add_attribute("snapped_participation_count", campaign_state.participation_count.to_string());
-
-    Ok(response)
-}
-
-pub fn disable_booster(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    // Validate
-    let contract_config: ContractConfig = ContractConfig::load(deps.storage)?;
-    if !contract_config.is_campaign_manager(&info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Execute
-    let mut response = make_response("disable_booster");
-
-    let mut booster_state = Booster::load_active(deps.storage)?;
-    booster_state.finish_with_save(deps.storage, env.block.time)?;
-
-    let drop_booster_left_amount = booster_state.drop_booster.assigned_amount
-        .checked_sub(booster_state.drop_booster.calculated_amount)?;
-
-    let activity_booster_left_amount = booster_state.activity_booster.assigned_amount
-        .checked_sub(booster_state.activity_booster.distributed_amount)?;
-
-    let plus_booster_left_amount = booster_state.plus_booster.assigned_amount
-        .checked_sub(booster_state.plus_booster.distributed_amount)?;
-
-    response.add_attribute("drop_booster_left_amount", drop_booster_left_amount);
-    response.add_attribute("activity_booster_left_amount", activity_booster_left_amount);
-    response.add_attribute("plus_booster_left_amount", plus_booster_left_amount);
-
-    Ok(response)
+    Ok((distributed_amount, referral_rewards))
 }
 
 fn validate_title(title: &str) -> StdResult<()> {

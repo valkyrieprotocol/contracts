@@ -1,14 +1,19 @@
-use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, BankMsg, WasmMsg, to_binary, Decimal, SubMsg};
-use valkyrie::common::{ContractResult, Denom};
-use crate::executions::withdraw;
-use valkyrie::test_utils::{contract_env, default_sender, expect_unauthorized_err, expect_generic_err};
-use crate::tests::{campaign_admin_sender, TOKEN_CONTRACT, CAMPAIGN_ADMIN, CAMPAIGN_DISTRIBUTION_AMOUNTS, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE, FUND_MANAGER};
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use valkyrie::terra::extract_tax;
+use cosmwasm_std::{BankMsg, coin, CosmosMsg, Decimal, Env, MessageInfo, Response, SubMsg, to_binary, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
-use valkyrie::utils::calc_ratio_amount;
+
+use valkyrie::campaign::enumerations::Referrer;
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::message_matchers;
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::terra::extract_tax;
+use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::campaign::{CAMPAIGN, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS};
+use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
+use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
+use valkyrie::utils::calc_ratio_amount;
+
+use crate::executions::withdraw;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -20,14 +25,14 @@ pub fn exec(
     let response = withdraw(deps.as_mut(), env, info, denom, amount)?;
 
     for msg in message_matchers::native_send(&response.messages) {
-        deps.querier.minus_native_balance_with_tax(MOCK_CONTRACT_ADDR, msg.amount.clone());
+        deps.querier.minus_native_balance_with_tax(CAMPAIGN, msg.amount.clone());
         deps.querier.plus_native_balance(msg.to_address.as_str(), msg.amount);
     }
 
     for msg in message_matchers::cw20_transfer(&response.messages) {
         deps.querier.minus_token_balances(&[(
             &msg.contract_addr,
-            &[(MOCK_CONTRACT_ADDR, &msg.amount)],
+            &[(CAMPAIGN, &msg.amount)],
         )]);
         deps.querier.plus_token_balances(&[(
             &msg.contract_addr,
@@ -43,7 +48,7 @@ pub fn will_success(
     denom: Denom,
     amount: Option<Uint128>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = campaign_env();
     let info = campaign_admin_sender();
 
     let response = exec(
@@ -59,16 +64,13 @@ pub fn will_success(
 
 #[test]
 fn succeed_at_pending() {
-    let mut deps = custom_deps(&[coin(10000u128, "uusd")]);
-    deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
-    )]);
+    let mut deps = custom_deps();
     deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
+    super::deposit::will_success(&mut deps, 10000, 10000);
 
-    let mut denom = Denom::Native("uusd".to_string());
+    let mut denom = Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string());
     let amount = Uint128::new(4000);
     let tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), amount).unwrap();
 
@@ -90,12 +92,12 @@ fn succeed_at_pending() {
         })),
     ]);
 
-    denom = Denom::Token(TOKEN_CONTRACT.to_string());
+    denom = Denom::Token(REFERRAL_REWARD_TOKEN.to_string());
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount,
@@ -107,7 +109,7 @@ fn succeed_at_pending() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: remain_amount,
@@ -119,27 +121,14 @@ fn succeed_at_pending() {
 
 #[test]
 fn succeed_at_active() {
-    let mut deps = custom_deps(&[coin(10000u128, "uusd")]);
-    deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
-    )]);
+    let mut deps = custom_deps();
     deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     let burn_rate = Decimal::percent(10);
-    deps.querier.with_global_campaign_config(
-        TOKEN_CONTRACT.to_string(),
-        Uint128::new(1000),
-        FUND_MANAGER.to_string(),
-        1,
-        vec![Denom::Token(TOKEN_CONTRACT.to_string()), Denom::Native("uusd".to_string())],
-        burn_rate.clone(),
-        FUND_MANAGER.to_string(),
-        1000,
-    );
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
+    super::deposit::will_success(&mut deps, 10000, 10000);
 
     let mut denom = Denom::Native("uusd".to_string());
     let amount = Uint128::new(4000);
@@ -175,13 +164,13 @@ fn succeed_at_active() {
         })),
     ]);
 
-    denom = Denom::Token(TOKEN_CONTRACT.to_string());
+    denom = Denom::Token(REFERRAL_REWARD_TOKEN.to_string());
 
     let (burn_amount, expect_amount) = calc_ratio_amount(amount, burn_rate);
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
                 amount: burn_amount,
@@ -189,7 +178,7 @@ fn succeed_at_active() {
             funds: vec![],
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
@@ -202,7 +191,7 @@ fn succeed_at_active() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: FUND_MANAGER.to_string(),
                 amount: burn_amount,
@@ -210,7 +199,7 @@ fn succeed_at_active() {
             funds: vec![],
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TOKEN_CONTRACT.to_string(),
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
@@ -222,30 +211,43 @@ fn succeed_at_active() {
 
 #[test]
 fn succeed_free_balance() {
-    let mut deps = custom_deps(&[
-        coin(1000, CAMPAIGN_DISTRIBUTION_DENOM_NATIVE),
-    ]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
+    super::deposit::will_success(&mut deps, 1000, 10000);
     super::participate::will_success(&mut deps, "Participator1", None);
+    super::participate::will_success(
+        &mut deps,
+        "Participator2",
+        Some(Referrer::Address("Participator1".to_string())),
+    );
 
     will_success(
         &mut deps,
-        Denom::Native(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        Some(Uint128::new(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap()),
+        Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+        Some(
+            Uint128::new(1000)
+                .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
+                .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap(),
+        ),
+    );
+    will_success(
+        &mut deps,
+        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Some(REFERRAL_REWARD_AMOUNTS[0]),
     );
 }
 
 #[test]
 fn failed_invalid_permission() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         default_sender(),
         Denom::Native("uusd".to_string()),
         None,
@@ -256,17 +258,14 @@ fn failed_invalid_permission() {
 
 #[test]
 fn failed_overflow() {
-    let mut deps = custom_deps(&[coin(1000, "uusd")]);
-    deps.querier.with_token_balances(&[(
-        TOKEN_CONTRACT,
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(1000))],
-    )]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
+    super::deposit::will_success(&mut deps, 1000, 1000);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
         Denom::Native("uusd".to_string()),
         Some(Uint128::new(1001)),
@@ -275,9 +274,9 @@ fn failed_overflow() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
-        Denom::Token(TOKEN_CONTRACT.to_string()),
+        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
         Some(Uint128::new(1001)),
     );
     expect_generic_err(&result, "Insufficient balance");
@@ -285,13 +284,36 @@ fn failed_overflow() {
     super::update_activation::will_success(&mut deps, true);
 
     super::participate::will_success(&mut deps, "Participator1", None);
+    super::participate::will_success(
+        &mut deps,
+        "Participator2",
+        Some(Referrer::Address("Participator1".to_string())),
+    );
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        campaign_env(),
         campaign_admin_sender(),
-        Denom::Token(CAMPAIGN_DISTRIBUTION_DENOM_NATIVE.to_string()),
-        Some(Uint128::new(1000).checked_sub(CAMPAIGN_DISTRIBUTION_AMOUNTS[0]).unwrap() + Uint128::new(1)),
+        Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
+        Some(
+            Uint128::new(1000)
+                .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
+                .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
+                .checked_add(Uint128::new(1)).unwrap(),
+        ),
+    );
+    expect_generic_err(&result, "Insufficient balance");
+
+    let result = exec(
+        &mut deps,
+        campaign_env(),
+        campaign_admin_sender(),
+        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Some(
+            Uint128::new(1000)
+                .checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap()
+                .checked_add(Uint128::new(1)).unwrap(),
+        ),
     );
     expect_generic_err(&result, "Insufficient balance");
 }

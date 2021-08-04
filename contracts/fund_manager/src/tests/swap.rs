@@ -2,12 +2,12 @@ use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, WasmMsg, to_binary, Addr, SubMsg};
 use valkyrie::common::{ContractResult, Denom};
 use crate::executions::swap;
-use valkyrie::test_utils::{contract_env, default_sender, expect_generic_err};
-use crate::tests::{TERRASWAP_ROUTER, TOKEN_CONTRACT};
+use valkyrie::test_utils::expect_generic_err;
 use terraswap::router::{ExecuteMsg, SwapOperation};
 use terraswap::asset::AssetInfo;
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cw20::Cw20ExecuteMsg;
+use valkyrie::test_constants::fund_manager::{fund_manager_env, FUND_MANAGER, MANAGING_TOKEN};
+use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -33,7 +33,7 @@ pub fn will_success(
     amount: Option<Uint128>,
     route: Option<Vec<Denom>>,
 ) -> (Env, MessageInfo, Response) {
-    let env = contract_env();
+    let env = fund_manager_env();
     let info = default_sender();
 
     let response = exec(
@@ -50,11 +50,13 @@ pub fn will_success(
 
 #[test]
 fn succeed_native() {
-    let mut deps = custom_deps(&[
-        coin(10000u128, "uusd"),
-    ]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
+
+    deps.querier.plus_native_balance(FUND_MANAGER, vec![
+        coin(10000u128, "uusd"),
+    ]);
 
     let (_, _, response) = will_success(
         &mut deps,
@@ -74,7 +76,7 @@ fn succeed_native() {
                             denom: "uusd".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked(TOKEN_CONTRACT),
+                            contract_addr: Addr::unchecked(MANAGING_TOKEN),
                         },
                     },
                 ],
@@ -87,10 +89,10 @@ fn succeed_native() {
 
 #[test]
 fn succeed_token() {
-    let mut deps = custom_deps(&[]);
+    let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
         "Token1",
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
+        &[(FUND_MANAGER, &Uint128::new(10000))],
     )]);
 
     super::instantiate::default(&mut deps);
@@ -116,7 +118,7 @@ fn succeed_token() {
                                 contract_addr: Addr::unchecked("Token1"),
                             },
                             ask_asset_info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked(TOKEN_CONTRACT),
+                                contract_addr: Addr::unchecked(MANAGING_TOKEN),
                             },
                         },
                     ],
@@ -130,11 +132,13 @@ fn succeed_token() {
 
 #[test]
 fn succeed_route() {
-    let mut deps = custom_deps(&[
-        coin(10000u128, "ukrw"),
-    ]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
+
+    deps.querier.plus_native_balance(FUND_MANAGER, vec![
+        coin(10000u128, "ukrw"),
+    ]);
 
     let (_, _, response) = will_success(
         &mut deps,
@@ -143,7 +147,7 @@ fn succeed_route() {
         Some(vec![
             Denom::Native("ukrw".to_string()),
             Denom::Native("uusd".to_string()),
-            Denom::Token(TOKEN_CONTRACT.to_string()),
+            Denom::Token(MANAGING_TOKEN.to_string()),
         ]),
     );
 
@@ -162,7 +166,7 @@ fn succeed_route() {
                             denom: "uusd".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked(TOKEN_CONTRACT),
+                            contract_addr: Addr::unchecked(MANAGING_TOKEN),
                         },
                     },
                 ],
@@ -175,15 +179,17 @@ fn succeed_route() {
 
 #[test]
 fn failed_invalid_route() {
-    let mut deps = custom_deps(&[
-        coin(10000u128, "ukrw"),
-    ]);
+    let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
 
+    deps.querier.plus_native_balance(FUND_MANAGER, vec![
+        coin(10000u128, "ukrw"),
+    ]);
+
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         Denom::Native("ukrw".to_string()),
         None,
@@ -195,32 +201,32 @@ fn failed_invalid_route() {
         &result,
         format!(
             "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), TOKEN_CONTRACT.to_string(),
+            "ukrw".to_string(), MANAGING_TOKEN.to_string(),
         ).as_str(),
     );
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         Denom::Native("ukrw".to_string()),
         None,
         Some(vec![
             Denom::Native("uusd".to_string()),
-            Denom::Token(TOKEN_CONTRACT.to_string()),
+            Denom::Token(MANAGING_TOKEN.to_string()),
         ]),
     );
     expect_generic_err(
         &result,
         format!(
             "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), TOKEN_CONTRACT.to_string(),
+            "ukrw".to_string(), MANAGING_TOKEN.to_string(),
         ).as_str(),
     );
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         Denom::Native("ukrw".to_string()),
         None,
@@ -233,26 +239,28 @@ fn failed_invalid_route() {
         &result,
         format!(
             "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), TOKEN_CONTRACT.to_string(),
+            "ukrw".to_string(), MANAGING_TOKEN.to_string(),
         ).as_str(),
     );
 }
 
 #[test]
 fn failed_overflow() {
-    let mut deps = custom_deps(&[
+    let mut deps = custom_deps();
+
+    deps.querier.plus_native_balance(FUND_MANAGER, vec![
         coin(10000u128, "ukrw"),
     ]);
     deps.querier.with_token_balances(&[(
         "Token1",
-        &[(MOCK_CONTRACT_ADDR, &Uint128::new(10000))],
+        &[(FUND_MANAGER, &Uint128::new(10000))],
     )]);
 
     super::instantiate::default(&mut deps);
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         Denom::Native("ukrw".to_string()),
         Some(Uint128::new(10001)),
@@ -262,7 +270,7 @@ fn failed_overflow() {
 
     let result = exec(
         &mut deps,
-        contract_env(),
+        fund_manager_env(),
         default_sender(),
         Denom::Token("Token1".to_string()),
         Some(Uint128::new(10001)),
