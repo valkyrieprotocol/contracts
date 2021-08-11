@@ -28,7 +28,6 @@ pub fn instantiate(
         deps.branch(),
         env.clone(),
         info.clone(),
-        msg.staking_config,
     )?;
     crate::poll::executions::instantiate(
         deps.branch(),
@@ -49,15 +48,9 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateStakingConfig {
-            withdraw_delay,
-        } => crate::staking::executions::update_config(deps, env, info, withdraw_delay),
         ExecuteMsg::UnstakeGovernanceToken {
             amount,
         } => crate::staking::executions::unstake_governance_token(deps, env, info, amount),
-        ExecuteMsg::WithdrawGovernanceToken {} => {
-            crate::staking::executions::withdraw_governance_token(deps, env, info)
-        },
         ExecuteMsg::UpdatePollConfig {
             quorum,
             threshold,
@@ -150,9 +143,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::ContractConfig {} => {
             to_binary(&crate::common::queries::get_contract_config(deps, env)?)
         }
-        QueryMsg::StakingConfig {} => {
-            to_binary(&crate::staking::queries::get_staking_config(deps, env)?)
-        }
         QueryMsg::PollConfig {} => to_binary(&crate::poll::queries::get_poll_config(deps, env)?),
         QueryMsg::PollState {} => to_binary(&crate::poll::queries::get_poll_state(deps, env)?),
         QueryMsg::Poll { poll_id } => {
@@ -193,9 +183,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
-        QueryMsg::Unstaking { address } => to_binary(
-            &crate::staking::queries::get_unstaking(deps, env, address)?
-        )
     }?;
 
     Ok(result)

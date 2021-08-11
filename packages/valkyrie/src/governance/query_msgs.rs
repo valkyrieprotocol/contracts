@@ -11,7 +11,6 @@ use crate::common::ExecutionMsg;
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     ContractConfig {},
-    StakingConfig {},
     PollConfig {},
     PollState {},
     Poll {
@@ -36,19 +35,11 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
-    Unstaking {
-        address: String,
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
     pub governance_token: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-pub struct StakingConfigResponse {
-    pub withdraw_delay: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -125,15 +116,4 @@ pub struct VotersResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotingPowerResponse {
     pub voting_power: Decimal,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct UnstakingResponse {
-    pub items: Vec<UnstakingItem>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct UnstakingItem {
-    pub unlock_height: u64,
-    pub amount: Uint128,
 }

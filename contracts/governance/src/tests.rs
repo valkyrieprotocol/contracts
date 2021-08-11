@@ -1,6 +1,6 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo};
 
-use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg, StakingConfigInitMsg};
+use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg};
 use valkyrie::test_constants::contract_creator;
 use valkyrie::test_constants::governance::*;
 
@@ -13,9 +13,6 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
     let msg = InstantiateMsg {
         contract_config: ContractConfigInitMsg {
             governance_token: GOVERNANCE_TOKEN.to_string(),
-        },
-        staking_config: StakingConfigInitMsg {
-            withdraw_delay: WITHDRAW_DELAY,
         },
         poll_config: PollConfigInitMsg {
             quorum: Decimal::percent(POLL_QUORUM_PERCENT),

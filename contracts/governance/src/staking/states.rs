@@ -7,30 +7,12 @@ use valkyrie::governance::enumerations::PollStatus;
 
 use crate::poll::states::{Poll, VoteInfo};
 
-const STAKING_CONFIG: Item<StakingConfig> = Item::new("staking-config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingConfig {
-    pub withdraw_delay: u64,
-}
-
-impl StakingConfig {
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        STAKING_CONFIG.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<StakingConfig> {
-        STAKING_CONFIG.load(storage)
-    }
-}
-
 
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StakingState {
     pub total_share: Uint128,
-    pub unstaking_amount: Uint128,
 }
 
 impl StakingState {
@@ -52,7 +34,6 @@ pub struct StakerState {
     pub share: Uint128,
     // total staked balance
     pub votes: Vec<(u64, VoteInfo)>, // maps poll_id to weight voted
-    pub unstaking_amounts: Vec<(u64, Uint128)>,
 }
 
 impl StakerState {
@@ -61,7 +42,6 @@ impl StakerState {
             address: address.clone(),
             share: Uint128::zero(),
             votes: vec![],
-            unstaking_amounts: vec![],
         }
     }
 
@@ -128,22 +108,5 @@ impl StakerState {
 
     pub fn vote(&mut self, poll_id: u64, vote: VoteInfo) {
         self.votes.push((poll_id, vote));
-    }
-
-    pub fn withdraw_unstaked(&mut self, _storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
-        let mut pending: Vec<(u64, Uint128)> = vec![];
-        let mut withdrawable: Vec<(u64, Uint128)> = vec![];
-
-        for each in self.unstaking_amounts.iter() {
-            if block_height > each.0 {
-                withdrawable.push(*each)
-            } else {
-                pending.push(*each)
-            }
-        }
-
-        self.unstaking_amounts = pending;
-
-        withdrawable
     }
 }

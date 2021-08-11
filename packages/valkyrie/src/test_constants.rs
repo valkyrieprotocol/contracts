@@ -30,9 +30,6 @@ pub mod governance {
     // common config
     pub const GOVERNANCE_TOKEN: &str = VALKYRIE_TOKEN;
 
-    // staking config
-    pub const WITHDRAW_DELAY: u64 = 94097;
-
     // poll config
     pub const POLL_QUORUM_PERCENT: u64 = 30;
     pub const POLL_THRESHOLD_PERCENT: u64 = 50;

@@ -9,18 +9,12 @@ use crate::common::ExecutionMsg;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
-    pub staking_config: StakingConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigInitMsg {
     pub governance_token: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingConfigInitMsg {
-    pub withdraw_delay: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,9 +31,6 @@ pub struct PollConfigInitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    UpdateStakingConfig {
-        withdraw_delay: Option<u64>,
-    },
     UpdatePollConfig {
         quorum: Option<Decimal>,
         threshold: Option<Decimal>,
@@ -49,7 +40,6 @@ pub enum ExecuteMsg {
         snapshot_period: Option<u64>,
     },
     UnstakeGovernanceToken { amount: Option<Uint128> },
-    WithdrawGovernanceToken {},
     CastVote {
         poll_id: u64,
         vote: VoteOption,

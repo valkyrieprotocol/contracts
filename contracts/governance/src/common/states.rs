@@ -4,7 +4,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use valkyrie::cw20::query_cw20_balance;
 use crate::poll::states::PollState;
-use crate::staking::states::StakingState;
 
 
 const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
@@ -29,10 +28,6 @@ impl ContractConfig {
     }
 }
 
-// 투표가 quorum 을 넘길경우 발의자에게 환불한다.
-// quorum 을 넘기지 못해 환불되지 않는 경우 total_deposit 에서만 차감된다.
-// contract balance 는 staking + poll deposit 이다.
-// total_deposit 에서만 차감하고 실제 출금을 하지 않았기때문에 contract balance 가 더 많을 수도 있다.
 pub fn load_available_balance(deps: Deps) -> StdResult<Uint128> {
     let contract_config = ContractConfig::load(deps.storage)?;
     let contract_balance = query_cw20_balance(
@@ -42,9 +37,7 @@ pub fn load_available_balance(deps: Deps) -> StdResult<Uint128> {
         &contract_config.address,
     )?;
     let poll_state = PollState::load(deps.storage)?;
-    let staking_state = StakingState::load(deps.storage)?;
-    let available_balance = contract_balance.checked_sub(poll_state.total_deposit)?
-        .checked_sub(staking_state.unstaking_amount)?;
+    let available_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
 
     Ok(available_balance)
 }
