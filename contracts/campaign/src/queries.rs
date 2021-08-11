@@ -18,7 +18,6 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
-        ticket_amount: campaign_config.ticket_amount,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
         executions: campaign_config.executions.iter()
             .map(|v| ExecutionMsg::from(v))

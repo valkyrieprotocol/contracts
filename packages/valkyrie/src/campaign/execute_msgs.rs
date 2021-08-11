@@ -23,7 +23,6 @@ pub enum ExecuteMsg {
         description: Option<String>,
         url: Option<String>,
         parameter_key: Option<String>,
-        ticket_amount: Option<u64>,
         qualifier: Option<String>,
         executions: Option<Vec<ExecutionMsg>>,
         admin: Option<String>,

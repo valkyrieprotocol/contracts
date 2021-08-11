@@ -74,7 +74,6 @@ pub fn receive_cw20(
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::CreateCampaign {
             config_msg,
-            ticket_amount,
             qualifier,
             executions,
         } => executions::create_campaign(
@@ -84,7 +83,6 @@ pub fn receive_cw20(
             cw20_msg.sender,
             cw20_msg.amount,
             config_msg,
-            ticket_amount,
             qualifier,
             executions,
         ),

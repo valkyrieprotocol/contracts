@@ -17,7 +17,6 @@ pub fn exec(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    ticket_amount: Option<u64>,
     qualifier: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
@@ -30,7 +29,6 @@ pub fn exec(
         description,
         url,
         parameter_key,
-        ticket_amount,
         qualifier,
         executions,
         admin,
@@ -43,7 +41,6 @@ pub fn will_success(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    ticket_amount: Option<u64>,
     qualifier: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
@@ -59,7 +56,6 @@ pub fn will_success(
         description,
         url,
         parameter_key,
-        ticket_amount,
         qualifier,
         executions,
         admin,
@@ -78,7 +74,6 @@ fn succeed() {
     let description = "Desc2".to_string();
     let url = "https://url2.url".to_string();
     let parameter_key = "vkr2".to_string();
-    let ticket_amount = 2u64;
     let qualifier = "Qualifier2".to_string();
     let executions = vec![
         ExecutionMsg {
@@ -95,7 +90,6 @@ fn succeed() {
         Some(description.clone()),
         Some(url.clone()),
         Some(parameter_key.clone()),
-        Some(ticket_amount),
         Some(qualifier.clone()),
         Some(executions.clone()),
         Some(admin.clone()),
@@ -106,7 +100,6 @@ fn succeed() {
     assert_eq!(campaign_config.description, description);
     assert_eq!(campaign_config.url, url);
     assert_eq!(campaign_config.parameter_key, parameter_key);
-    assert_eq!(campaign_config.ticket_amount, ticket_amount);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
@@ -126,7 +119,6 @@ fn succeed_update_info_after_activation() {
 
     let title = "Title2".to_string();
     let description = "Desc2".to_string();
-    let ticket_amount = 2u64;
     let qualifier = "Qualifier2".to_string();
     let executions = vec![
         ExecutionMsg {
@@ -143,7 +135,6 @@ fn succeed_update_info_after_activation() {
         Some(description.clone()),
         None,
         None,
-        Some(ticket_amount),
         Some(qualifier.clone()),
         Some(executions.clone()),
         Some(admin.clone()),
@@ -152,7 +143,6 @@ fn succeed_update_info_after_activation() {
     let campaign_config = CampaignConfig::load(&deps.storage).unwrap();
     assert_eq!(campaign_config.title, title);
     assert_eq!(campaign_config.description, description);
-    assert_eq!(campaign_config.ticket_amount, ticket_amount);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
@@ -181,7 +171,6 @@ fn failed_update_url_after_activation() {
         None,
         None,
         None,
-        None,
     );
 
     expect_generic_err(&result, "Only modifiable in pending status");
@@ -194,7 +183,6 @@ fn failed_update_url_after_activation() {
         None,
         None,
         Some("vkr2".to_string()),
-        None,
         None,
         None,
         None,
@@ -213,7 +201,6 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_env(),
         default_sender(),
-        None,
         None,
         None,
         None,
@@ -243,7 +230,6 @@ fn failed_invalid_title() {
         None,
         None,
         None,
-        None,
     );
     expect_generic_err(&result, "Title too short");
 
@@ -252,7 +238,6 @@ fn failed_invalid_title() {
         campaign_env(),
         campaign_admin_sender(),
         Some(std::iter::repeat('b').take(MAX_TITLE_LENGTH + 1).collect()),
-        None,
         None,
         None,
         None,
@@ -280,7 +265,6 @@ fn failed_invalid_description() {
         None,
         None,
         None,
-        None,
     );
     expect_generic_err(&result, "Description too short");
 
@@ -290,7 +274,6 @@ fn failed_invalid_description() {
         campaign_admin_sender(),
         None,
         Some(std::iter::repeat('b').take(MAX_DESC_LENGTH + 1).collect()),
-        None,
         None,
         None,
         None,
@@ -317,7 +300,6 @@ fn failed_invalid_url() {
         None,
         None,
         None,
-        None,
     );
     expect_generic_err(&result, "Url too short");
 
@@ -328,7 +310,6 @@ fn failed_invalid_url() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_URL_LENGTH + 1).collect()),
-        None,
         None,
         None,
         None,
@@ -354,7 +335,6 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         None,
-        None,
     );
     expect_generic_err(&result, "ParameterKey too short");
 
@@ -366,7 +346,6 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_PARAM_KEY_LENGTH + 1).collect()),
-        None,
         None,
         None,
         None,
@@ -400,7 +379,6 @@ fn test_execution_order() {
 
     will_success(
         &mut deps,
-        None,
         None,
         None,
         None,

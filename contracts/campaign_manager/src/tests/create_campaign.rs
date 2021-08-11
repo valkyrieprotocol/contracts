@@ -22,7 +22,6 @@ pub fn exec(
     sender: String,
     amount: Uint128,
     config_msg: Binary,
-    ticket_count: u64,
     qualifier: Option<String>,
     executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
@@ -33,7 +32,6 @@ pub fn exec(
         sender,
         amount,
         config_msg,
-        ticket_count,
         qualifier,
         executions,
     )
@@ -60,7 +58,6 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         DEFAULT_SENDER.to_string(),
         CREATION_FEE_AMOUNT,
         to_binary(&campaign_config_msg).unwrap(),
-        1,
         None,
         vec![],
     ).unwrap();
@@ -97,7 +94,6 @@ fn succeed() {
                         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
                         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                     }).unwrap(),
-                    ticket_amount: 1,
                     qualifier: None,
                     executions: vec![],
                     referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
@@ -162,7 +158,6 @@ fn succeed_zero_creation_fee() {
             participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
             referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        1,
         None,
         vec![],
     ).unwrap();
@@ -188,7 +183,6 @@ fn succeed_zero_creation_fee() {
                         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
                         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                     }).unwrap(),
-                    ticket_amount: 1,
                     qualifier: None,
                     executions: vec![],
                     referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
@@ -229,7 +223,6 @@ fn failed_insufficient_creation_fee() {
             participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
             referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        1,
         None,
         vec![],
     );
@@ -261,7 +254,6 @@ fn failed_invalid_creation_token() {
             participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
             referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         }).unwrap(),
-        1,
         None,
         vec![],
     );

@@ -1,3 +1,0 @@
-[submodule "contracts/ticket"]
-	path = contracts/ticket
-	url = https://github.com/valkyrieprotocol/ticket-contract.git

@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, OverflowError};
 
 use thiserror::Error;
 
@@ -7,6 +7,12 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
+
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Invalid zero amount")]
+    InvalidZeroAmount {},
 }

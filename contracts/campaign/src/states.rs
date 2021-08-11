@@ -21,7 +21,6 @@ pub struct CampaignConfig {
     pub description: String,
     pub url: String,
     pub parameter_key: String,
-    pub ticket_amount: u64,
     pub qualifier: Option<Addr>,
     pub executions: Vec<Execution>,
     pub admin: Addr,

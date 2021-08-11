@@ -36,7 +36,6 @@ fn succeed() {
         CAMPAIGN_DESCRIPTION.to_string(),
         CAMPAIGN_URL.to_string(),
         CAMPAIGN_PARAMETER_KEY.to_string(),
-        TICKET_AMOUNT,
         Some("Qualifier".to_string()),
         vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),

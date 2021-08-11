@@ -143,7 +143,6 @@ pub fn create_campaign(
     sender: String,
     amount: Uint128,
     config_msg: Binary,
-    ticket_amount: u64,
     qualifier: Option<String>,
     executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
@@ -178,7 +177,6 @@ pub fn create_campaign(
             admin: sender.to_string(),
             creator: sender.to_string(),
             config_msg,
-            ticket_amount,
             qualifier,
             executions,
             referral_reward_token: config.referral_reward_token.to_string(),

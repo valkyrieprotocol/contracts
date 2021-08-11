@@ -55,7 +55,6 @@ pub fn instantiate(
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
-        ticket_amount: msg.ticket_amount,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str()).unwrap()),
         executions,
         admin: deps.api.addr_validate(&msg.admin)?,
@@ -101,7 +100,6 @@ pub fn update_campaign_config(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    ticket_amount: Option<u64>,
     qualifier: Option<String>,
     mut executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
@@ -151,11 +149,6 @@ pub fn update_campaign_config(
 
         campaign_config.parameter_key = parameter_key.clone();
         response.add_attribute("is_updated_parameter_key", "true");
-    }
-
-    if let Some(ticket_amount) = ticket_amount.as_ref() {
-        campaign_config.ticket_amount = *ticket_amount;
-        response.add_attribute("is_updated_ticket_amount", "true");
     }
 
     if let Some(qualifier) = qualifier.as_ref() {

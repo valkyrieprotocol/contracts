@@ -36,7 +36,6 @@ pub struct CampaignConfigResponse {
     pub description: String,
     pub url: String,
     pub parameter_key: String,
-    pub ticket_amount: u64,
     pub qualifier: Option<String>,
     pub executions: Vec<ExecutionMsg>,
     pub admin: String,

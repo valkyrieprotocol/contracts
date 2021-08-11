@@ -122,7 +122,6 @@ pub mod campaign {
     pub const PARTICIPATION_REWARD_DENOM_NATIVE: &str = "uusd";
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(5);
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
-    pub const TICKET_AMOUNT: u64 = 1;
     pub const QUALIFIER: &str = "Qualifier";
 
     pub fn campaign_env() -> Env {

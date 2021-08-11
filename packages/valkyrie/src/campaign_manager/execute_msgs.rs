@@ -48,7 +48,6 @@ pub enum ExecuteMsg {
 pub enum Cw20HookMsg {
     CreateCampaign {
         config_msg: Binary,
-        ticket_amount: u64,
         qualifier: Option<String>,
         executions: Vec<ExecutionMsg>,
     },
@@ -65,7 +64,6 @@ pub struct CampaignInstantiateMsg {
     pub admin: String,
     pub creator: String,
     pub config_msg: Binary,
-    pub ticket_amount: u64,
     pub qualifier: Option<String>,
     pub executions: Vec<ExecutionMsg>,
     pub referral_reward_token: String,

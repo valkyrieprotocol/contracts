@@ -7,4 +7,5 @@ use crate::QualificationMsg;
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Qualify(QualificationMsg),
+    Requirement {},
 }
