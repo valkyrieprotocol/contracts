@@ -20,6 +20,14 @@ pub struct InstantiateMsg {
     pub key_denom: Denom,
     pub referral_reward_token: String,
     pub min_referral_reward_deposit_rate: Decimal,
+    pub referral_reward_limit_option: ReferralRewardLimitOptionMsg,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ReferralRewardLimitOptionMsg {
+    pub overflow_amount_recipient: Option<String>,
+    pub base_count: u8,
+    pub percent_for_governance_staking: u16,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -41,6 +49,12 @@ pub enum ExecuteMsg {
         referral_reward_token: Option<String>,
         min_referral_reward_deposit_rate: Option<Decimal>,
     },
+    UpdateReferralRewardLimitOption {
+        overflow_amount_recipient: Option<String>,
+        base_count: Option<u8>,
+        percent_for_governance_staking: Option<u16>,
+    },
+    SetReuseOverflowAmount {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

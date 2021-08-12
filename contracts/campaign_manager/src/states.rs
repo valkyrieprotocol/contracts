@@ -42,6 +42,26 @@ impl Config {
 }
 
 
+const REFERRAL_REWARD_LIMIT_OPTION: Item<ReferralRewardLimitOption> = Item::new("referral_reward_limit_option");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ReferralRewardLimitOption {
+    pub overflow_amount_recipient: Option<Addr>,
+    pub base_count: u8,
+    pub percent_for_governance_staking: u16,
+}
+
+impl ReferralRewardLimitOption {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        REFERRAL_REWARD_LIMIT_OPTION.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<ReferralRewardLimitOption> {
+        REFERRAL_REWARD_LIMIT_OPTION.load(storage)
+    }
+}
+
+
 const CREATE_CAMPAIGN_CONTEXT: Item<CreateCampaignContext> = Item::new("create_campaign_context");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

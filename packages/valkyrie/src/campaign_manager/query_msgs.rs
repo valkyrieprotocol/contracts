@@ -13,6 +13,7 @@ use crate::test_constants::campaign_manager::*;
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    ReferralRewardLimitOption {},
     Campaign {
         address: String,
     },
@@ -20,6 +21,9 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,
+    },
+    ReferralRewardLimitAmount {
+        address: String,
     },
 }
 
@@ -61,6 +65,24 @@ impl Default for ConfigResponse {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ReferralRewardLimitOptionResponse {
+    pub overflow_amount_recipient: Option<String>,
+    pub base_count: u8,
+    pub percent_for_governance_staking: u16,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Default for ReferralRewardLimitOptionResponse {
+    fn default() -> Self {
+        ReferralRewardLimitOptionResponse {
+            overflow_amount_recipient: None,
+            base_count: REFERRAL_REWARD_LIMIT_BASE_COUNT,
+            percent_for_governance_staking: REFERRAL_REWARD_LIMIT_STAKING_PERCENT,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignResponse {
     pub code_id: u64,
@@ -72,4 +94,10 @@ pub struct CampaignResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignsResponse {
     pub campaigns: Vec<CampaignResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct ReferralRewardLimitAmountResponse {
+    pub address: String,
+    pub amount: Uint128,
 }

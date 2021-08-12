@@ -186,6 +186,12 @@ pub struct Balance {
     pub locked: Uint128,
 }
 
+impl Balance {
+    pub fn available(&self) -> Uint128 {
+        self.total.checked_sub(self.locked).unwrap()
+    }
+}
+
 pub fn is_pending(storage: &dyn Storage) -> StdResult<bool> {
     Ok(CampaignState::load(storage)?.is_pending())
 }

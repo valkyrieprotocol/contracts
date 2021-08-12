@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api};
+use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api, WasmMsg};
 use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
 use terraswap::asset::AssetInfo;
 use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
@@ -14,6 +14,7 @@ use valkyrie_qualifier::{QualificationMsg, QualificationResult};
 use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
 
 use crate::states::*;
+use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitOptionResponse, ReferralRewardLimitAmountResponse};
 
 pub const MIN_TITLE_LENGTH: usize = 4;
 pub const MAX_TITLE_LENGTH: usize = 64;
@@ -702,6 +703,7 @@ pub fn participate(
     } else {
         _participate(
             deps.storage,
+            &deps.querier,
             &env,
             &mut response,
             actor,
@@ -739,6 +741,7 @@ pub fn participate_qualify_result(
     if continue_option.can_participate() {
         _participate(
             deps.storage,
+            &deps.querier,
             &env,
             &mut response,
             context.actor,
@@ -764,6 +767,7 @@ pub fn participate_qualify_result(
 
 fn _participate(
     storage: &mut dyn Storage,
+    querier: &QuerierWrapper,
     env: &Env,
     response: &mut Response,
     actor: Addr,
@@ -776,8 +780,14 @@ fn _participate(
             &env.block,
         ));
 
+    let campaign_config = CampaignConfig::load(storage)?;
     let mut campaign_state = CampaignState::load(storage)?;
     let reward_config = RewardConfig::load(storage)?;
+
+    let referral_reward_limit_option: ReferralRewardLimitOptionResponse = querier.query_wasm_smart(
+        &campaign_config.campaign_manager,
+        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitOption {},
+    )?;
 
     let distributed_participation_reward_amount = distribute_participation_reward(
         &mut my_participation,
@@ -785,12 +795,37 @@ fn _participate(
         &reward_config,
     )?;
 
-    let (distributed_referral_reward_amount, referral_rewards) = distribute_referral_reward(
+    let (
+        distributed_referral_reward_amount,
+        referral_rewards,
+        referral_reward_overflow_amount,
+    ) = distribute_referral_reward(
         &mut my_participation,
         &mut campaign_state,
         &reward_config,
+        &referral_reward_limit_option,
         storage,
+        querier,
+        &campaign_config.campaign_manager,
     )?;
+
+    if !referral_reward_overflow_amount.is_zero() {
+        if let Some(recipient) = referral_reward_limit_option.overflow_amount_recipient {
+            campaign_state.withdraw(
+                &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
+                &referral_reward_overflow_amount,
+            )?;
+
+            response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: reward_config.referral_reward_token.to_string(),
+                funds: vec![],
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    recipient,
+                    amount: referral_reward_overflow_amount,
+                })?,
+            }));
+        }
+    }
 
     //Check balance after distribute
     campaign_state.validate_balance().map_err(|_| StdError::generic_err("Insufficient balance"))?;
@@ -827,6 +862,13 @@ fn _participate(
         "distributed_referral_reward_amount",
         format!("{}{}",
                 distributed_referral_reward_amount.to_string(),
+                reward_config.referral_reward_token.to_string(),
+        ),
+    );
+    response.add_attribute(
+        "referral_reward_overflow_amount",
+        format!("{}{}",
+                referral_reward_overflow_amount.to_string(),
                 reward_config.referral_reward_token.to_string(),
         ),
     );
@@ -874,8 +916,11 @@ fn distribute_referral_reward(
     participation: &mut Actor,
     campaign_state: &mut CampaignState,
     reward_config: &RewardConfig,
+    referral_limit_option: &ReferralRewardLimitOptionResponse,
     storage: &mut dyn Storage,
-) -> StdResult<(Uint128, Vec<ReferralReward>)> {
+    querier: &QuerierWrapper,
+    campaign_manager: &Addr,
+) -> StdResult<(Uint128, Vec<ReferralReward>, Uint128)> {
     let mut referrers = participation.load_referrers(
         storage,
         reward_config.referral_reward_amounts.len(),
@@ -884,34 +929,71 @@ fn distribute_referral_reward(
     if referrers.is_empty() {
         participation.referrer = None;
 
-        return Ok((Uint128::zero(), vec![]));
+        return Ok((Uint128::zero(), vec![], Uint128::zero()));
     }
 
     let mut distributed_amount = Uint128::zero();
     let mut referral_rewards: Vec<ReferralReward> = vec![];
+    let mut overflow_amount = Uint128::zero();
 
     let referrer_reward_pairs = referrers.iter_mut()
         .zip(&reward_config.referral_reward_amounts)
         .enumerate();
 
     let referral_reward_denom = cw20::Denom::Cw20(reward_config.referral_reward_token.clone());
-    for (distance, (participation, reward_amount)) in referrer_reward_pairs {
-        participation.referral_count += 1;
-        participation.referral_reward_amount += *reward_amount;
-        campaign_state.cumulative_referral_reward_amount += *reward_amount;
-        campaign_state.lock_balance(&referral_reward_denom, reward_amount);
-        distributed_amount += *reward_amount;
+    for (distance, (actor, reward_amount)) in referrer_reward_pairs {
+        let reward_limit = calc_referral_reward_limit(
+            reward_config,
+            &referral_limit_option,
+            querier,
+            campaign_manager,
+            &actor.address,
+        )?;
+        let mut actor_receive_amount = *reward_amount;
+        let mut actor_overflow_amount = Uint128::zero();
+        let mut actor_reward_amount = actor.referral_reward_amount + *reward_amount;
+        if reward_limit < actor_reward_amount {
+            actor_overflow_amount = actor_reward_amount.checked_sub(reward_limit)?;
+            actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)?;
+            actor_reward_amount = reward_limit;
+        }
 
-        participation.save(storage)?;
+        actor.referral_count += 1;
+        actor.referral_reward_amount = actor_reward_amount;
+        campaign_state.cumulative_referral_reward_amount += *reward_amount;
+        campaign_state.lock_balance(&referral_reward_denom, &actor_receive_amount);
+        distributed_amount += *reward_amount;
+        overflow_amount += actor_overflow_amount;
+
+        actor.save(storage)?;
 
         referral_rewards.push(ReferralReward {
-            address: participation.address.to_string(),
+            address: actor.address.to_string(),
             distance: (distance + 1) as u64,
-            amount: *reward_amount,
+            amount: actor_receive_amount,
         });
     }
 
-    Ok((distributed_amount, referral_rewards))
+    Ok((distributed_amount, referral_rewards, overflow_amount))
+}
+
+fn calc_referral_reward_limit(
+    reward_config: &RewardConfig,
+    option: &ReferralRewardLimitOptionResponse,
+    querier: &QuerierWrapper,
+    campaign_manager: &Addr,
+    address: &Addr,
+) -> StdResult<Uint128> {
+    let referral_reward_amount: Uint128 = reward_config.referral_reward_amounts.iter().sum();
+    let base_limit = referral_reward_amount.checked_mul(Uint128::from(option.base_count))?;
+    let limit: ReferralRewardLimitAmountResponse = querier.query_wasm_smart(
+        campaign_manager,
+        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitAmount {
+            address: address.to_string(),
+        },
+    )?;
+
+    Ok(std::cmp::max(base_limit, limit.amount))
 }
 
 fn validate_title(title: &str) -> StdResult<()> {

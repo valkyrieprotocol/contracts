@@ -62,6 +62,19 @@ pub fn execute(
             referral_reward_token,
             min_referral_reward_deposit_rate,
         ),
+        ExecuteMsg::UpdateReferralRewardLimitOption {
+            overflow_amount_recipient,
+            base_count,
+            percent_for_governance_staking,
+        } => executions::update_referral_reward_limit_option(
+            deps,
+            env,
+            info,
+            overflow_amount_recipient,
+            base_count,
+            percent_for_governance_staking,
+        ),
+        ExecuteMsg::SetReuseOverflowAmount {} => executions::set_reuse_overflow_amount(deps, env, info),
     }
 }
 
@@ -112,6 +125,9 @@ pub fn query(
         QueryMsg::Config {} => to_binary(
             &queries::get_config(deps, env)?
         ),
+        QueryMsg::ReferralRewardLimitOption {} => to_binary(
+            &queries::get_referral_reward_limit_option(deps, env)?
+        ),
         QueryMsg::Campaign { address } => to_binary(
             &queries::get_campaign(deps, env, address)?
         ),
@@ -121,6 +137,11 @@ pub fn query(
             order_by,
         } => to_binary(
             &queries::query_campaign(deps, env, start_after, limit, order_by)?
+        ),
+        QueryMsg::ReferralRewardLimitAmount {
+            address,
+        } => to_binary(
+            &queries::get_referral_reward_limit_amount(deps, env, address)?
         ),
     }?;
 

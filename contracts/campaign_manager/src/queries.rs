@@ -1,9 +1,10 @@
-use cosmwasm_std::{Deps, Env};
+use cosmwasm_std::{Deps, Env, Uint128, StdError};
 
-use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse, ConfigResponse};
+use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse, ConfigResponse, ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
 use valkyrie::common::{ContractResult, Denom, OrderBy};
 
 use crate::states::*;
+use valkyrie::governance::query_msgs::{QueryMsg, StakerStateResponse};
 
 pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
     let config = Config::load(deps.storage)?;
@@ -22,6 +23,19 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
         key_denom: Denom::from_cw20(config.key_denom),
         referral_reward_token: config.referral_reward_token.to_string(),
         min_referral_reward_deposit_rate: config.min_referral_reward_deposit_rate,
+    })
+}
+
+pub fn get_referral_reward_limit_option(
+    deps: Deps,
+    _env: Env,
+) -> ContractResult<ReferralRewardLimitOptionResponse> {
+    let option = ReferralRewardLimitOption::load(deps.storage)?;
+
+    Ok(ReferralRewardLimitOptionResponse {
+        overflow_amount_recipient: option.overflow_amount_recipient.map(|r| r.to_string()),
+        base_count: option.base_count,
+        percent_for_governance_staking: option.percent_for_governance_staking,
     })
 }
 
@@ -54,4 +68,33 @@ pub fn query_campaign(
     )?;
 
     Ok(campaigns)
+}
+
+pub fn get_referral_reward_limit_amount(
+    deps: Deps,
+    _env: Env,
+    address: String,
+) -> ContractResult<ReferralRewardLimitAmountResponse> {
+    let address = deps.api.addr_validate(address.as_str())?;
+
+    let config = Config::load(deps.storage)?;
+    let option = ReferralRewardLimitOption::load(deps.storage)?;
+
+    let gov_staker_state: StakerStateResponse = deps.querier.query_wasm_smart(
+        config.governance,
+        &QueryMsg::StakerState {
+            address: address.to_string(),
+        },
+    )?;
+    let gov_staking_amount = gov_staker_state.balance;
+
+    let amount = gov_staking_amount
+        .checked_mul(Uint128::from(100 * option.percent_for_governance_staking))?
+        .checked_div(Uint128::new(100))
+        .map_err(|e| StdError::divide_by_zero(e))?;
+
+    Ok(ReferralRewardLimitAmountResponse {
+        address: address.to_string(),
+        amount,
+    })
 }

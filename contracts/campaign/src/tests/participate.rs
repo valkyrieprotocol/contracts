@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, to_binary};
 use cosmwasm_std::testing::mock_info;
 
 use valkyrie::campaign::enumerations::Referrer;
@@ -11,6 +11,8 @@ use crate::states::{CampaignState, Actor};
 use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
 use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
+use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
+use cw20::{Denom, Cw20ExecuteMsg};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -200,4 +202,81 @@ fn failed_insufficient_balance() {
         None,
     );
     expect_generic_err(&result, "Insufficient balance");
+}
+
+#[test]
+fn overflow_referral_reward() {
+    let mut deps = custom_deps();
+
+    super::instantiate::default(&mut deps);
+    super::update_activation::will_success(&mut deps, true);
+    super::deposit::will_success(&mut deps, 100, 100);
+
+    deps.querier.with_referral_reward_limit_option(ReferralRewardLimitOptionResponse {
+        overflow_amount_recipient: None,
+        base_count: 1,
+        percent_for_governance_staking: 10,
+    });
+
+    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
+        address: "Referrer".to_string(),
+        amount: Uint128::new(8),
+    });
+
+    will_success(&mut deps, "Referrer", None);
+
+    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    will_success(&mut deps, "Participator2", Some(Referrer::Address("Participator".to_string())));
+    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    assert_eq!(referrer.referral_reward_amount, Uint128::new(10)); //reach limit. overflow amount = 3
+
+    let state = CampaignState::load(&deps.storage).unwrap();
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(85));
+
+
+    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
+        address: "Referrer".to_string(),
+        amount: Uint128::new(14),
+    });
+
+    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    assert_eq!(referrer.referral_reward_amount, Uint128::new(14)); //reach limit. overflow amount = 1
+
+    let state = CampaignState::load(&deps.storage).unwrap();
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(81));
+
+
+    deps.querier.with_referral_reward_limit_option(ReferralRewardLimitOptionResponse {
+        overflow_amount_recipient: Some("Recipient".to_string()),
+        base_count: 1,
+        percent_for_governance_staking: 10,
+    });
+
+    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
+        address: "Referrer".to_string(),
+        amount: Uint128::new(16),
+    });
+
+    let (_, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+
+    assert_eq!(response.messages, vec![
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "Recipient".to_string(),
+                amount: Uint128::new(3),
+            }).unwrap(),
+        })),
+    ]);
+
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    assert_eq!(referrer.referral_reward_amount, Uint128::new(16)); //reach limit. overflow amount = 3
+
+    let state = CampaignState::load(&deps.storage).unwrap();
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(76));
 }

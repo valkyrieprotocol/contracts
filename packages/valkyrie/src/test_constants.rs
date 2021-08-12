@@ -93,6 +93,8 @@ pub mod campaign_manager {
     pub const KEY_DENOM_NATIVE: &str = "uusd";
     pub const REFERRAL_REWARD_TOKEN: &str = VALKYRIE_TOKEN;
     pub const MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT: u64 = 20;
+    pub const REFERRAL_REWARD_LIMIT_BASE_COUNT: u8 = 5;
+    pub const REFERRAL_REWARD_LIMIT_STAKING_PERCENT: u16 = 50;
 
     pub fn campaign_manager_env() -> Env {
         mock_env_contract(CAMPAIGN_MANAGER)

@@ -7,7 +7,7 @@ use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrap
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse};
 use crate::terra::calc_tax_one_plus;
 use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg};
-use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse};
+use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse, ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
 
 use terraswap::router::{QueryMsg as TerraswapRouterQueryMsg, SwapOperation, SimulateSwapOperationsResponse};
 
@@ -62,14 +62,20 @@ pub(crate) fn powers_to_map(powers: &[(&String, &Decimal)]) -> HashMap<String, D
 #[derive(Clone, Default)]
 pub struct CampaignManagerConfigQuerier {
     config: ConfigResponse,
+    referral_reward_limit_option: ReferralRewardLimitOptionResponse,
+    referral_reward_limit: HashMap<String, ReferralRewardLimitAmountResponse>,
 }
 
 impl CampaignManagerConfigQuerier {
     pub fn new(
         config: ConfigResponse,
+        referral_reward_limit_option: ReferralRewardLimitOptionResponse,
+        referral_reward_limit: HashMap<String, ReferralRewardLimitAmountResponse>,
     ) -> Self {
         CampaignManagerConfigQuerier {
             config,
+            referral_reward_limit_option,
+            referral_reward_limit,
         }
     }
 }
@@ -266,6 +272,22 @@ impl WasmMockQuerier {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
                     &self.campaign_manager_config_querier.config,
                 ))))
+            },
+            Ok(CampaignManagerQueryMsg::ReferralRewardLimitOption {}) => {
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &self.campaign_manager_config_querier.referral_reward_limit_option,
+                ))))
+            },
+            Ok(CampaignManagerQueryMsg::ReferralRewardLimitAmount { address }) => {
+                let default = ReferralRewardLimitAmountResponse {
+                    address: address.clone(),
+                    amount: Uint128::new(9999999999),
+                };
+
+                let limit = self.campaign_manager_config_querier.referral_reward_limit.get(&address)
+                    .unwrap_or(&default);
+
+                Some(SystemResult::Ok(ContractResult::from(to_binary(&limit))))
             },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart".to_string(),
@@ -474,6 +496,21 @@ impl WasmMockQuerier {
         config: ConfigResponse,
     ) {
         self.campaign_manager_config_querier.config = config;
+    }
+
+    pub fn with_referral_reward_limit(
+        &mut self,
+        address: &str,
+        limit: ReferralRewardLimitAmountResponse,
+    ) {
+        self.campaign_manager_config_querier.referral_reward_limit.insert(address.to_string(), limit);
+    }
+
+    pub fn with_referral_reward_limit_option(
+        &mut self,
+        option: ReferralRewardLimitOptionResponse,
+    ) {
+        self.campaign_manager_config_querier.referral_reward_limit_option = option;
     }
 
     pub fn with_gov_config(

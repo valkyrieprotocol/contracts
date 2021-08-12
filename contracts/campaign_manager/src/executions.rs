@@ -33,6 +33,13 @@ pub fn instantiate(
         min_referral_reward_deposit_rate: msg.min_referral_reward_deposit_rate,
     }.save(deps.storage)?;
 
+    ReferralRewardLimitOption {
+        overflow_amount_recipient: msg.referral_reward_limit_option.overflow_amount_recipient
+            .map(|r| deps.api.addr_validate(r.as_str()).unwrap()),
+        base_count: msg.referral_reward_limit_option.base_count,
+        percent_for_governance_staking: msg.referral_reward_limit_option.percent_for_governance_staking,
+    }.save(deps.storage)?;
+
     Ok(response)
 }
 
@@ -130,6 +137,69 @@ pub fn update_config(
     }
 
     config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn update_referral_reward_limit_option(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    overflow_amount_recipient: Option<String>,
+    base_count: Option<u8>,
+    percent_for_governance_staking: Option<u16>,
+) -> ContractResult<Response> {
+    // Validate
+    let config = Config::load(deps.storage)?;
+    if !config.is_governance(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("update_referral_reward_limit_option");
+
+    let mut limit_option = ReferralRewardLimitOption::load(deps.storage)?;
+
+    if let Some(overflow_amount_recipient) = overflow_amount_recipient.as_ref() {
+        limit_option.overflow_amount_recipient = Some(deps.api.addr_validate(overflow_amount_recipient.as_str())?);
+        response.add_attribute("is_updated_overflow_amount_recipient", "true");
+    }
+
+    if let Some(base_count) = base_count.as_ref() {
+        limit_option.base_count = *base_count;
+        response.add_attribute("is_updated_base_count", "true");
+    }
+
+    if let Some(percent_for_governance_staking) = percent_for_governance_staking.as_ref() {
+        limit_option.percent_for_governance_staking = *percent_for_governance_staking;
+        response.add_attribute("is_updated_percent_for_governance_staking", "true");
+    }
+
+    limit_option.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn set_reuse_overflow_amount(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+) -> ContractResult<Response> {
+    // Validate
+    let config = Config::load(deps.storage)?;
+    if !config.is_governance(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("set_reuse_overflow_amount");
+
+    let mut limit_option = ReferralRewardLimitOption::load(deps.storage)?;
+
+    limit_option.overflow_amount_recipient = None;
+    response.add_attribute("is_updated_overflow_amount_recipient", "true");
+
+    limit_option.save(deps.storage)?;
 
     Ok(response)
 }
