@@ -861,6 +861,7 @@ fn distribute_participation_reward(
 ) -> StdResult<Uint128> {
     participation.participation_count += 1;
     participation.participation_reward_amount += reward_config.participation_reward_amount;
+    campaign_state.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
     campaign_state.lock_balance(
         &reward_config.participation_reward_denom,
         &reward_config.participation_reward_amount,
@@ -897,6 +898,7 @@ fn distribute_referral_reward(
     for (distance, (participation, reward_amount)) in referrer_reward_pairs {
         participation.referral_count += 1;
         participation.referral_reward_amount += *reward_amount;
+        campaign_state.cumulative_referral_reward_amount += *reward_amount;
         campaign_state.lock_balance(&referral_reward_denom, reward_amount);
         distributed_amount += *reward_amount;
 
