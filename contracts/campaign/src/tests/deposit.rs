@@ -1,14 +1,18 @@
-use cosmwasm_std::{Env, Response, MessageInfo, Uint128, coin, Addr, Decimal};
+use cosmwasm_std::{Env, Response, MessageInfo, Uint128, coin, Addr, Decimal, SubMsg, CosmosMsg, WasmMsg, to_binary};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
 
 use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_DENOM_NATIVE, CAMPAIGN_ADMIN};
 use crate::states::CampaignState;
-use crate::executions::deposit;
+use crate::executions::{deposit, calc_deposit_fee_amount};
 use cosmwasm_std::testing::mock_info;
 use valkyrie::test_constants::campaign_manager::{REFERRAL_REWARD_TOKEN, KEY_DENOM_NATIVE, MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT};
 use valkyrie::test_utils::expect_generic_err;
+use cw20::Cw20ExecuteMsg;
+use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
+use valkyrie::campaign_manager::query_msgs::ConfigResponse;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -70,11 +74,35 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    will_success(
+    let mut config = ConfigResponse::default();
+    config.deposit_fee_rate = Decimal::percent(1);
+    deps.querier.with_global_campaign_config(config);
+
+    let (env, info, response) = will_success(
         &mut deps,
         100 - MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT as u128,
         MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT as u128,
     );
+    assert_eq!(response.messages, vec![
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: Uint128::from(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+            }).unwrap(),
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                contract: FUND_MANAGER.to_string(),
+                amount: Uint128::new(1),
+                msg: to_binary(&Cw20HookMsg::CampaignDepositFee {}).unwrap(),
+            }).unwrap(),
+        })),
+    ]);
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(
@@ -83,7 +111,7 @@ fn succeed() {
     );
     assert_eq!(
         campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
-        Uint128::from(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+        Uint128::new(19),
     );
 }
 
@@ -93,20 +121,44 @@ fn succeed_more_referral_token() {
 
     super::instantiate::default(&mut deps);
 
-    will_success(
+    let mut config = ConfigResponse::default();
+    config.deposit_fee_rate = Decimal::percent(1);
+    deps.querier.with_global_campaign_config(config);
+
+    let (env, info, response) = will_success(
         &mut deps,
-        1,
-        MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT as u128,
+        100,
+        200,
     );
+    assert_eq!(response.messages, vec![
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: Uint128::new(200),
+            }).unwrap(),
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                contract: FUND_MANAGER.to_string(),
+                amount: Uint128::new(3),
+                msg: to_binary(&Cw20HookMsg::CampaignDepositFee {}).unwrap(),
+            }).unwrap(),
+        })),
+    ]);
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(
         campaign_state.balance(&cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string())).total,
-        Uint128::new(1),
+        Uint128::new(100),
     );
     assert_eq!(
         campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
-        Uint128::from(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+        Uint128::new(197),
     );
 }
 
@@ -116,11 +168,35 @@ fn succeed_zero_participation_token() {
 
     super::instantiate::default(&mut deps);
 
-    will_success(
+    let mut config = ConfigResponse::default();
+    config.deposit_fee_rate = Decimal::percent(1);
+    deps.querier.with_global_campaign_config(config);
+
+    let (env, info, response) = will_success(
         &mut deps,
         0,
-        MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT as u128,
+        200,
     );
+    assert_eq!(response.messages, vec![
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: Uint128::new(200),
+            }).unwrap(),
+        })),
+        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                contract: FUND_MANAGER.to_string(),
+                amount: Uint128::new(2),
+                msg: to_binary(&Cw20HookMsg::CampaignDepositFee {}).unwrap(),
+            }).unwrap(),
+        })),
+    ]);
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(
@@ -129,7 +205,7 @@ fn succeed_zero_participation_token() {
     );
     assert_eq!(
         campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
-        Uint128::from(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+        Uint128::new(198),
     );
 }
 
@@ -176,4 +252,63 @@ fn failed_insufficient_referral_token() {
         "Referral reward rate must be greater than {}",
         Decimal::percent(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT).to_string(),
     ).as_str());
+}
+
+#[test]
+fn test_deposit_fee_amount() {
+    let result = calc_deposit_fee_amount(
+        Uint128::new(20),
+        Decimal::percent(20),
+        Decimal::percent(1),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(1));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(200),
+        Decimal::percent(50),
+        Decimal::percent(1),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(4));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(500),
+        Decimal::percent(50),
+        Decimal::percent(1),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(10));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(500),
+        Decimal::percent(40),
+        Decimal::percent(1),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(12));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(20),
+        Decimal::percent(20),
+        Decimal::percent(5),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(5));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(200),
+        Decimal::percent(50),
+        Decimal::percent(5),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(20));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(500),
+        Decimal::percent(50),
+        Decimal::percent(5),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(50));
+
+    let result = calc_deposit_fee_amount(
+        Uint128::new(500),
+        Decimal::percent(40),
+        Decimal::percent(5),
+    ).unwrap();
+    assert_eq!(result, Uint128::new(62));
 }

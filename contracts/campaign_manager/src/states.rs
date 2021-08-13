@@ -19,6 +19,7 @@ pub struct Config {
     pub creation_fee_amount: Uint128,
     pub creation_fee_recipient: Addr,
     pub code_id: u64,
+    pub deposit_fee_rate: Decimal,
     pub withdraw_fee_rate: Decimal,
     pub withdraw_fee_recipient: Addr,
     pub deactivate_period: u64,

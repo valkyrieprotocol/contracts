@@ -141,6 +141,7 @@ fn succeed_zero_creation_fee() {
         None,
         None,
         None,
+        None,
     );
 
     let response = exec(

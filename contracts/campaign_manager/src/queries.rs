@@ -17,6 +17,7 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
         creation_fee_amount: config.creation_fee_amount,
         creation_fee_recipient: config.creation_fee_recipient.to_string(),
         code_id: config.code_id,
+        deposit_fee_rate: config.deposit_fee_rate,
         withdraw_fee_rate: config.withdraw_fee_rate,
         withdraw_fee_recipient: config.withdraw_fee_recipient.to_string(),
         deactivate_period: config.deactivate_period,

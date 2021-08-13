@@ -1,11 +1,12 @@
 use cw_storage_plus::{Item, Map};
-use cosmwasm_std::{Addr, Storage, StdResult, Uint128, QuerierWrapper, Api, Env};
+use cosmwasm_std::{Addr, Storage, StdResult, Uint128, QuerierWrapper, Api, Env, Decimal};
 use valkyrie::common::OrderBy;
 use valkyrie::fund_manager::query_msgs::{AllowancesResponse, AllowanceResponse, BalanceResponse};
 use valkyrie::pagination::addr_range_option;
 use valkyrie::cw20::query_cw20_balance;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 
 const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
 
@@ -14,6 +15,8 @@ pub struct ContractConfig {
     pub admins: Vec<Addr>,
     pub managing_token: Addr,
     pub terraswap_router: Addr,
+    pub campaign_deposit_fee_burn_ratio: Decimal,
+    pub campaign_deposit_fee_recipient: Addr,
 }
 
 impl ContractConfig {
@@ -30,11 +33,13 @@ impl ContractConfig {
     }
 }
 
+
 const CONTRACT_STATE: Item<ContractState> = Item::new("contract-state");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractState {
     pub remain_allowance_amount: Uint128,
+    pub campaign_deposit_fee_amount: Uint128,
 }
 
 impl ContractState {
@@ -63,10 +68,13 @@ impl ContractState {
         Ok(BalanceResponse {
             total_balance,
             allowance_amount: self.remain_allowance_amount,
-            free_balance: total_balance.checked_sub(self.remain_allowance_amount)?,
+            campaign_deposit_fee_amount: self.campaign_deposit_fee_amount,
+            free_balance: total_balance.checked_sub(self.remain_allowance_amount)?
+                .checked_sub(self.campaign_deposit_fee_amount)?,
         })
     }
 }
+
 
 const ALLOWANCE: Map<&Addr, Allowance> = Map::new("allowance");
 

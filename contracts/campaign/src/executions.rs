@@ -15,6 +15,7 @@ use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
 
 use crate::states::*;
 use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitOptionResponse, ReferralRewardLimitAmountResponse};
+use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 
 pub const MIN_TITLE_LENGTH: usize = 4;
 pub const MAX_TITLE_LENGTH: usize = 64;
@@ -287,7 +288,7 @@ pub fn deposit(
     }
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
-    let (key_denom, referral_reward_pool_ratio) = validate_reward_pool_weight(
+    let (key_denom, referral_reward_pool_ratio, deposit_value) = validate_reward_pool_weight(
         &deps.querier,
         deps.api,
         &campaign_config,
@@ -298,6 +299,22 @@ pub fn deposit(
 
     // Execute
     let mut response = make_response("deposit");
+    response.add_attribute("participation_reward_amount", participation_reward_amount.to_string());
+    response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
+    response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
+    response.add_attribute("deposit_value", deposit_value);
+
+    let global_campaign_config = load_global_campaign_config(&deps.querier, &campaign_config.campaign_manager)?;
+
+    let deposit_fee_amount = calc_deposit_fee_amount(
+        referral_reward_amount,
+        referral_reward_pool_ratio,
+        global_campaign_config.deposit_fee_rate,
+    )?;
+    response.add_attribute("deposit_fee_amount", deposit_fee_amount.to_string());
+
+    let real_referral_reward_amount = referral_reward_amount.checked_sub(deposit_fee_amount)?;
+    response.add_attribute("referral_reward_amount", real_referral_reward_amount.to_string());
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
@@ -307,7 +324,7 @@ pub fn deposit(
     );
     campaign_state.deposit(
         &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
-        &referral_reward_amount,
+        &real_referral_reward_amount,
     );
 
     campaign_state.save(deps.storage)?;
@@ -321,7 +338,7 @@ pub fn deposit(
                 recipient: env.contract.address.to_string(),
                 amount: participation_reward_amount.clone(),
             },
-        ))
+        ));
     }
 
     response.add_message(message_factories::wasm_execute(
@@ -333,10 +350,30 @@ pub fn deposit(
         },
     ));
 
-    response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
-    response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
+    if !deposit_fee_amount.is_zero() {
+        response.add_message(message_factories::wasm_execute(
+            &reward_config.referral_reward_token,
+            &Cw20ExecuteMsg::Send {
+                contract: global_campaign_config.fund_manager.to_string(),
+                amount: deposit_fee_amount,
+                msg: to_binary(&Cw20HookMsg::CampaignDepositFee {})?,
+            },
+        ));
+    }
 
     Ok(response)
+}
+
+const FRACTION: Uint128 = Uint128::new(1_000_000);
+
+pub fn calc_deposit_fee_amount(
+    send_amount: Uint128,
+    ratio: Decimal,
+    fee_rate: Decimal,
+) -> StdResult<Uint128> {
+    send_amount.checked_mul(FRACTION * fee_rate)?
+        .checked_div(FRACTION * ratio)
+        .map_err(StdError::divide_by_zero)
 }
 
 fn validate_native_send(
@@ -366,7 +403,7 @@ fn validate_reward_pool_weight(
     reward_config: &RewardConfig,
     participation_reward_amount: Uint128,
     referral_reward_amount: Uint128,
-) -> StdResult<(cw20::Denom, Decimal)> {
+) -> StdResult<(cw20::Denom, Decimal, Uint128)> {
     let global_campaign_config = load_global_campaign_config(
         &querier,
         &campaign_config.campaign_manager,
@@ -401,7 +438,7 @@ fn validate_reward_pool_weight(
         )));
     }
 
-    Ok((key_denom, referral_reward_pool_rate))
+    Ok((key_denom, referral_reward_pool_rate, participation_reward_value + referral_reward_amount))
 }
 
 fn swap_simulate(

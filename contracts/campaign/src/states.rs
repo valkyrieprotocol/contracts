@@ -186,6 +186,7 @@ pub struct Balance {
     pub locked: Uint128,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Balance {
     pub fn available(&self) -> Uint128 {
         self.total.checked_sub(self.locked).unwrap()

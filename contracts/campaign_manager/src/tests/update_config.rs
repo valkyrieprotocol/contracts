@@ -21,6 +21,7 @@ pub fn exec(
     creation_fee_amount: Option<Uint128>,
     creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
+    deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
     withdraw_fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
@@ -39,6 +40,7 @@ pub fn exec(
         creation_fee_amount,
         creation_fee_recipient,
         code_id,
+        deposit_fee_rate,
         withdraw_fee_rate,
         withdraw_fee_recipient,
         deactivate_period,
@@ -57,6 +59,7 @@ pub fn will_success(
     creation_fee_amount: Option<Uint128>,
     creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
+    deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
     withdraw_fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
@@ -78,6 +81,7 @@ pub fn will_success(
         creation_fee_amount,
         creation_fee_recipient,
         code_id,
+        deposit_fee_rate,
         withdraw_fee_rate,
         withdraw_fee_recipient,
         deactivate_period,
@@ -102,6 +106,7 @@ fn succeed() {
     let creation_fee_amount = Uint128::new(1);
     let creation_fee_recipient = "ChangedFeeRecipient";
     let code_id = 100u64;
+    let deposit_fee_rate = Decimal::percent(9);
     let withdraw_fee_rate = Decimal::percent(99);
     let withdraw_fee_recipient = "ChangedFeeRecipient";
     let deactivate_period = 99u64;
@@ -118,6 +123,7 @@ fn succeed() {
         Some(creation_fee_amount.clone()),
         Some(creation_fee_recipient.to_string()),
         Some(code_id),
+        Some(deposit_fee_rate),
         Some(withdraw_fee_rate),
         Some(withdraw_fee_recipient.to_string()),
         Some(deactivate_period),
@@ -135,6 +141,7 @@ fn succeed() {
         creation_fee_amount: creation_fee_amount.clone(),
         creation_fee_recipient: Addr::unchecked(creation_fee_recipient),
         code_id: code_id.clone(),
+        deposit_fee_rate: deposit_fee_rate.clone(),
         withdraw_fee_rate: withdraw_fee_rate.clone(),
         withdraw_fee_recipient: Addr::unchecked(withdraw_fee_recipient),
         deactivate_period: deactivate_period.clone(),
@@ -154,6 +161,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_manager_env(),
         default_sender(),
+        None,
         None,
         None,
         None,

@@ -25,6 +25,7 @@ pub fn instantiate(
         creation_fee_amount: msg.creation_fee_amount,
         creation_fee_recipient: deps.api.addr_validate(msg.creation_fee_recipient.as_str())?,
         code_id: msg.code_id,
+        deposit_fee_rate: msg.deposit_fee_rate,
         withdraw_fee_rate: msg.withdraw_fee_rate,
         withdraw_fee_recipient: deps.api.addr_validate(msg.withdraw_fee_recipient.as_str())?,
         deactivate_period: msg.deactivate_period,
@@ -54,6 +55,7 @@ pub fn update_config(
     creation_fee_amount: Option<Uint128>,
     creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
+    deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
     withdraw_fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
@@ -104,6 +106,11 @@ pub fn update_config(
     if let Some(code_id) = code_id.as_ref() {
         config.code_id = *code_id;
         response.add_attribute("is_updated_code_id", "true");
+    }
+
+    if let Some(deposit_fee_rate) = deposit_fee_rate.as_ref() {
+        config.deposit_fee_rate = *deposit_fee_rate;
+        response.add_attribute("is_updated_deposit_fee_rate", "true");
     }
 
     if let Some(withdraw_fee_rate) = withdraw_fee_rate.as_ref() {

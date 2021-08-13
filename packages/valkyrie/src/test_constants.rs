@@ -66,6 +66,8 @@ pub mod fund_manager {
     pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
+    pub const CAMPAIGN_DEPOSIT_FEE_BURN_RATIO_PERCENT: u64 = 50;
+    pub const CAMPAIGN_DEPOSIT_FEE_RECIPIENT: &str = GOVERNANCE;
 
     pub fn fund_manager_env() -> Env {
         mock_env_contract(FUND_MANAGER)
@@ -88,6 +90,7 @@ pub mod campaign_manager {
     pub const CREATION_FEE_TOKEN: &str = VALKYRIE_TOKEN;
     pub const CREATION_FEE_AMOUNT: Uint128 = Uint128::new(100000000);
     pub const CAMPAIGN_CODE_ID: u64 = 1;
+    pub const DEPOSIT_FEE_RATE_PERCENT: u64 = 0;
     pub const WITHDRAW_FEE_RATE_PERCENT: u64 = 10;
     pub const CAMPAIGN_DEACTIVATE_PERIOD: u64 = 403290;
     pub const KEY_DENOM_NATIVE: &str = "uusd";
