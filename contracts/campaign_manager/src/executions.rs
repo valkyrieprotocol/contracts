@@ -21,9 +21,6 @@ pub fn instantiate(
         governance: deps.api.addr_validate(msg.governance.as_str())?,
         fund_manager: deps.api.addr_validate(msg.fund_manager.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
-        creation_fee_token: deps.api.addr_validate(msg.creation_fee_token.as_str())?,
-        creation_fee_amount: msg.creation_fee_amount,
-        creation_fee_recipient: deps.api.addr_validate(msg.creation_fee_recipient.as_str())?,
         code_id: msg.code_id,
         deposit_fee_rate: msg.deposit_fee_rate,
         withdraw_fee_rate: msg.withdraw_fee_rate,
@@ -51,9 +48,6 @@ pub fn update_config(
     governance: Option<String>,
     fund_manager: Option<String>,
     terraswap_router: Option<String>,
-    creation_fee_token: Option<String>,
-    creation_fee_amount: Option<Uint128>,
-    creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
     deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
@@ -86,21 +80,6 @@ pub fn update_config(
     if let Some(terraswap_router) = terraswap_router.as_ref() {
         config.terraswap_router = deps.api.addr_validate(terraswap_router)?;
         response.add_attribute("is_updated_terraswap_router", "true");
-    }
-
-    if let Some(creation_fee_token) = creation_fee_token.as_ref() {
-        config.creation_fee_token = deps.api.addr_validate(creation_fee_token)?;
-        response.add_attribute("is_updated_creation_fee_token", "true");
-    }
-
-    if let Some(creation_fee_amount) = creation_fee_amount.as_ref() {
-        config.creation_fee_amount = *creation_fee_amount;
-        response.add_attribute("is_updated_creation_fee_amount", "true");
-    }
-
-    if let Some(creation_fee_recipient) = creation_fee_recipient.as_ref() {
-        config.creation_fee_recipient = deps.api.addr_validate(creation_fee_recipient)?;
-        response.add_attribute("is_updated_creation_fee_recipient", "true");
     }
 
     if let Some(code_id) = code_id.as_ref() {
@@ -216,9 +195,8 @@ pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
 pub fn create_campaign(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     sender: String,
-    amount: Uint128,
     config_msg: Binary,
     collateral_denom: Option<Denom>,
     collateral_amount: Option<Uint128>,
@@ -228,16 +206,6 @@ pub fn create_campaign(
 ) -> ContractResult<Response> {
     // Validate
     let config = Config::load(deps.storage)?;
-
-    if info.sender != config.creation_fee_token {
-        return Err(ContractError::Std(StdError::generic_err("Invalid creation fee token")));
-    }
-
-    if amount < config.creation_fee_amount {
-        return Err(ContractError::Std(StdError::generic_err(
-            format!("Insufficient creation fee (Fee = {})", config.creation_fee_amount),
-        )));
-    }
 
     // Execute
     let mut response = make_response("create_campaign");
@@ -272,14 +240,6 @@ pub fn create_campaign(
         gas_limit: None,
         reply_on: ReplyOn::Success,
     });
-
-    if !amount.is_zero() {
-        response.add_message(message_factories::cw20_transfer(
-            &config.creation_fee_token,
-            &config.creation_fee_recipient,
-            amount,
-        ));
-    }
 
     response.add_attribute("campaign_code_id", config.code_id.to_string());
     response.add_attribute("campaign_creator", sender.clone());

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdResult, Storage};
 use cw20::Denom;
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
@@ -15,9 +15,6 @@ pub struct Config {
     pub governance: Addr,
     pub fund_manager: Addr,
     pub terraswap_router: Addr,
-    pub creation_fee_token: Addr,
-    pub creation_fee_amount: Uint128,
-    pub creation_fee_recipient: Addr,
     pub code_id: u64,
     pub deposit_fee_rate: Decimal,
     pub withdraw_fee_rate: Decimal,

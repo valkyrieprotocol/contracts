@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response};
 
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
@@ -17,9 +17,6 @@ pub fn exec(
     governance: Option<String>,
     fund_manager: Option<String>,
     terraswap_router: Option<String>,
-    creation_fee_token: Option<String>,
-    creation_fee_amount: Option<Uint128>,
-    creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
     deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
@@ -36,9 +33,6 @@ pub fn exec(
         governance,
         fund_manager,
         terraswap_router,
-        creation_fee_token,
-        creation_fee_amount,
-        creation_fee_recipient,
         code_id,
         deposit_fee_rate,
         withdraw_fee_rate,
@@ -55,9 +49,6 @@ pub fn will_success(
     governance: Option<String>,
     fund_manager: Option<String>,
     terraswap_router: Option<String>,
-    creation_fee_token: Option<String>,
-    creation_fee_amount: Option<Uint128>,
-    creation_fee_recipient: Option<String>,
     code_id: Option<u64>,
     deposit_fee_rate: Option<Decimal>,
     withdraw_fee_rate: Option<Decimal>,
@@ -77,9 +68,6 @@ pub fn will_success(
         governance,
         fund_manager,
         terraswap_router,
-        creation_fee_token,
-        creation_fee_amount,
-        creation_fee_recipient,
         code_id,
         deposit_fee_rate,
         withdraw_fee_rate,
@@ -102,9 +90,6 @@ fn succeed() {
     let governance = "ChangedGovernance";
     let fund_manager = "ChangedFundManager";
     let terraswap_router = "ChangedTerraswapRouter";
-    let creation_fee_token = "ChangedFeeToken";
-    let creation_fee_amount = Uint128::new(1);
-    let creation_fee_recipient = "ChangedFeeRecipient";
     let code_id = 100u64;
     let deposit_fee_rate = Decimal::percent(9);
     let withdraw_fee_rate = Decimal::percent(99);
@@ -119,9 +104,6 @@ fn succeed() {
         Some(governance.to_string()),
         Some(fund_manager.to_string()),
         Some(terraswap_router.to_string()),
-        Some(creation_fee_token.to_string()),
-        Some(creation_fee_amount.clone()),
-        Some(creation_fee_recipient.to_string()),
         Some(code_id),
         Some(deposit_fee_rate),
         Some(withdraw_fee_rate),
@@ -137,9 +119,6 @@ fn succeed() {
         governance: Addr::unchecked(governance),
         fund_manager: Addr::unchecked(fund_manager),
         terraswap_router: Addr::unchecked(terraswap_router),
-        creation_fee_token: Addr::unchecked(creation_fee_token),
-        creation_fee_amount: creation_fee_amount.clone(),
-        creation_fee_recipient: Addr::unchecked(creation_fee_recipient),
         code_id: code_id.clone(),
         deposit_fee_rate: deposit_fee_rate.clone(),
         withdraw_fee_rate: withdraw_fee_rate.clone(),
@@ -161,9 +140,6 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_manager_env(),
         default_sender(),
-        None,
-        None,
-        None,
         None,
         None,
         None,

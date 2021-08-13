@@ -79,7 +79,7 @@ pub mod fund_manager {
 }
 
 pub mod campaign_manager {
-    use cosmwasm_std::{Env, MessageInfo, Uint128};
+    use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
     use crate::test_constants::VALKYRIE_TOKEN;
@@ -87,8 +87,6 @@ pub mod campaign_manager {
 
     pub const CAMPAIGN_MANAGER: &str = "CampaignManager";
 
-    pub const CREATION_FEE_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const CREATION_FEE_AMOUNT: Uint128 = Uint128::new(100000000);
     pub const CAMPAIGN_CODE_ID: u64 = 1;
     pub const DEPOSIT_FEE_RATE_PERCENT: u64 = 0;
     pub const WITHDRAW_FEE_RATE_PERCENT: u64 = 10;
@@ -105,10 +103,6 @@ pub mod campaign_manager {
 
     pub fn campaign_manager_sender() -> MessageInfo {
         mock_info(CAMPAIGN_MANAGER, &[])
-    }
-
-    pub fn creation_fee_token() -> MessageInfo {
-        mock_info(CREATION_FEE_TOKEN, &[])
     }
 }
 

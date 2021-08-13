@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{Addr, Decimal, Env, MessageInfo, Response};
 
 use valkyrie::campaign_manager::execute_msgs::{InstantiateMsg, ReferralRewardLimitOptionMsg};
 use valkyrie::common::{ContractResult, Denom};
@@ -18,9 +18,6 @@ pub fn exec(
     governance: String,
     fund_manager: String,
     terraswap_router: String,
-    creation_fee_token: String,
-    creation_fee_amount: Uint128,
-    creation_fee_recipient: String,
     code_id: u64,
     deposit_fee_rate: Decimal,
     withdraw_fee_rate: Decimal,
@@ -37,9 +34,6 @@ pub fn exec(
         governance,
         fund_manager,
         terraswap_router,
-        creation_fee_token,
-        creation_fee_amount,
-        creation_fee_recipient,
         code_id,
         deposit_fee_rate,
         withdraw_fee_rate,
@@ -74,9 +68,6 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         GOVERNANCE.to_string(),
         FUND_MANAGER.to_string(),
         TERRASWAP_ROUTER.to_string(),
-        CREATION_FEE_TOKEN.to_string(),
-        CREATION_FEE_AMOUNT,
-        FUND_MANAGER.to_string(),
         CAMPAIGN_CODE_ID,
         Decimal::percent(DEPOSIT_FEE_RATE_PERCENT),
         Decimal::percent(WITHDRAW_FEE_RATE_PERCENT),
@@ -104,9 +95,6 @@ fn succeed() {
         governance: Addr::unchecked(GOVERNANCE),
         fund_manager: Addr::unchecked(FUND_MANAGER),
         terraswap_router: Addr::unchecked(TERRASWAP_ROUTER),
-        creation_fee_token: Addr::unchecked(CREATION_FEE_TOKEN),
-        creation_fee_amount: CREATION_FEE_AMOUNT,
-        creation_fee_recipient: Addr::unchecked(FUND_MANAGER),
         code_id: CAMPAIGN_CODE_ID,
         deposit_fee_rate: Decimal::percent(DEPOSIT_FEE_RATE_PERCENT),
         withdraw_fee_rate: Decimal::percent(WITHDRAW_FEE_RATE_PERCENT),
