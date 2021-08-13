@@ -128,6 +128,9 @@ pub mod campaign {
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(5);
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
     pub const QUALIFIER: &str = "Qualifier";
+    pub const COLLATERAL_DENOM_NATIVE: &str = "uusd";
+    pub const COLLATERAL_AMOUNT: Uint128 = Uint128::new(100);
+    pub const COLLATERAL_LOCK_PERIOD: u64 = 10000;
 
     pub fn campaign_env() -> Env {
         mock_env_contract(CAMPAIGN)

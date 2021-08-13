@@ -64,6 +64,9 @@ pub enum ExecuteMsg {
 pub enum Cw20HookMsg {
     CreateCampaign {
         config_msg: Binary,
+        collateral_denom: Option<Denom>,
+        collateral_amount: Option<Uint128>,
+        collateral_lock_period: Option<u64>,
         qualifier: Option<String>,
         executions: Vec<ExecutionMsg>,
     },
@@ -80,6 +83,9 @@ pub struct CampaignInstantiateMsg {
     pub admin: String,
     pub creator: String,
     pub config_msg: Binary,
+    pub collateral_denom: Option<Denom>,
+    pub collateral_amount: Uint128,
+    pub collateral_lock_period: u64,
     pub qualifier: Option<String>,
     pub executions: Vec<ExecutionMsg>,
     pub referral_reward_token: String,

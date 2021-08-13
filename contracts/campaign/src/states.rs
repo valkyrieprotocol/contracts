@@ -21,6 +21,9 @@ pub struct CampaignConfig {
     pub description: String,
     pub url: String,
     pub parameter_key: String,
+    pub collateral_denom: Option<Denom>,
+    pub collateral_amount: Uint128,
+    pub collateral_lock_period: u64,
     pub qualifier: Option<Addr>,
     pub executions: Vec<Execution>,
     pub admin: Addr,
@@ -40,6 +43,10 @@ impl CampaignConfig {
     pub fn is_admin(&self, address: &Addr) -> bool {
         self.admin == *address
     }
+
+    pub fn require_collateral(&self) -> bool {
+        self.collateral_denom.is_some() && !self.collateral_amount.is_zero()
+    }
 }
 
 pub fn is_admin(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
@@ -57,6 +64,7 @@ pub struct CampaignState {
     pub cumulative_referral_reward_amount: Uint128,
     pub balances: Vec<(Denom, Uint128)>,
     pub locked_balances: Vec<(Denom, Uint128)>,
+    pub collateral_amount: Uint128,
     pub active_flag: bool,
     pub last_active_height: Option<u64>,
     pub chain_id: String,
@@ -71,6 +79,7 @@ impl CampaignState {
             cumulative_referral_reward_amount: Uint128::zero(),
             balances: vec![],
             locked_balances: vec![],
+            collateral_amount: Uint128::zero(),
             active_flag: false,
             last_active_height: None,
             chain_id,
@@ -316,6 +325,79 @@ impl Actor {
 
     pub fn has_referral_reward(&self) -> bool {
         !self.referral_reward_amount.is_zero()
+    }
+}
+
+
+const COLLATERALS: Map<&Addr, Collateral> = Map::new("collateral");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Collateral {
+    pub owner: Addr,
+    pub deposit_amount: Uint128,
+    pub locked_amounts: Vec<(Uint128, u64)>,
+}
+
+impl Collateral {
+    pub fn new(owner: Addr) -> Collateral {
+        Collateral {
+            owner,
+            deposit_amount: Uint128::zero(),
+            locked_amounts: vec![],
+        }
+    }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        COLLATERALS.save(storage, &self.owner, self)
+    }
+
+    pub fn load(storage: &dyn Storage, owner: &Addr) -> StdResult<Collateral> {
+        COLLATERALS.load(storage, owner)
+    }
+
+    pub fn load_or_new(storage: &dyn Storage, owner: &Addr) -> StdResult<Collateral> {
+        Ok(COLLATERALS.may_load(storage, owner)
+            ?.unwrap_or_else(|| Self::new(owner.clone())))
+    }
+
+    pub fn clear(&mut self, height: u64) {
+        let mut locked_amounts = vec![];
+
+        loop {
+            match self.locked_amounts.pop() {
+                Some((locked_amount, unlock_height)) => {
+                    if unlock_height > height {
+                        locked_amounts.push((locked_amount, unlock_height));
+                    }
+                },
+                None => break,
+            }
+        }
+
+        self.locked_amounts = locked_amounts;
+    }
+
+    pub fn locked_amount(&self, height: u64) -> Uint128 {
+        self.locked_amounts.iter()
+            .fold(Uint128::zero(), |locked_amount, (amount, unlock_height)| {
+                if *unlock_height > height {
+                    locked_amount + *amount
+                } else {
+                    locked_amount
+                }
+            })
+    }
+
+    pub fn balance(&self, height: u64) -> StdResult<Uint128> {
+        Ok(self.deposit_amount.checked_sub(self.locked_amount(height))?)
+    }
+
+    pub fn lock(&mut self, amount: Uint128, height: u64, lock_period: u64) -> StdResult<()> {
+        self.balance(height)?.checked_sub(amount)?; //check overflow
+
+        self.locked_amounts.push((amount, height + lock_period));
+
+        Ok(())
     }
 }
 

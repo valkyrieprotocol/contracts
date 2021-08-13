@@ -3,6 +3,7 @@ use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::common::{Denom, ExecutionMsg};
+use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CampaignConfigMsg {
@@ -18,11 +19,14 @@ pub struct CampaignConfigMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    Receive(Cw20ReceiveMsg),
     UpdateCampaignConfig {
         title: Option<String>,
         description: Option<String>,
         url: Option<String>,
         parameter_key: Option<String>,
+        collateral_amount: Option<Uint128>,
+        collateral_lock_period: Option<u64>,
         qualifier: Option<String>,
         executions: Option<Vec<ExecutionMsg>>,
         admin: Option<String>,
@@ -52,6 +56,16 @@ pub enum ExecuteMsg {
         actor: String,
         referrer: Option<Referrer>,
     },
+    DepositCollateral {},
+    WithdrawCollateral {
+        amount: Uint128,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Cw20HookMsg {
+    DepositCollateral {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

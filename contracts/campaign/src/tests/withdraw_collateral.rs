@@ -1,26 +1,29 @@
-use crate::tests::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Response, Addr, SubMsg, CosmosMsg, BankMsg, coin, StdError};
-use crate::executions::{ExecuteResult, withdraw_collateral};
-use cosmwasm_std::testing::{mock_env, mock_info};
+use cosmwasm_std::{Addr, BankMsg, coin, CosmosMsg, Env, MessageInfo, Response, StdError, SubMsg, Uint128};
+
 use crate::states::Collateral;
-use crate::tests::{COLLATERAL_LOCK_PERIOD, COLLATERAL_AMOUNT};
-use crate::errors::ContractError;
+use valkyrie::mock_querier::{CustomDeps, custom_deps};
+use crate::executions::withdraw_collateral;
+use valkyrie::test_constants::campaign::{campaign_env, COLLATERAL_AMOUNT, COLLATERAL_LOCK_PERIOD};
+use cosmwasm_std::testing::mock_info;
+use valkyrie::errors::ContractError;
+use valkyrie::common::ContractResult;
 
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
     amount: Uint128,
-) -> ExecuteResult {
+) -> ContractResult<Response> {
     withdraw_collateral(deps.as_mut(), env, info, amount)
 }
 
 pub fn will_success(
     deps: &mut CustomDeps,
+    sender: &str,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
-    let env = mock_env();
-    let info = mock_info("Actor", &[]);
+    let env = campaign_env();
+    let info = mock_info(sender, &[]);
 
     let response = exec(deps, env.clone(), info.clone(), amount).unwrap();
 
@@ -39,7 +42,7 @@ fn succeed() {
     collateral.save(&mut deps.storage).unwrap();
 
     let withdraw_amount = Uint128::new(1000).checked_sub(COLLATERAL_AMOUNT).unwrap();
-    let (_, _, response) = will_success(&mut deps, withdraw_amount);
+    let (_, _, response) = will_success(&mut deps, "Actor", withdraw_amount);
     assert_eq!(response.messages, vec![SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
         to_address: "Actor".to_string(),
         amount: vec![coin(withdraw_amount.u128(), "uusd")],
@@ -60,7 +63,7 @@ fn failed_overdrawn() {
     let withdraw_amount = Uint128::new(1000).checked_sub(COLLATERAL_AMOUNT).unwrap() + Uint128::new(1);
     let result = exec(
         &mut deps,
-        mock_env(),
+        campaign_env(),
         mock_info("Actor", &[]),
         withdraw_amount,
     );

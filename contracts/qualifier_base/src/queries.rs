@@ -1,14 +1,14 @@
-use cosmwasm_std::{Deps, Env, Uint128};
+use cosmwasm_std::{Deps, Env};
 use valkyrie_qualifier::{QualificationMsg, QualificationResult, QualifiedContinueOption};
 use crate::errors::ContractError;
-use crate::states::{Requirement, QualifierConfig, Querier, Collateral};
+use crate::states::{Requirement, QualifierConfig, Querier};
 
 
 pub type QueryResult<T> = Result<T, ContractError>;
 
 pub fn qualify(
     deps: Deps,
-    env: Env,
+    _env: Env,
     msg: QualificationMsg,
 ) -> QueryResult<QualificationResult> {
     let actor = deps.api.addr_validate(msg.actor.as_str())?;
@@ -16,13 +16,7 @@ pub fn qualify(
     let requirement = Requirement::load(deps.storage)?;
     let querier = Querier::new(&deps.querier);
 
-    let collateral_balance = if requirement.require_collateral() {
-        Collateral::load_or_new(deps.storage, &actor)?.balance(env.block.height)?
-    } else {
-        Uint128::zero()
-    };
-
-    let (is_valid, error_msg) = requirement.is_satisfy_requirements(&querier, &actor, collateral_balance)?;
+    let (is_valid, error_msg) = requirement.is_satisfy_requirements(&querier, &actor)?;
 
     if !is_valid {
         let config = QualifierConfig::load(deps.storage)?;
@@ -44,4 +38,8 @@ pub fn requirement(
     _env: Env,
 ) -> QueryResult<Requirement> {
     Ok(Requirement::load(deps.storage)?)
+}
+
+pub fn config(deps: Deps, _env: Env) -> QueryResult<QualifierConfig> {
+    Ok(QualifierConfig::load(deps.storage)?)
 }

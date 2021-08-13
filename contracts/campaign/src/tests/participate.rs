@@ -8,7 +8,7 @@ use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::participate;
 use crate::states::{CampaignState, Actor};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE};
+use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, COLLATERAL_AMOUNT};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
 use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
 use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
@@ -31,6 +31,8 @@ pub fn will_success(
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
     let info = mock_info(participator, &[]);
+
+    super::deposit_collateral::will_success(deps, participator, COLLATERAL_AMOUNT);
 
     let response = exec(
         deps,
@@ -193,6 +195,8 @@ fn failed_insufficient_balance() {
     super::deposit::will_success(&mut deps, 5, 10000000000000);
 
     will_success(&mut deps, "Participator1", None);
+
+    super::deposit_collateral::will_success(&mut deps, "Participator2", COLLATERAL_AMOUNT);
 
     let result = exec(
         &mut deps,

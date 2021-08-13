@@ -136,3 +136,7 @@ pub fn query_participations(
 
     Ok(ActorsResponse { actors: participations })
 }
+
+pub fn collateral(deps: Deps, _env: Env, address: String) -> ContractResult<Collateral> {
+    Ok(Collateral::load(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
+}

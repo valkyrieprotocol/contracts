@@ -25,6 +25,9 @@ pub enum QueryMsg {
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
+    Collateral {
+        address: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

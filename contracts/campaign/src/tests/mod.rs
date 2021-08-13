@@ -10,3 +10,5 @@ pub mod withdraw_irregular;
 pub mod claim_participation_reward;
 pub mod claim_referral_reward;
 pub mod participate;
+pub mod deposit_collateral;
+pub mod withdraw_collateral;

@@ -1,13 +1,14 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary, from_binary, Addr};
 use cosmwasm_std::entry_point;
 
-use valkyrie::campaign::execute_msgs::{ExecuteMsg, MigrateMsg};
+use valkyrie::campaign::execute_msgs::{ExecuteMsg, MigrateMsg, Cw20HookMsg};
 use valkyrie::campaign::query_msgs::QueryMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 
 use crate::executions;
+use cw20::Cw20ReceiveMsg;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -31,11 +32,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateCampaignConfig {
             title,
             description,
             url,
             parameter_key,
+            collateral_amount,
+            collateral_lock_period,
             qualifier,
             executions,
             admin,
@@ -47,6 +51,8 @@ pub fn execute(
             description,
             url,
             parameter_key,
+            collateral_amount,
+            collateral_lock_period,
             qualifier,
             executions,
             admin,
@@ -89,7 +95,39 @@ pub fn execute(
         ExecuteMsg::ClaimReferralReward {} => crate::executions::claim_referral_reward(deps, env, info),
         ExecuteMsg::Participate { actor, referrer } => {
             crate::executions::participate(deps, env, info, actor, referrer)
-        }
+        },
+        ExecuteMsg::DepositCollateral {} => {
+            let sender = info.sender.clone();
+            let funds = info.funds.iter()
+                .map(|c| (cw20::Denom::Native(c.denom.clone()), c.amount))
+                .collect();
+
+            executions::deposit_collateral(deps, env, info, sender, funds)
+        },
+        ExecuteMsg::WithdrawCollateral {
+            amount,
+        } => executions::withdraw_collateral(deps, env, info, amount),
+    }
+}
+
+pub fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> ContractResult<Response> {
+    match from_binary(&cw20_msg.msg)? {
+        Cw20HookMsg::DepositCollateral {} => {
+            let sender = info.sender.clone();
+
+            executions::deposit_collateral(
+                deps,
+                env,
+                info,
+                Addr::unchecked(cw20_msg.sender),
+                vec![(cw20::Denom::Cw20(sender), cw20_msg.amount)],
+            )
+        },
     }
 }
 
@@ -132,6 +170,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             limit,
             order_by,
         )?),
+        QueryMsg::Collateral { address } => to_binary(&crate::queries::collateral(deps, env, address)?),
     }?;
 
     Ok(result)

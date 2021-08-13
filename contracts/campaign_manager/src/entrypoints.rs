@@ -89,6 +89,9 @@ pub fn receive_cw20(
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::CreateCampaign {
             config_msg,
+            collateral_denom,
+            collateral_amount,
+            collateral_lock_period,
             qualifier,
             executions,
         } => executions::create_campaign(
@@ -98,6 +101,9 @@ pub fn receive_cw20(
             cw20_msg.sender,
             cw20_msg.amount,
             config_msg,
+            collateral_denom,
+            collateral_amount,
+            collateral_lock_period,
             qualifier,
             executions,
         ),

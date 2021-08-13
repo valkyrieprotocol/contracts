@@ -57,6 +57,9 @@ pub fn instantiate(
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
+        collateral_denom: msg.collateral_denom.map(|d| d.to_cw20(deps.api)),
+        collateral_amount: msg.collateral_amount,
+        collateral_lock_period: msg.collateral_lock_period,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str()).unwrap()),
         executions,
         admin: deps.api.addr_validate(&msg.admin)?,
@@ -102,6 +105,8 @@ pub fn update_campaign_config(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
+    collateral_amount: Option<Uint128>,
+    collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
     mut executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
@@ -151,6 +156,16 @@ pub fn update_campaign_config(
 
         campaign_config.parameter_key = parameter_key.clone();
         response.add_attribute("is_updated_parameter_key", "true");
+    }
+
+    if let Some(collateral_amount) = collateral_amount {
+        campaign_config.collateral_amount = collateral_amount;
+        response.add_attribute("is_updated_collateral_amount", "true");
+    }
+
+    if let Some(collateral_lock_period) = collateral_lock_period {
+        campaign_config.collateral_lock_period = collateral_lock_period;
+        response.add_attribute("is_updated_collateral_lock_period", "true");
     }
 
     if let Some(qualifier) = qualifier.as_ref() {
@@ -582,7 +597,8 @@ pub fn withdraw_irregular(
     let denom_cw20 = denom.to_cw20(deps.api);
 
     let contract_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
-    let expect_balance = campaign_state.balance(&denom_cw20).total;
+    let expect_balance = campaign_state.balance(&denom_cw20).total
+        .checked_sub(campaign_state.collateral_amount)?;
 
     if contract_balance == expect_balance {
         return Err(ContractError::InvalidZeroAmount {});
@@ -714,6 +730,23 @@ pub fn participate(
     // Execute
     let mut response = make_response("participate");
     response.add_attribute("actor", actor.to_string());
+
+    if campaign_config.require_collateral() {
+        let mut collateral = Collateral::load_or_new(deps.storage, &actor)?;
+
+        let collateral_balance = collateral.balance(env.block.height)?;
+
+        if collateral_balance < campaign_config.collateral_amount {
+            return Err(ContractError::Std(StdError::generic_err(format!(
+                "Insufficient collateral balance (required: {}, current: {})",
+                campaign_config.collateral_amount.to_string(),
+                collateral_balance.to_string(),
+            ))));
+        }
+
+        collateral.lock(campaign_config.collateral_amount, env.block.height, campaign_config.collateral_lock_period)?;
+        collateral.save(deps.storage)?;
+    }
 
     let referrer_address = referrer.and_then(|v| v.to_address(deps.api).ok());
 
@@ -1012,6 +1045,102 @@ fn distribute_referral_reward(
     }
 
     Ok((distributed_amount, referral_rewards, overflow_amount))
+}
+
+pub fn deposit_collateral(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    sender: Addr,
+    funds: Vec<(cw20::Denom, Uint128)>,
+) -> ContractResult<Response> {
+    if funds.len() < 1 {
+        return Err(ContractError::Std(StdError::generic_err("Missing collateral denom")));
+    } else if funds.len() > 1 {
+        return Err(ContractError::Std(StdError::generic_err("Too many sent denom")));
+    }
+
+    let (send_denom, send_amount) = &funds[0];
+
+    if send_amount.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    let mut response = Response::new();
+    response.add_attribute("action", "deposit_collateral");
+
+    let campaign_config = CampaignConfig::load(deps.storage)?;
+
+    if let Some(collateral_denom) = campaign_config.collateral_denom {
+        if *send_denom != collateral_denom {
+            return Err(ContractError::Std(StdError::generic_err("Missing collateral denom")));
+        }
+    }
+
+    let mut campaign_state = CampaignState::load(deps.storage)?;
+    let mut collateral = Collateral::load_or_new(deps.storage, &sender)?;
+
+    campaign_state.collateral_amount += send_amount;
+    collateral.deposit_amount += send_amount;
+
+    campaign_state.save(deps.storage)?;
+    collateral.save(deps.storage)?;
+
+    response.add_attribute("deposit", send_amount.to_string());
+    response.add_attribute("balance", collateral.deposit_amount.to_string());
+
+    Ok(response)
+}
+
+pub fn withdraw_collateral(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> ContractResult<Response> {
+    let mut response = Response::new();
+    response.add_attribute("action", "withdraw_collateral");
+
+    let mut collateral = Collateral::load(deps.storage, &info.sender)?;
+
+    response.add_attribute("deposit_amount", collateral.deposit_amount.to_string());
+    response.add_attribute("locked_amount", collateral.locked_amount(env.block.height));
+
+    collateral.clear(env.block.height);
+
+    let balance = collateral.balance(env.block.height)?;
+
+    if balance.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    if balance < amount {
+        return Err(ContractError::Std(StdError::generic_err("Overdraw collateral")));
+    }
+
+    collateral.deposit_amount = collateral.deposit_amount.checked_sub(amount)?;
+
+    collateral.save(deps.storage)?;
+
+    let campaign_config = CampaignConfig::load(deps.storage)?;
+
+    if let Some(denom) = campaign_config.collateral_denom {
+        let mut campaign_state = CampaignState::load(deps.storage)?;
+
+        campaign_state.collateral_amount = campaign_state.collateral_amount.checked_sub(amount)?;
+        campaign_state.save(deps.storage)?;
+
+        response.add_message(make_send_msg(
+            &deps.querier,
+            denom,
+            amount,
+            &info.sender,
+        )?);
+    } else {
+        return Err(ContractError::Std(StdError::generic_err("No collateral")));
+    }
+
+    Ok(response)
 }
 
 fn calc_referral_reward_limit(

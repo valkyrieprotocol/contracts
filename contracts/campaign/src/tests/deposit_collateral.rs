@@ -1,11 +1,13 @@
-use crate::tests::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Uint128, Addr, Response, coin, StdError};
-use cw20::Denom;
-use crate::executions::{ExecuteResult, deposit_collateral};
-use cosmwasm_std::testing::{mock_env, mock_info};
-use crate::tests::COLLATERAL_DENOM_NATIVE;
+use cosmwasm_std::{Addr, coin, Env, MessageInfo, Response, StdError, Uint128};
+
 use crate::states::Collateral;
-use crate::errors::ContractError;
+use valkyrie::mock_querier::{CustomDeps, custom_deps};
+use crate::executions::deposit_collateral;
+use valkyrie::common::ContractResult;
+use valkyrie::test_constants::campaign::{campaign_env, COLLATERAL_DENOM_NATIVE};
+use cosmwasm_std::testing::mock_info;
+use valkyrie::errors::ContractError;
+use cw20::Denom;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -13,7 +15,7 @@ pub fn exec(
     info: MessageInfo,
     sender: &str,
     funds: Vec<(Denom, Uint128)>,
-) -> ExecuteResult {
+) -> ContractResult<Response> {
     deposit_collateral(
         deps.as_mut(),
         env,
@@ -28,7 +30,7 @@ pub fn will_success(
     sender: &str,
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
-    let env = mock_env();
+    let env = campaign_env();
     let info = mock_info(sender, &[coin(amount.u128(), "uusd")]);
 
     let response = exec(
@@ -84,7 +86,7 @@ fn failed_invalid_funds() {
 
     let result = exec(
         &mut deps,
-        mock_env(),
+        campaign_env(),
         mock_info("Actor", &[]),
         "Actor",
         vec![],
@@ -93,7 +95,7 @@ fn failed_invalid_funds() {
 
     let result = exec(
         &mut deps,
-        mock_env(),
+        campaign_env(),
         mock_info("Actor", &[]),
         "Actor",
         vec![
@@ -105,7 +107,7 @@ fn failed_invalid_funds() {
 
     let result = exec(
         &mut deps,
-        mock_env(),
+        campaign_env(),
         mock_info("Actor", &[]),
         "Actor",
         vec![
@@ -116,7 +118,7 @@ fn failed_invalid_funds() {
 
     let result = exec(
         &mut deps,
-        mock_env(),
+        campaign_env(),
         mock_info("Actor", &[]),
         "Actor",
         vec![
