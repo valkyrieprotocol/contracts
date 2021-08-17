@@ -15,7 +15,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> ExecuteResult {
     let mut response = Response::new();
-    response.add_attribute("action", "instantiate");
+    response = response.add_attribute("action", "instantiate");
 
     QualifierConfig {
         admin: info.sender,
@@ -41,7 +41,7 @@ pub fn update_admin(
     }
 
     let mut response = Response::new();
-    response.add_attribute("action", "update_admin");
+    response = response.add_attribute("action", "update_admin");
 
     let mut config = QualifierConfig::load(deps.storage)?;
 
@@ -65,13 +65,13 @@ pub fn update_requirement(
     }
 
     let mut response = Response::new();
-    response.add_attribute("action", "update_requirement");
+    response = response.add_attribute("action", "update_requirement");
 
     if let Some(continue_option_on_fail) = continue_option_on_fail {
         let mut config = QualifierConfig::load(deps.storage)?;
 
         config.continue_option_on_fail = continue_option_on_fail;
-        response.add_attribute("is_updated_continue_option_on_fail", "true");
+        response = response.add_attribute("is_updated_continue_option_on_fail", "true");
 
         config.save(deps.storage)?;
     }
@@ -93,7 +93,7 @@ pub fn update_requirement(
         }
 
         requirement.min_token_balances = min_token_balances;
-        response.add_attribute("is_updated_min_token_balances", "true");
+        response = response.add_attribute("is_updated_min_token_balances", "true");
     }
 
     if let Some(min_luna_staking) = min_luna_staking {
@@ -102,7 +102,7 @@ pub fn update_requirement(
         }
 
         requirement.min_luna_staking = min_luna_staking;
-        response.add_attribute("is_updated_min_luna_staking", "true");
+        response = response.add_attribute("is_updated_min_luna_staking", "true");
     }
 
     requirement.save(deps.storage)?;
@@ -118,7 +118,7 @@ pub fn qualify(
 ) -> ExecuteResult {
     let mut response = Response::new();
 
-    response.add_attribute("action", "qualify");
+    response = response.add_attribute("action", "qualify");
 
     let actor = deps.api.addr_validate(msg.actor.as_str())?;
 
@@ -140,9 +140,9 @@ pub fn qualify(
         }
     };
 
-    response.add_attribute("qualified_continue_option", result.continue_option.to_string());
+    response = response.add_attribute("qualified_continue_option", result.continue_option.to_string());
 
-    response.set_data(to_binary(&result)?);
+    response = response.set_data(to_binary(&result)?);
 
     Ok(response)
 }

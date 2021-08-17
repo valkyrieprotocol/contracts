@@ -5,7 +5,7 @@ use std::num::ParseIntError;
 pub fn make_response(action: &str) -> Response {
     let mut response = Response::new();
 
-    response.add_attribute("action", action);
+    response = response.add_attribute("action", action);
 
     response
 }

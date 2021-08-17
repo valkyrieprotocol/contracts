@@ -1,7 +1,5 @@
-use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, Response, StdResult, Uint128, WasmQuery, SubMsg};
+use cosmwasm_std::{Addr, Api, attr, Attribute, Binary, QuerierWrapper, QueryRequest, StdResult, Uint128, WasmQuery};
 use cw20::Denom;
-
-use crate::message_factories;
 
 pub fn query_balance(
     querier: &QuerierWrapper,
@@ -35,20 +33,6 @@ pub fn query_cw20_balance(
             )),
         }))
         .unwrap_or_else(|_| Uint128::zero()))
-}
-
-pub fn create_send_msg_response(
-    token: &Addr,
-    recipient: &Addr,
-    amount: Uint128,
-    action: &str,
-) -> Response {
-    Response {
-        messages: vec![SubMsg::new(message_factories::cw20_transfer(token, recipient, amount))],
-        attributes: create_send_attr(recipient, amount, action),
-        events: vec![],
-        data: None,
-    }
 }
 
 pub fn create_send_attr(recipient: &Addr, amount: Uint128, action: &str) -> Vec<Attribute> {

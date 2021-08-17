@@ -64,9 +64,9 @@ pub fn stake_governance_token(
     staker_state.share += share;
     staker_state.save(deps.storage)?;
 
-    response.add_attribute("sender", sender.as_str());
-    response.add_attribute("share", share.to_string());
-    response.add_attribute("amount", amount.to_string());
+    response = response.add_attribute("sender", sender.as_str());
+    response = response.add_attribute("share", share.to_string());
+    response = response.add_attribute("amount", amount.to_string());
 
     Ok(response)
 }
@@ -124,14 +124,14 @@ pub fn unstake_governance_token(
     staking_state.save(deps.storage)?;
 
     let contract_config = ContractConfig::load(deps.storage)?;
-    response.add_message(message_factories::cw20_transfer(
+    response = response.add_message(message_factories::cw20_transfer(
         &contract_config.governance_token,
         &info.sender,
         withdraw_amount,
     ));
 
-    response.add_attribute("unstake_amount", withdraw_amount);
-    response.add_attribute("unstake_share", withdraw_share);
+    response = response.add_attribute("unstake_amount", withdraw_amount);
+    response = response.add_attribute("unstake_share", withdraw_share);
 
     Ok(response)
 }

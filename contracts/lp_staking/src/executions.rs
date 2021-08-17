@@ -33,8 +33,8 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     staker_info.save(deps.storage)?;
     state.save(deps.storage)?;
 
-    response.add_attribute("owner", sender_addr);
-    response.add_attribute("amount", amount.to_string());
+    response = response.add_attribute("owner", sender_addr);
+    response = response.add_attribute("amount", amount.to_string());
 
     Ok(response)
 }
@@ -72,7 +72,7 @@ pub fn auto_stake(
     let tax_amount: Uint128 = compute_uusd_tax(&deps.querier, uusd_amount)?;
 
     // 1. Transfer token asset to staking contract
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.token,
         &Cw20ExecuteMsg::TransferFrom {
             owner: info.sender.to_string(),
@@ -81,7 +81,7 @@ pub fn auto_stake(
         },
     ));
     // 2. Increase allowance of token for pair contract
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.token,
         &Cw20ExecuteMsg::IncreaseAllowance {
             spender: pair_addr.to_string(),
@@ -90,7 +90,7 @@ pub fn auto_stake(
         },
     ));
     // 3. Provide liquidity
-    response.add_message(message_factories::wasm_execute_with_funds(
+    response = response.add_message(message_factories::wasm_execute_with_funds(
         &config.pair,
         vec![Coin {denom: UST.to_string(),amount: uusd_amount.checked_sub(tax_amount)?}],
         &PairExecuteMsg::ProvideLiquidity {
@@ -104,15 +104,16 @@ pub fn auto_stake(
                 Asset {
                     amount: token_amount,
                     info: AssetInfo::Token {
-                        contract_addr: deps.api.addr_validate(token_addr.as_str())?,
+                        contract_addr: token_addr.to_string(),
                     },
                 },
             ],
             slippage_tolerance,
+            receiver: None,
         },
     ));
     // 4. Execute staking hook, will stake in the name of the sender
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &env.contract.address,
         &ExecuteMsg::AutoStakeHook {
             staker_addr: info.sender.to_string(),
@@ -120,7 +121,7 @@ pub fn auto_stake(
         },
     ));
 
-    response.add_attribute("tax_amount", tax_amount.to_string());
+    response = response.add_attribute("tax_amount", tax_amount.to_string());
 
     Ok(response)
 }
@@ -194,7 +195,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         staker_info.save(deps.storage)?;
     }
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.lp_token,
         &Cw20ExecuteMsg::Transfer {
             recipient: sender_addr_raw.to_string(),
@@ -202,8 +203,8 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
         },
     ));
 
-    response.add_attribute("owner", sender_addr_raw.to_string());
-    response.add_attribute("amount", amount.to_string());
+    response = response.add_attribute("owner", sender_addr_raw.to_string());
+    response = response.add_attribute("amount", amount.to_string());
 
     Ok(response)
 }
@@ -234,7 +235,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         staker_info.save(deps.storage)?;
     }
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.token,
         &Cw20ExecuteMsg::Transfer {
             recipient: sender_addr_raw.to_string(),
@@ -242,8 +243,8 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         },
     ));
 
-    response.add_attribute("owner", sender_addr_raw.to_string());
-    response.add_attribute("amount", amount.to_string());
+    response = response.add_attribute("owner", sender_addr_raw.to_string());
+    response = response.add_attribute("amount", amount.to_string());
 
     Ok(response)
 }

@@ -78,33 +78,33 @@ pub fn update_poll_config(
     if let Some(quorum) = quorum {
         validate_quorum(quorum)?;
         poll_config.quorum = quorum;
-        response.add_attribute("is_updated_quorum", "true");
+        response = response.add_attribute("is_updated_quorum", "true");
     }
 
     if let Some(threshold) = threshold {
         validate_threshold(threshold)?;
         poll_config.threshold = threshold;
-        response.add_attribute("is_updated_threshold", "true");
+        response = response.add_attribute("is_updated_threshold", "true");
     }
 
     if let Some(voting_period) = voting_period {
         poll_config.voting_period = voting_period;
-        response.add_attribute("is_updated_voting_period", "true");
+        response = response.add_attribute("is_updated_voting_period", "true");
     }
 
     if let Some(execution_delay_period) = execution_delay_period {
         poll_config.execution_delay_period = execution_delay_period;
-        response.add_attribute("is_updated_execution_delay_period", "true");
+        response = response.add_attribute("is_updated_execution_delay_period", "true");
     }
 
     if let Some(proposal_deposit) = proposal_deposit {
         poll_config.proposal_deposit = proposal_deposit;
-        response.add_attribute("is_updated_proposal_deposit", "true");
+        response = response.add_attribute("is_updated_proposal_deposit", "true");
     }
 
     if let Some(period) = snapshot_period {
         poll_config.snapshot_period = period;
-        response.add_attribute("is_updated_period", "true");
+        response = response.add_attribute("is_updated_period", "true");
     }
 
     poll_config.save(deps.storage)?;
@@ -168,9 +168,9 @@ pub fn create_poll(
 
     poll.save_with_index(deps.storage)?;
 
-    response.add_attribute("creator", proposer.as_str());
-    response.add_attribute("poll_id", poll.id.to_string());
-    response.add_attribute("end_height", poll.end_height.to_string());
+    response = response.add_attribute("creator", proposer.as_str());
+    response = response.add_attribute("poll_id", poll.id.to_string());
+    response = response.add_attribute("end_height", poll.end_height.to_string());
 
     Ok(response)
 }
@@ -217,10 +217,10 @@ pub fn cast_vote(
     poll.save(deps.storage)?;
     staker_state.save(deps.storage)?;
 
-    response.add_attribute("poll_id", &poll_id.to_string());
-    response.add_attribute("amount", &amount.to_string());
-    response.add_attribute("voter", info.sender.as_str());
-    response.add_attribute("voter_option", option.to_string());
+    response = response.add_attribute("poll_id", &poll_id.to_string());
+    response = response.add_attribute("amount", &amount.to_string());
+    response = response.add_attribute("voter", info.sender.as_str());
+    response = response.add_attribute("voter_option", option.to_string());
 
     Ok(response)
 }
@@ -258,7 +258,7 @@ pub fn end_poll(
 
     // Refunds deposit only when quorum is reached
     if poll_result != PollResult::QuorumNotReached && !poll.deposit_amount.is_zero() {
-        response.add_message(
+        response = response.add_message(
             message_factories::cw20_transfer(
                 &contract_config.governance_token,
                 &poll.creator,
@@ -275,9 +275,9 @@ pub fn end_poll(
     poll_state.total_deposit = poll_state.total_deposit.checked_sub(poll.deposit_amount)?;
     poll_state.save(deps.storage)?;
 
-    response.add_attribute("poll_id", poll_id.to_string());
-    response.add_attribute("result", poll_result.to_string());
-    response.add_attribute("passed", (poll_result == PollResult::Passed).to_string());
+    response = response.add_attribute("poll_id", poll_id.to_string());
+    response = response.add_attribute("result", poll_result.to_string());
+    response = response.add_attribute("passed", (poll_result == PollResult::Passed).to_string());
 
     Ok(response)
 }
@@ -317,7 +317,7 @@ pub fn execute_poll(
         execution_count: executions.len() as u64,
     }.save(deps.storage)?;
 
-    response.add_submessage(SubMsg {
+    response = response.add_submessage(SubMsg {
         id: REPLY_EXECUTION,
         msg: message_factories::wasm_execute(
             &env.contract.address,
@@ -329,7 +329,7 @@ pub fn execute_poll(
         reply_on: ReplyOn::Always,
     });
 
-    response.add_attribute("poll_id", poll_id.to_string());
+    response = response.add_attribute("poll_id", poll_id.to_string());
 
     Ok(response)
 }
@@ -351,13 +351,13 @@ pub fn run_execution(
     executions.sort_by_key(|e| e.order);
 
     for execution in executions.iter() {
-        response.add_message(message_factories::wasm_execute_bin(
+        response = response.add_message(message_factories::wasm_execute_bin(
             &deps.api.addr_validate(&execution.contract)?,
             execution.msg.clone(),
         ));
     }
 
-    response.add_attribute("execution_count", executions.len().to_string());
+    response = response.add_attribute("execution_count", executions.len().to_string());
 
     Ok(response)
 }
@@ -387,7 +387,7 @@ pub fn reply_execution(
     poll.save_with_index(deps.storage)?;
     PollExecutionContext::clear(deps.storage);
 
-    response.add_attribute("poll_status", poll.status.to_string());
+    response = response.add_attribute("poll_status", poll.status.to_string());
 
     Ok(response)
 }
@@ -416,8 +416,8 @@ pub fn snapshot_poll(
     )?;
     poll.save(deps.storage)?;
 
-    response.add_attribute("poll_id", poll_id.to_string());
-    response.add_attribute("staked_amount", staked_amount);
+    response = response.add_attribute("poll_id", poll_id.to_string());
+    response = response.add_attribute("staked_amount", staked_amount);
 
     Ok(response)
 }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api, WasmMsg};
+use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api, WasmMsg, attr};
 use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
 use terraswap::asset::AssetInfo;
 use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
@@ -86,7 +86,7 @@ pub fn migrate(
 ) -> ContractResult<Response> {
     // Execute
     let mut response = make_response("migrate");
-    response.add_attribute("chain_id", env.block.chain_id.clone());
+    response = response.add_attribute("chain_id", env.block.chain_id.clone());
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
@@ -123,13 +123,13 @@ pub fn update_campaign_config(
     if let Some(title) = title.as_ref() {
         validate_title(title)?;
         campaign_config.title = title.clone();
-        response.add_attribute("is_updated_title", "true");
+        response = response.add_attribute("is_updated_title", "true");
     }
 
     if let Some(description) = description.as_ref() {
         validate_description(description)?;
         campaign_config.description = description.clone();
-        response.add_attribute("is_updated_description", "true");
+        response = response.add_attribute("is_updated_description", "true");
     }
 
     if let Some(url) = url.as_ref() {
@@ -142,7 +142,7 @@ pub fn update_campaign_config(
         }
 
         campaign_config.url = url.clone();
-        response.add_attribute("is_updated_url", "true");
+        response = response.add_attribute("is_updated_url", "true");
     }
 
     if let Some(parameter_key) = parameter_key.as_ref() {
@@ -155,22 +155,22 @@ pub fn update_campaign_config(
         }
 
         campaign_config.parameter_key = parameter_key.clone();
-        response.add_attribute("is_updated_parameter_key", "true");
+        response = response.add_attribute("is_updated_parameter_key", "true");
     }
 
     if let Some(collateral_amount) = collateral_amount {
         campaign_config.collateral_amount = collateral_amount;
-        response.add_attribute("is_updated_collateral_amount", "true");
+        response = response.add_attribute("is_updated_collateral_amount", "true");
     }
 
     if let Some(collateral_lock_period) = collateral_lock_period {
         campaign_config.collateral_lock_period = collateral_lock_period;
-        response.add_attribute("is_updated_collateral_lock_period", "true");
+        response = response.add_attribute("is_updated_collateral_lock_period", "true");
     }
 
     if let Some(qualifier) = qualifier.as_ref() {
         campaign_config.qualifier = Some(deps.api.addr_validate(qualifier)?);
-        response.add_attribute("is_updated_qualifier", "true");
+        response = response.add_attribute("is_updated_qualifier", "true");
     }
 
     if let Some(executions) = executions.as_mut() {
@@ -178,12 +178,12 @@ pub fn update_campaign_config(
         campaign_config.executions = executions.iter()
             .map(|e| Execution::from(deps.api, e))
             .collect();
-        response.add_attribute("is_updated_executions", "true");
+        response = response.add_attribute("is_updated_executions", "true");
     }
 
     if let Some(admin) = admin.as_ref() {
         campaign_config.admin = deps.api.addr_validate(admin)?;
-        response.add_attribute("is_updated_admin", "true");
+        response = response.add_attribute("is_updated_admin", "true");
     }
 
     campaign_config.save(deps.storage)?;
@@ -216,12 +216,12 @@ pub fn update_reward_config(
 
     if let Some(participation_reward_amount) = participation_reward_amount {
         reward_config.participation_reward_amount = participation_reward_amount;
-        response.add_attribute("is_updated_participation_reward_amount", "true");
+        response = response.add_attribute("is_updated_participation_reward_amount", "true");
     }
 
     if let Some(referral_reward_amounts) = referral_reward_amounts {
         reward_config.referral_reward_amounts = referral_reward_amounts;
-        response.add_attribute("is_updated_referral_reward_amounts", "true");
+        response = response.add_attribute("is_updated_referral_reward_amounts", "true");
     }
 
     reward_config.save(deps.storage)?;
@@ -244,7 +244,7 @@ pub fn set_no_qualification(
     let mut response = make_response("set_no_qualification");
 
     campaign_config.qualifier = None;
-    response.add_attribute("is_updated_qualifier", "true");
+    response = response.add_attribute("is_updated_qualifier", "true");
 
     campaign_config.save(deps.storage)?;
 
@@ -279,7 +279,7 @@ pub fn update_activation(
 
     campaign_state.save(deps.storage)?;
 
-    response.add_attribute(
+    response = response.add_attribute(
         "last_active_height",
         campaign_state.last_active_height
             .map_or(String::new(), |v| v.to_string()),
@@ -314,10 +314,10 @@ pub fn deposit(
 
     // Execute
     let mut response = make_response("deposit");
-    response.add_attribute("participation_reward_amount", participation_reward_amount.to_string());
-    response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
-    response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
-    response.add_attribute("deposit_value", deposit_value);
+    response = response.add_attribute("participation_reward_amount", participation_reward_amount.to_string());
+    response = response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
+    response = response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
+    response = response.add_attribute("deposit_value", deposit_value);
 
     let global_campaign_config = load_global_campaign_config(&deps.querier, &campaign_config.campaign_manager)?;
 
@@ -326,10 +326,10 @@ pub fn deposit(
         referral_reward_pool_ratio,
         global_campaign_config.deposit_fee_rate,
     )?;
-    response.add_attribute("deposit_fee_amount", deposit_fee_amount.to_string());
+    response = response.add_attribute("deposit_fee_amount", deposit_fee_amount.to_string());
 
     let real_referral_reward_amount = referral_reward_amount.checked_sub(deposit_fee_amount)?;
-    response.add_attribute("referral_reward_amount", real_referral_reward_amount.to_string());
+    response = response.add_attribute("referral_reward_amount", real_referral_reward_amount.to_string());
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
@@ -346,7 +346,7 @@ pub fn deposit(
 
     // If participation reward denom is native, It will be send with this execute_msg.
     if let cw20::Denom::Cw20(token) = &reward_config.participation_reward_denom {
-        response.add_message(message_factories::wasm_execute(
+        response = response.add_message(message_factories::wasm_execute(
             token,
             &Cw20ExecuteMsg::TransferFrom {
                 owner: info.sender.to_string(),
@@ -356,7 +356,7 @@ pub fn deposit(
         ));
     }
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &reward_config.referral_reward_token,
         &Cw20ExecuteMsg::TransferFrom {
             owner: info.sender.to_string(),
@@ -366,7 +366,7 @@ pub fn deposit(
     ));
 
     if !deposit_fee_amount.is_zero() {
-        response.add_message(message_factories::wasm_execute(
+        response = response.add_message(message_factories::wasm_execute(
             &reward_config.referral_reward_token,
             &Cw20ExecuteMsg::Send {
                 contract: global_campaign_config.fund_manager.to_string(),
@@ -488,19 +488,19 @@ fn swap_operation(offer: cw20::Denom, ask: cw20::Denom) -> SwapOperation {
                 },
                 cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
                     offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
-                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token },
+                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
                 },
             }
         }
         cw20::Denom::Cw20(offer_token) => {
             match ask {
                 cw20::Denom::Native(ask_denom) => SwapOperation::TerraSwap {
-                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token },
+                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
                     ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
                 },
                 cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
-                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token },
-                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token },
+                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
+                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
                 },
             }
         }
@@ -537,8 +537,8 @@ pub fn withdraw(
 
     // Execute
     let mut response = make_response("withdraw");
-    response.add_attribute("pre_campaign_balance", campaign_balance);
-    response.add_attribute("pre_locked_balance", locked_balance);
+    response = response.add_attribute("pre_campaign_balance", campaign_balance);
+    response = response.add_attribute("pre_locked_balance", locked_balance);
 
     let mut receive_amount = withdraw_amount;
     let mut withdraw_fee_amount = Uint128::zero();
@@ -557,7 +557,7 @@ pub fn withdraw(
         receive_amount = _receive_amount;
 
         campaign_state.withdraw(&denom_cw20, &withdraw_fee_amount)?;
-        response.add_message(make_send_msg(
+        response = response.add_message(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
             withdraw_fee_amount,
@@ -566,7 +566,7 @@ pub fn withdraw(
     }
 
     campaign_state.withdraw(&denom_cw20, &receive_amount)?;
-    response.add_message(make_send_msg(
+    response = response.add_message(make_send_msg(
         &deps.querier,
         denom_cw20,
         receive_amount,
@@ -576,8 +576,8 @@ pub fn withdraw(
     campaign_state.validate_balance()?;
     campaign_state.save(deps.storage)?;
 
-    response.add_attribute("receive_amount", receive_amount);
-    response.add_attribute("withdraw_fee_amount", withdraw_fee_amount);
+    response = response.add_attribute("receive_amount", receive_amount);
+    response = response.add_attribute("withdraw_fee_amount", withdraw_fee_amount);
 
     Ok(response)
 }
@@ -609,7 +609,7 @@ pub fn withdraw_irregular(
 
     let diff = contract_balance.checked_sub(expect_balance)?;
 
-    response.add_message(make_send_msg(
+    response = response.add_message(make_send_msg(
         &deps.querier,
         denom_cw20,
         diff,
@@ -647,13 +647,13 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
     participation.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
 
-    response.add_message(make_send_msg(
+    response = response.add_message(make_send_msg(
         &deps.querier,
         reward_config.participation_reward_denom.clone(),
         reward_amount,
         &participation.address,
     )?);
-    response.add_attribute(
+    response = response.add_attribute(
         "amount",
         format!(
             "{}{}",
@@ -696,13 +696,13 @@ pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Con
     participation.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
 
-    response.add_message(make_send_msg(
+    response = response.add_message(make_send_msg(
         &deps.querier,
         cw20::Denom::Cw20(reward_config.referral_reward_token),
         reward_amount,
         &participation.address,
     )?);
-    response.add_attribute("amount", reward_amount);
+    response = response.add_attribute("amount", reward_amount);
 
     Ok(response)
 }
@@ -729,7 +729,7 @@ pub fn participate(
 
     // Execute
     let mut response = make_response("participate");
-    response.add_attribute("actor", actor.to_string());
+    response = response.add_attribute("actor", actor.to_string());
 
     if campaign_config.require_collateral() {
         let mut collateral = Collateral::load_or_new(deps.storage, &actor)?;
@@ -751,7 +751,7 @@ pub fn participate(
     let referrer_address = referrer.and_then(|v| v.to_address(deps.api).ok());
 
     if let Some(qualifier) = campaign_config.qualifier {
-        response.add_submessage(SubMsg {
+        response = response.add_submessage(SubMsg {
             id: REPLY_QUALIFY_PARTICIPATION,
             msg: message_factories::wasm_execute(
                 &qualifier,
@@ -781,7 +781,7 @@ pub fn participate(
         )?;
 
         for execution in campaign_config.executions.iter() {
-            response.add_message(message_factories::wasm_execute_bin(
+            response = response.add_message(message_factories::wasm_execute_bin(
                 &execution.contract,
                 execution.msg.clone(),
             ));
@@ -823,7 +823,7 @@ pub fn participate_qualify_result(
         let campaign_config = CampaignConfig::load(deps.storage)?;
 
         for execution in campaign_config.executions.iter() {
-            response.add_message(message_factories::wasm_execute_bin(
+            response = response.add_message(message_factories::wasm_execute_bin(
                 &execution.contract,
                 execution.msg.clone(),
             ));
@@ -886,14 +886,14 @@ fn _participate(
                 &referral_reward_overflow_amount,
             )?;
 
-            response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+            response.messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: reward_config.referral_reward_token.to_string(),
                 funds: vec![],
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
                     recipient,
                     amount: referral_reward_overflow_amount,
                 })?,
-            }));
+            })));
         }
     }
 
@@ -901,47 +901,47 @@ fn _participate(
     campaign_state.validate_balance().map_err(|_| StdError::generic_err("Insufficient balance"))?;
     let participation_reward_denom = Denom::from_cw20(reward_config.participation_reward_denom);
 
-    response.set_data(to_binary(&DistributeResult {
+    response.data = Some(to_binary(&DistributeResult {
         participation_reward_denom: participation_reward_denom.clone(),
         participation_reward_amount: distributed_participation_reward_amount,
         referral_rewards,
     })?);
 
-    response.add_attribute(
+    response.attributes.push(attr(
         "configured_participation_reward_amount",
         format!("{}{}",
                 reward_config.participation_reward_amount.to_string(),
                 participation_reward_denom.to_string(),
         ),
-    );
-    response.add_attribute(
+    ));
+    response.attributes.push(attr(
         "distributed_participation_reward_amount",
         format!("{}{}",
                 distributed_participation_reward_amount.to_string(),
                 participation_reward_denom.to_string(),
         ),
-    );
-    response.add_attribute(
+    ));
+    response.attributes.push(attr(
         "configured_referral_reward_amount",
         format!("{}{}",
                 reward_config.referral_reward_amounts.iter().sum::<Uint128>().to_string(),
                 reward_config.referral_reward_token.to_string(),
         ),
-    );
-    response.add_attribute(
+    ));
+    response.attributes.push(attr(
         "distributed_referral_reward_amount",
         format!("{}{}",
                 distributed_referral_reward_amount.to_string(),
                 reward_config.referral_reward_token.to_string(),
         ),
-    );
-    response.add_attribute(
+    ));
+    response.attributes.push(attr(
         "referral_reward_overflow_amount",
         format!("{}{}",
                 referral_reward_overflow_amount.to_string(),
                 reward_config.referral_reward_token.to_string(),
         ),
-    );
+    ));
 
     if my_participation.participation_count == 1 {
         campaign_state.actor_count += 1;
@@ -952,16 +952,16 @@ fn _participate(
     campaign_state.save(storage)?;
     my_participation.save(storage)?;
 
-    response.add_attribute(
+    response.attributes.push(attr(
         "cumulative_participation_reward_amount",
         campaign_state.cumulative_participation_reward_amount,
-    );
-    response.add_attribute(
+    ));
+    response.attributes.push(attr(
         "cumulative_referral_reward_amount",
         campaign_state.cumulative_referral_reward_amount,
-    );
-    response.add_attribute("participation_count", campaign_state.actor_count.to_string());
-    response.add_attribute("participate_count", campaign_state.participation_count.to_string());
+    ));
+    response.attributes.push(attr("participation_count", campaign_state.actor_count.to_string()));
+    response.attributes.push(attr("participate_count", campaign_state.participation_count.to_string()));
 
     Ok(())
 }
@@ -1067,7 +1067,7 @@ pub fn deposit_collateral(
     }
 
     let mut response = Response::new();
-    response.add_attribute("action", "deposit_collateral");
+    response = response.add_attribute("action", "deposit_collateral");
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
 
@@ -1086,8 +1086,8 @@ pub fn deposit_collateral(
     campaign_state.save(deps.storage)?;
     collateral.save(deps.storage)?;
 
-    response.add_attribute("deposit", send_amount.to_string());
-    response.add_attribute("balance", collateral.deposit_amount.to_string());
+    response = response.add_attribute("deposit", send_amount.to_string());
+    response = response.add_attribute("balance", collateral.deposit_amount.to_string());
 
     Ok(response)
 }
@@ -1099,12 +1099,12 @@ pub fn withdraw_collateral(
     amount: Uint128,
 ) -> ContractResult<Response> {
     let mut response = Response::new();
-    response.add_attribute("action", "withdraw_collateral");
+    response = response.add_attribute("action", "withdraw_collateral");
 
     let mut collateral = Collateral::load(deps.storage, &info.sender)?;
 
-    response.add_attribute("deposit_amount", collateral.deposit_amount.to_string());
-    response.add_attribute("locked_amount", collateral.locked_amount(env.block.height));
+    response = response.add_attribute("deposit_amount", collateral.deposit_amount.to_string());
+    response = response.add_attribute("locked_amount", collateral.locked_amount(env.block.height));
 
     collateral.clear(env.block.height);
 
@@ -1130,7 +1130,7 @@ pub fn withdraw_collateral(
         campaign_state.collateral_amount = campaign_state.collateral_amount.checked_sub(amount)?;
         campaign_state.save(deps.storage)?;
 
-        response.add_message(make_send_msg(
+        response = response.add_message(make_send_msg(
             &deps.querier,
             denom,
             amount,

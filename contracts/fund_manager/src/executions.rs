@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Decimal};
+use cosmwasm_std::{coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Decimal};
 use cw20::Cw20ExecuteMsg;
 use terraswap::asset::AssetInfo;
 use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
@@ -59,22 +59,22 @@ pub fn update_config(
         config.admins = admins.iter()
             .map(|v| deps.api.addr_validate(v).unwrap())
             .collect();
-        response.add_attribute("is_updated_admins", "true");
+        response = response.add_attribute("is_updated_admins", "true");
     }
 
     if let Some(terraswap_router) = terraswap_router.as_ref() {
         config.terraswap_router = deps.api.addr_validate(terraswap_router.as_str())?;
-        response.add_attribute("is_updated_terraswap_router", "true");
+        response = response.add_attribute("is_updated_terraswap_router", "true");
     }
 
     if let Some(campaign_deposit_fee_burn_ratio) = campaign_deposit_fee_burn_ratio {
         config.campaign_deposit_fee_burn_ratio = campaign_deposit_fee_burn_ratio;
-        response.add_attribute("is_updated_campaign_deposit_fee_burn_ratio", "true");
+        response = response.add_attribute("is_updated_campaign_deposit_fee_burn_ratio", "true");
     }
 
     if let Some(campaign_deposit_fee_recipient) = campaign_deposit_fee_recipient.as_ref() {
         config.campaign_deposit_fee_recipient = deps.api.addr_validate(campaign_deposit_fee_recipient.as_str())?;
-        response.add_attribute("is_updated_campaign_deposit_fee_recipient", "true");
+        response = response.add_attribute("is_updated_campaign_deposit_fee_recipient", "true");
     }
 
     config.save(deps.storage)?;
@@ -117,10 +117,10 @@ pub fn increase_allowance(
     state.remain_allowance_amount += amount;
     state.save(deps.storage)?;
 
-    response.add_attribute("address", address.to_string());
-    response.add_attribute("amount", amount.clone());
-    response.add_attribute("allowed_amount", allowance.allowed_amount);
-    response.add_attribute("remain_amount", allowance.remain_amount);
+    response = response.add_attribute("address", address.to_string());
+    response = response.add_attribute("amount", amount.clone());
+    response = response.add_attribute("allowed_amount", allowance.allowed_amount);
+    response = response.add_attribute("remain_amount", allowance.remain_amount);
 
     Ok(response)
 }
@@ -161,10 +161,10 @@ pub fn decrease_allowance(
     state.remain_allowance_amount = state.remain_allowance_amount.checked_sub(amount)?;
     state.save(deps.storage)?;
 
-    response.add_attribute("address", address.to_string());
-    response.add_attribute("amount", amount.to_string());
-    response.add_attribute("allowed_amount", allowance.allowed_amount);
-    response.add_attribute("remain_amount", allowance.remain_amount);
+    response = response.add_attribute("address", address.to_string());
+    response = response.add_attribute("amount", amount.to_string());
+    response = response.add_attribute("allowed_amount", allowance.allowed_amount);
+    response = response.add_attribute("remain_amount", allowance.remain_amount);
 
     Ok(response)
 }
@@ -215,7 +215,7 @@ pub fn transfer(
         }
     };
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.managing_token,
         &Cw20ExecuteMsg::Transfer {
             recipient: deps.api.addr_validate(&recipient)?.to_string(),
@@ -223,10 +223,10 @@ pub fn transfer(
         },
     ));
 
-    response.add_attribute("requester", info.sender.as_str());
-    response.add_attribute("recipient", recipient);
-    response.add_attribute("amount", amount);
-    response.add_attribute("remain_amount", remain_amount);
+    response = response.add_attribute("requester", info.sender.as_str());
+    response = response.add_attribute("recipient", recipient);
+    response = response.add_attribute("amount", amount);
+    response = response.add_attribute("remain_amount", remain_amount);
 
     Ok(response)
 }
@@ -257,7 +257,7 @@ pub fn swap(
     let mut response = make_response("swap");
 
     let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
-        pair_to_terraswap_operation(pair, deps.api)
+        pair_to_terraswap_operation(pair)
     }).collect();
 
     let terraswap_msg = TerraswapExecuteMsg::ExecuteSwapOperations {
@@ -306,12 +306,12 @@ pub fn swap(
         }
     };
 
-    response.add_message(swap_msg);
+    response = response.add_message(swap_msg);
 
     Ok(response)
 }
 
-fn pair_to_terraswap_operation(pair: &[Denom], api: &dyn Api) -> SwapOperation {
+fn pair_to_terraswap_operation(pair: &[Denom]) -> SwapOperation {
     let left = pair[0].clone();
     let right = pair[1].clone();
 
@@ -325,18 +325,18 @@ fn pair_to_terraswap_operation(pair: &[Denom], api: &dyn Api) -> SwapOperation {
     }
 
     SwapOperation::TerraSwap {
-        offer_asset_info: denom_to_asset_info(left, api),
-        ask_asset_info: denom_to_asset_info(right, api),
+        offer_asset_info: denom_to_asset_info(left),
+        ask_asset_info: denom_to_asset_info(right),
     }
 }
 
-fn denom_to_asset_info(denom: Denom, api: &dyn Api) -> AssetInfo {
+fn denom_to_asset_info(denom: Denom) -> AssetInfo {
     match denom {
         Denom::Native(denom) => AssetInfo::NativeToken {
             denom,
         },
         Denom::Token(address) => AssetInfo::Token {
-            contract_addr: api.addr_validate(address.as_str()).unwrap(),
+            contract_addr: address,
         },
     }
 }
@@ -354,7 +354,7 @@ pub fn receive_campaign_deposit_fee(
 
     state.save(deps.storage)?;
 
-    response.add_attribute("campaign_deposit_fee_balance", state.campaign_deposit_fee_amount.to_string());
+    response = response.add_attribute("campaign_deposit_fee_balance", state.campaign_deposit_fee_amount.to_string());
 
     Ok(response)
 }
@@ -384,7 +384,7 @@ pub fn distribute_campaign_deposit_fee(
     let burn_amount = amount * config.campaign_deposit_fee_burn_ratio;
     let distribute_amount = amount.checked_sub(burn_amount)?;
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.managing_token,
         &Cw20ExecuteMsg::Transfer {
             recipient: config.campaign_deposit_fee_recipient.to_string(),
@@ -392,7 +392,7 @@ pub fn distribute_campaign_deposit_fee(
         },
     ));
 
-    response.add_message(message_factories::wasm_execute(
+    response = response.add_message(message_factories::wasm_execute(
         &config.managing_token,
         &Cw20ExecuteMsg::Burn {
             amount: burn_amount,
