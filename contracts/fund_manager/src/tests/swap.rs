@@ -76,7 +76,7 @@ fn succeed_native() {
                             denom: "uusd".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked(MANAGING_TOKEN),
+                            contract_addr: Addr::unchecked(MANAGING_TOKEN).to_string(),
                         },
                     },
                 ],
@@ -115,10 +115,10 @@ fn succeed_token() {
                     operations: vec![
                         SwapOperation::TerraSwap {
                             offer_asset_info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked("Token1"),
+                                contract_addr: Addr::unchecked("Token1").to_string(),
                             },
                             ask_asset_info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked(MANAGING_TOKEN),
+                                contract_addr: Addr::unchecked(MANAGING_TOKEN).to_string(),
                             },
                         },
                     ],
@@ -166,7 +166,7 @@ fn succeed_route() {
                             denom: "uusd".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
-                            contract_addr: Addr::unchecked(MANAGING_TOKEN),
+                            contract_addr: Addr::unchecked(MANAGING_TOKEN).to_string(),
                         },
                     },
                 ],

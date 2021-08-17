@@ -195,8 +195,7 @@ pub const REPLY_CREATE_CAMPAIGN: u64 = 1;
 pub fn create_campaign(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
-    sender: String,
+    info: MessageInfo,
     config_msg: Binary,
     collateral_denom: Option<Denom>,
     collateral_amount: Option<Uint128>,
@@ -212,7 +211,7 @@ pub fn create_campaign(
 
     CreateCampaignContext {
         code_id: config.code_id,
-        creator: deps.api.addr_validate(sender.as_str())?,
+        creator: deps.api.addr_validate(info.sender.as_str())?,
     }.save(deps.storage)?;
 
     let create_campaign_msg = message_factories::wasm_instantiate(
@@ -222,8 +221,8 @@ pub fn create_campaign(
             governance: config.governance.to_string(),
             fund_manager: config.fund_manager.to_string(),
             campaign_manager: env.contract.address.to_string(),
-            admin: sender.to_string(),
-            creator: sender.to_string(),
+            admin: info.sender.to_string(),
+            creator: info.sender.to_string(),
             config_msg,
             collateral_denom,
             collateral_amount: collateral_amount.unwrap_or_default(),
@@ -242,8 +241,8 @@ pub fn create_campaign(
     });
 
     response = response.add_attribute("campaign_code_id", config.code_id.to_string());
-    response = response.add_attribute("campaign_creator", sender.clone());
-    response = response.add_attribute("campaign_admin", sender.clone());
+    response = response.add_attribute("campaign_creator", info.sender.to_string());
+    response = response.add_attribute("campaign_admin", info.sender.to_string());
 
     Ok(response)
 }

@@ -113,7 +113,7 @@ fn succeed() {
         attr("action", "create_poll"),
         attr("creator", PROPOSER1),
         attr("poll_id", "1"),
-        attr("end_height", env.block.height + POLL_VOTING_PERIOD),
+        attr("end_height", (env.block.height + POLL_VOTING_PERIOD).to_string()),
     ]);
 
     let executions = execution_msgs.iter()

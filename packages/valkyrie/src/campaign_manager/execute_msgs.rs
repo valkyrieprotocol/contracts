@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Decimal, Uint128, Binary};
 use crate::common::{Denom, ExecutionMsg};
-use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -31,7 +30,6 @@ pub struct ReferralRewardLimitOptionMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Receive(Cw20ReceiveMsg),
     UpdateConfig {
         governance: Option<String>,
         fund_manager: Option<String>,
@@ -51,11 +49,6 @@ pub enum ExecuteMsg {
         percent_for_governance_staking: Option<u16>,
     },
     SetReuseOverflowAmount {},
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Cw20HookMsg {
     CreateCampaign {
         config_msg: Binary,
         collateral_denom: Option<Denom>,

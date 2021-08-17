@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, attr, ContractResult as CwContractResult, Env, Event, Reply, Response, SubMsgExecutionResponse};
+use cosmwasm_std::{Addr, ContractResult as CwContractResult, Env, Event, Reply, Response, SubMsgExecutionResponse};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
@@ -35,12 +35,8 @@ fn succeed_success_reply() {
         env.clone(),
         CwContractResult::Ok(SubMsgExecutionResponse {
             events: vec![
-                Event {
-                    ty: "instantiate_contract".to_string(),
-                    attributes: vec![
-                        attr("contract_address", campaign_address.to_string()),
-                    ],
-                },
+                Event::new("instantiate_contract")
+                    .add_attribute("contract_address", campaign_address.to_string()),
             ],
             data: None,
         }),

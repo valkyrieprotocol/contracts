@@ -534,12 +534,13 @@ fn test_auto_stake() {
                         },
                         Asset {
                             info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked("asset")
+                                contract_addr: Addr::unchecked("asset").to_string()
                             },
                             amount: Uint128::new(1u128),
                         },
                     ],
                     slippage_tolerance: None,
+                    receiver: None,
                 })
                     .unwrap(),
                 funds: vec![Coin {

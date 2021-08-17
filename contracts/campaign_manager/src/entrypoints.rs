@@ -1,8 +1,7 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary};
 use cosmwasm_std::entry_point;
-use cw20::Cw20ReceiveMsg;
 
-use valkyrie::campaign_manager::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
+use valkyrie::campaign_manager::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::campaign_manager::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
@@ -29,7 +28,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateConfig {
             governance,
             fund_manager,
@@ -71,17 +69,7 @@ pub fn execute(
             percent_for_governance_staking,
         ),
         ExecuteMsg::SetReuseOverflowAmount {} => executions::set_reuse_overflow_amount(deps, env, info),
-    }
-}
-
-pub fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> ContractResult<Response> {
-    match from_binary(&cw20_msg.msg)? {
-        Cw20HookMsg::CreateCampaign {
+        ExecuteMsg::CreateCampaign {
             config_msg,
             collateral_denom,
             collateral_amount,
@@ -92,7 +80,6 @@ pub fn receive_cw20(
             deps,
             env,
             info,
-            cw20_msg.sender,
             config_msg,
             collateral_denom,
             collateral_amount,
