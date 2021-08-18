@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Decimal};
+use cosmwasm_std::Decimal;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::common::{OrderBy, Denom};
@@ -21,9 +21,6 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
         order_by: Option<OrderBy>,
-    },
-    ReferralRewardLimitAmount {
-        address: String,
     },
 }
 
@@ -90,10 +87,4 @@ pub struct CampaignResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct CampaignsResponse {
     pub campaigns: Vec<CampaignResponse>,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-pub struct ReferralRewardLimitAmountResponse {
-    pub address: String,
-    pub amount: Uint128,
 }

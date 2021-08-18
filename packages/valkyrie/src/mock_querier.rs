@@ -4,12 +4,15 @@ use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, fr
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
-use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse};
+use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse, StakerStateResponse};
 use crate::terra::calc_tax_one_plus;
 use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg};
-use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse, ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
+use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse, ReferralRewardLimitOptionResponse};
 
 use terraswap::router::{QueryMsg as TerraswapRouterQueryMsg, SwapOperation, SimulateSwapOperationsResponse};
+use crate::test_constants::campaign_manager::CAMPAIGN_MANAGER;
+use crate::test_constants::governance::GOVERNANCE;
+use crate::test_constants::TERRASWAP_ROUTER;
 
 pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
 
@@ -33,7 +36,7 @@ pub struct WasmMockQuerier {
     tax_querier: TaxQuerier,
     voting_powers_querier: VotingPowerQuerier,
     campaign_manager_config_querier: CampaignManagerConfigQuerier,
-    gov_config_querier: GovConfigQuerier,
+    governance_querier: GovConfigQuerier,
     campaign_state_querier: CampaignStateQuerier,
     terraswap_router_querier: TerraswapRouterQuerier,
 }
@@ -63,19 +66,16 @@ pub(crate) fn powers_to_map(powers: &[(&String, &Decimal)]) -> HashMap<String, D
 pub struct CampaignManagerConfigQuerier {
     config: ConfigResponse,
     referral_reward_limit_option: ReferralRewardLimitOptionResponse,
-    referral_reward_limit: HashMap<String, ReferralRewardLimitAmountResponse>,
 }
 
 impl CampaignManagerConfigQuerier {
     pub fn new(
         config: ConfigResponse,
         referral_reward_limit_option: ReferralRewardLimitOptionResponse,
-        referral_reward_limit: HashMap<String, ReferralRewardLimitAmountResponse>,
     ) -> Self {
         CampaignManagerConfigQuerier {
             config,
             referral_reward_limit_option,
-            referral_reward_limit,
         }
     }
 }
@@ -83,14 +83,17 @@ impl CampaignManagerConfigQuerier {
 #[derive(Clone, Default)]
 pub struct GovConfigQuerier {
     token_contract: String,
+    staker_state: HashMap<String, StakerStateResponse>,
 }
 
 impl GovConfigQuerier {
     pub fn new(
         token_contract: String,
+        staker_state: HashMap<String, StakerStateResponse>,
     ) -> Self {
         GovConfigQuerier {
             token_contract,
+            staker_state,
         }
     }
 }
@@ -266,7 +269,11 @@ impl WasmMockQuerier {
         result.unwrap()
     }
 
-    fn handle_wasm_smart_campaign_manager(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+    fn handle_wasm_smart_campaign_manager(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        if contract_addr != CAMPAIGN_MANAGER {
+            return None;
+        }
+
         match from_binary(msg) {
             Ok(CampaignManagerQueryMsg::Config {}) => {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
@@ -278,33 +285,22 @@ impl WasmMockQuerier {
                     &self.campaign_manager_config_querier.referral_reward_limit_option,
                 ))))
             },
-            Ok(CampaignManagerQueryMsg::ReferralRewardLimitAmount { address }) => {
-                let default = ReferralRewardLimitAmountResponse {
-                    address: address.clone(),
-                    amount: Uint128::new(9999999999),
-                };
-
-                let limit = self.campaign_manager_config_querier.referral_reward_limit.get(&address)
-                    .unwrap_or(&default);
-
-                Some(SystemResult::Ok(ContractResult::from(to_binary(&limit))))
-            },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_wasm_smart".to_string(),
+                kind: "handle_wasm_smart:campaign_manager".to_string(),
             })),
             Err(_) => None,
         }
     }
 
     fn handle_wasm_smart_governance(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
-        if contract_addr != "GovernanceContract" {
+        if contract_addr != GOVERNANCE {
             return None;
         }
 
         match from_binary(msg) {
             Ok(GovQueryMsg::ContractConfig {}) => {
                 let response = GovContractConfigResponse {
-                    governance_token: self.gov_config_querier.token_contract.clone(),
+                    governance_token: self.governance_querier.token_contract.clone(),
                 };
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
@@ -324,14 +320,26 @@ impl WasmMockQuerier {
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
             },
+            Ok(GovQueryMsg::StakerState { address }) => {
+                let default = StakerStateResponse::default();
+                let response = self.governance_querier.staker_state
+                    .get(address.as_str())
+                    .unwrap_or(&default);
+
+                Some(SystemResult::Ok(ContractResult::from(to_binary(response))))
+            },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_wasm_smart".to_string(),
+                kind: "handle_wasm_smart:governance".to_string(),
             })),
             Err(_) => None,
         }
     }
 
     fn handle_wasm_smart_campaign(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        if !self.campaign_state_querier.states.contains_key(contract_addr) {
+            return None;
+        }
+
         match from_binary(msg) {
             Ok(QueryMsg::CampaignState {}) => {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
@@ -339,13 +347,17 @@ impl WasmMockQuerier {
                 ))))
             },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_wasm_smart".to_string(),
+                kind: "handle_wasm_smart:campaign".to_string(),
             })),
             Err(_) => None,
         }
     }
 
-    fn handle_wasm_smart_terraswap_router(&self, _contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+    fn handle_wasm_smart_terraswap_router(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        if contract_addr != TERRASWAP_ROUTER {
+            return None;
+        }
+
         match from_binary(msg) {
             Ok(TerraswapRouterQueryMsg::SimulateSwapOperations { offer_amount, operations }) => {
                 let mut amount = offer_amount.u128();
@@ -364,7 +376,7 @@ impl WasmMockQuerier {
                 ))))
             },
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_wasm_smart".to_string(),
+                kind: "handle_wasm_smart:terraswap_router".to_string(),
             })),
             Err(_) => None,
         }
@@ -480,7 +492,7 @@ impl WasmMockQuerier {
             tax_querier: TaxQuerier::default(),
             campaign_manager_config_querier: CampaignManagerConfigQuerier::default(),
             voting_powers_querier: VotingPowerQuerier::default(),
-            gov_config_querier: GovConfigQuerier::default(),
+            governance_querier: GovConfigQuerier::default(),
             campaign_state_querier: CampaignStateQuerier::default(),
             terraswap_router_querier: TerraswapRouterQuerier::default(),
         }
@@ -498,14 +510,6 @@ impl WasmMockQuerier {
         self.campaign_manager_config_querier.config = config;
     }
 
-    pub fn with_referral_reward_limit(
-        &mut self,
-        address: &str,
-        limit: ReferralRewardLimitAmountResponse,
-    ) {
-        self.campaign_manager_config_querier.referral_reward_limit.insert(address.to_string(), limit);
-    }
-
     pub fn with_referral_reward_limit_option(
         &mut self,
         option: ReferralRewardLimitOptionResponse,
@@ -517,7 +521,15 @@ impl WasmMockQuerier {
         &mut self,
         token_contract: &str,
     ) {
-        self.gov_config_querier = GovConfigQuerier::new(token_contract.to_string());
+        self.governance_querier.token_contract = token_contract.to_string();
+    }
+
+    pub fn with_gov_staker_state(
+        &mut self,
+        address: &str,
+        state: StakerStateResponse,
+    ) {
+        self.governance_querier.staker_state.insert(address.to_string(), state);
     }
 
     pub fn with_voting_powers(&mut self, powers: &[(&String, &Decimal)]) {

@@ -156,6 +156,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::GetAddressFromReferrer { referrer } => to_binary(
             &crate::queries::get_address_from_referrer(deps, env, referrer)?,
         ),
+        QueryMsg::ReferralRewardLimitAmount { address } => to_binary(
+            &crate::queries::get_referral_reward_limit_amount(deps, env, address)?,
+        ),
         QueryMsg::Actor { address } => {
             to_binary(&crate::queries::get_actor(deps, env, address)?)
         }

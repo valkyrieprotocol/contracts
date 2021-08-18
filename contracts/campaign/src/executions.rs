@@ -14,7 +14,7 @@ use valkyrie_qualifier::{QualificationMsg, QualificationResult};
 use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
 
 use crate::states::*;
-use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitOptionResponse, ReferralRewardLimitAmountResponse};
+use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 
 pub const MIN_TITLE_LENGTH: usize = 4;
@@ -872,11 +872,11 @@ fn _participate(
     ) = distribute_referral_reward(
         &mut my_participation,
         &mut campaign_state,
+        &campaign_config,
         &reward_config,
         &referral_reward_limit_option,
         storage,
         querier,
-        &campaign_config.campaign_manager,
     )?;
 
     if !referral_reward_overflow_amount.is_zero() {
@@ -985,11 +985,11 @@ fn distribute_participation_reward(
 fn distribute_referral_reward(
     participation: &mut Actor,
     campaign_state: &mut CampaignState,
+    campaign_config: &CampaignConfig,
     reward_config: &RewardConfig,
     referral_limit_option: &ReferralRewardLimitOptionResponse,
     storage: &mut dyn Storage,
     querier: &QuerierWrapper,
-    campaign_manager: &Addr,
 ) -> StdResult<(Uint128, Vec<ReferralReward>, Uint128)> {
     let mut referrers = participation.load_referrers(
         storage,
@@ -1013,12 +1013,12 @@ fn distribute_referral_reward(
     let referral_reward_denom = cw20::Denom::Cw20(reward_config.referral_reward_token.clone());
     for (distance, (actor, reward_amount)) in referrer_reward_pairs {
         let reward_limit = calc_referral_reward_limit(
-            reward_config,
             &referral_limit_option,
+            &campaign_config,
+            &reward_config,
             querier,
-            campaign_manager,
             &actor.address,
-        )?;
+        )?.limit_amount;
         let mut actor_receive_amount = *reward_amount;
         let mut actor_overflow_amount = Uint128::zero();
         let mut actor_reward_amount = actor.referral_reward_amount + *reward_amount;
@@ -1141,25 +1141,6 @@ pub fn withdraw_collateral(
     }
 
     Ok(response)
-}
-
-fn calc_referral_reward_limit(
-    reward_config: &RewardConfig,
-    option: &ReferralRewardLimitOptionResponse,
-    querier: &QuerierWrapper,
-    campaign_manager: &Addr,
-    address: &Addr,
-) -> StdResult<Uint128> {
-    let referral_reward_amount: Uint128 = reward_config.referral_reward_amounts.iter().sum();
-    let base_limit = referral_reward_amount.checked_mul(Uint128::from(option.base_count))?;
-    let limit: ReferralRewardLimitAmountResponse = querier.query_wasm_smart(
-        campaign_manager,
-        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitAmount {
-            address: address.to_string(),
-        },
-    )?;
-
-    Ok(std::cmp::max(base_limit, limit.amount))
 }
 
 fn validate_title(title: &str) -> StdResult<()> {

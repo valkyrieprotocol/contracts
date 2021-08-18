@@ -6,6 +6,7 @@ use valkyrie::common::{ContractResult, Denom, ExecutionMsg, OrderBy};
 use valkyrie::utils::{compress_addr, put_query_parameter};
 
 use crate::states::*;
+use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 
 pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConfigResponse> {
     let campaign_config = CampaignConfig::load(deps.storage)?;
@@ -88,6 +89,30 @@ pub fn get_address_from_referrer(
     Ok(GetAddressFromReferrerResponse {
         address: referrer.to_address(deps.api)?.to_string(),
     })
+}
+
+pub fn get_referral_reward_limit_amount(
+    deps: Deps,
+    _env: Env,
+    address: String,
+) -> ContractResult<ReferralRewardLimitAmount> {
+    let address = deps.api.addr_validate(address.as_str())?;
+
+    let config = CampaignConfig::load(deps.storage)?;
+    let option: ReferralRewardLimitOptionResponse = deps.querier.query_wasm_smart(
+        &config.campaign_manager,
+        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitOption {},
+    )?;
+
+    let reward_config = RewardConfig::load(deps.storage)?;
+
+    Ok(calc_referral_reward_limit(
+        &option,
+        &config,
+        &reward_config,
+        &deps.querier,
+        &address,
+    )?)
 }
 
 pub fn get_actor(

@@ -1,10 +1,13 @@
-use cosmwasm_std::{Addr, BlockInfo, QuerierWrapper, StdError, StdResult, Storage, Timestamp, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, QuerierWrapper, StdError, StdResult, Storage, Timestamp, Uint128, Decimal};
 use cw20::Denom;
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie::common::{Execution, OrderBy};
+use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
+use valkyrie::campaign::query_msgs::ReferralRewardLimitAmount;
+use valkyrie::governance::query_msgs::StakerStateResponse;
 
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
@@ -432,4 +435,34 @@ pub fn load_global_campaign_config(
         campaign_manager,
         &valkyrie::campaign_manager::query_msgs::QueryMsg::Config {},
     )
+}
+
+pub fn calc_referral_reward_limit(
+    limit_option: &ReferralRewardLimitOptionResponse,
+    campaign_config: &CampaignConfig,
+    reward_config: &RewardConfig,
+    querier: &QuerierWrapper,
+    address: &Addr,
+) -> StdResult<ReferralRewardLimitAmount> {
+    let base_limit_amount = reward_config.referral_reward_amounts.iter().sum::<Uint128>()
+        .checked_mul(Uint128::from(limit_option.base_count))?;
+
+    let gov_staker_state: StakerStateResponse = querier.query_wasm_smart(
+        &campaign_config.governance,
+        &valkyrie::governance::query_msgs::QueryMsg::StakerState {
+            address: address.to_string(),
+        },
+    )?;
+    let gov_staking_amount = gov_staker_state.balance;
+
+    let actor_limit_amount = gov_staking_amount * Decimal::percent(limit_option.percent_for_governance_staking as u64);
+
+    let limit_amount = std::cmp::max(base_limit_amount, actor_limit_amount);
+
+    Ok(ReferralRewardLimitAmount {
+        address: address.to_string(),
+        limit_amount,
+        base_limit_amount,
+        actor_limit_amount,
+    })
 }

@@ -11,8 +11,9 @@ use crate::states::{CampaignState, Actor};
 use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, COLLATERAL_AMOUNT};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
 use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
-use valkyrie::campaign_manager::query_msgs::{ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
+use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
+use valkyrie::governance::query_msgs::StakerStateResponse;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -222,10 +223,14 @@ fn overflow_referral_reward() {
         percent_for_governance_staking: 10,
     });
 
-    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
-        address: "Referrer".to_string(),
-        amount: Uint128::new(8),
-    });
+    deps.querier.with_gov_staker_state(
+        "Referrer",
+        StakerStateResponse {
+            balance: Uint128::new(80),
+            share: Uint128::new(80),
+            votes: vec![],
+        }
+    );
 
     will_success(&mut deps, "Referrer", None);
 
@@ -240,10 +245,15 @@ fn overflow_referral_reward() {
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(85));
 
 
-    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
-        address: "Referrer".to_string(),
-        amount: Uint128::new(14),
-    });
+
+    deps.querier.with_gov_staker_state(
+        "Referrer",
+        StakerStateResponse {
+            balance: Uint128::new(140),
+            share: Uint128::new(140),
+            votes: vec![],
+        }
+    );
 
     will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
 
@@ -254,15 +264,19 @@ fn overflow_referral_reward() {
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(81));
 
 
+    deps.querier.with_gov_staker_state(
+        "Referrer",
+        StakerStateResponse {
+            balance: Uint128::new(160),
+            share: Uint128::new(160),
+            votes: vec![],
+        }
+    );
+
     deps.querier.with_referral_reward_limit_option(ReferralRewardLimitOptionResponse {
         overflow_amount_recipient: Some("Recipient".to_string()),
         base_count: 1,
         percent_for_governance_staking: 10,
-    });
-
-    deps.querier.with_referral_reward_limit("Referrer", ReferralRewardLimitAmountResponse {
-        address: "Referrer".to_string(),
-        amount: Uint128::new(16),
     });
 
     let (_, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));

@@ -126,11 +126,6 @@ pub fn query(
         } => to_binary(
             &queries::query_campaign(deps, env, start_after, limit, order_by)?
         ),
-        QueryMsg::ReferralRewardLimitAmount {
-            address,
-        } => to_binary(
-            &queries::get_referral_reward_limit_amount(deps, env, address)?
-        ),
     }?;
 
     Ok(result)

@@ -1,10 +1,9 @@
-use cosmwasm_std::{Deps, Env, Uint128, StdError};
+use cosmwasm_std::{Deps, Env};
 
-use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse, ConfigResponse, ReferralRewardLimitAmountResponse, ReferralRewardLimitOptionResponse};
+use valkyrie::campaign_manager::query_msgs::{CampaignResponse, CampaignsResponse, ConfigResponse, ReferralRewardLimitOptionResponse};
 use valkyrie::common::{ContractResult, Denom, OrderBy};
 
 use crate::states::*;
-use valkyrie::governance::query_msgs::{QueryMsg, StakerStateResponse};
 
 pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
     let config = Config::load(deps.storage)?;
@@ -66,33 +65,4 @@ pub fn query_campaign(
     )?;
 
     Ok(campaigns)
-}
-
-pub fn get_referral_reward_limit_amount(
-    deps: Deps,
-    _env: Env,
-    address: String,
-) -> ContractResult<ReferralRewardLimitAmountResponse> {
-    let address = deps.api.addr_validate(address.as_str())?;
-
-    let config = Config::load(deps.storage)?;
-    let option = ReferralRewardLimitOption::load(deps.storage)?;
-
-    let gov_staker_state: StakerStateResponse = deps.querier.query_wasm_smart(
-        config.governance,
-        &QueryMsg::StakerState {
-            address: address.to_string(),
-        },
-    )?;
-    let gov_staking_amount = gov_staker_state.balance;
-
-    let amount = gov_staking_amount
-        .checked_mul(Uint128::from(100 * option.percent_for_governance_staking))?
-        .checked_div(Uint128::new(100))
-        .map_err(|e| StdError::divide_by_zero(e))?;
-
-    Ok(ReferralRewardLimitAmountResponse {
-        address: address.to_string(),
-        amount,
-    })
 }

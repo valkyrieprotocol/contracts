@@ -17,6 +17,9 @@ pub enum QueryMsg {
     GetAddressFromReferrer {
         referrer: Referrer,
     },
+    ReferralRewardLimitAmount {
+        address: String,
+    },
     Actor {
         address: String,
     },
@@ -76,6 +79,14 @@ pub struct ShareUrlResponse {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct GetAddressFromReferrerResponse {
     pub address: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct ReferralRewardLimitAmount {
+    pub address: String,
+    pub limit_amount: Uint128,
+    pub base_limit_amount: Uint128,
+    pub actor_limit_amount: Uint128,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
