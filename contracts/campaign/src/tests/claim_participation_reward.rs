@@ -48,6 +48,7 @@ fn succeed() {
 
     let participation = Actor::load(&deps.storage, &participator).unwrap();
     assert_eq!(participation.participation_reward_amount, Uint128::zero());
+    assert_eq!(participation.cumulative_participation_reward_amount, Uint128::new(5));
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(

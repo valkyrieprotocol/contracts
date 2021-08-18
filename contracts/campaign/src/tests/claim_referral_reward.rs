@@ -51,6 +51,7 @@ fn succeed() {
 
     let participation = Actor::load(&deps.storage, &referrer).unwrap();
     assert_eq!(participation.referral_reward_amount, Uint128::zero());
+    assert_eq!(participation.cumulative_referral_reward_amount, REFERRAL_REWARD_AMOUNTS[0]);
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(

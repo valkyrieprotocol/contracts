@@ -98,6 +98,8 @@ pub struct ActorResponse {
     pub referrer_address: Option<String>,
     pub participation_reward_amount: Uint128,
     pub referral_reward_amount: Uint128,
+    pub cumulative_participation_reward_amount: Uint128,
+    pub cumulative_referral_reward_amount: Uint128,
     pub participation_count: u64,
     pub referral_count: u64,
     pub last_participated_at: Timestamp,
