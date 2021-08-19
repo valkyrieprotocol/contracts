@@ -1,21 +1,23 @@
-use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, Api, WasmMsg, attr};
+use cosmwasm_std::{Addr, Api, attr, Binary, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, WasmMsg};
 use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
+use protobuf::Message;
 use terraswap::asset::AssetInfo;
 use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, MigrateMsg, ReferralReward};
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
+use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
+use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 use valkyrie::message_factories;
 use valkyrie::utils::{calc_ratio_amount, make_response};
 use valkyrie_qualifier::{QualificationMsg, QualificationResult};
 use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
 
+use crate::proto::MsgExecuteContractResponse;
 use crate::states::*;
-use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
-use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 
 pub const MIN_TITLE_LENGTH: usize = 4;
 pub const MAX_TITLE_LENGTH: usize = 64;
@@ -798,7 +800,13 @@ pub fn participate_qualify_result(
 ) -> ContractResult<Response> {
     let mut response = make_response("participate_qualify_result");
 
-    let result: QualificationResult = from_binary(&reply.result.unwrap().data.unwrap())?;
+    let core_response: MsgExecuteContractResponse = Message::parse_from_bytes(
+        reply.result.unwrap().data.unwrap().as_slice(),
+    ).map_err(|_| {
+        StdError::parse_err("MsgExecuteContractResponse", "failed to parse data")
+    })?;
+
+    let result: QualificationResult = from_binary(&Binary(core_response.data))?;
     let continue_option = result.continue_option;
 
     if continue_option.is_error() {
