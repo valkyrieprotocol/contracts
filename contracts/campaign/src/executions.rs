@@ -47,7 +47,7 @@ pub fn instantiate(
 
     let mut executions: Vec<Execution> = msg.executions.iter()
         .map(|e| Execution::from(deps.api, e))
-        .collect();
+        .collect::<StdResult<Vec<Execution>>>()?;
 
     executions.sort_by_key(|e| e.order);
 
@@ -62,7 +62,7 @@ pub fn instantiate(
         collateral_denom: msg.collateral_denom.map(|d| d.to_cw20(deps.api)),
         collateral_amount: msg.collateral_amount,
         collateral_lock_period: msg.collateral_lock_period,
-        qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str()).unwrap()),
+        qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str())).transpose()?,
         executions,
         admin: deps.api.addr_validate(&msg.admin)?,
         creator: deps.api.addr_validate(&msg.creator)?,
@@ -179,7 +179,7 @@ pub fn update_campaign_config(
         executions.sort_by_key(|e| e.order);
         campaign_config.executions = executions.iter()
             .map(|e| Execution::from(deps.api, e))
-            .collect();
+            .collect::<StdResult<Vec<Execution>>>()?;
         response = response.add_attribute("is_updated_executions", "true");
     }
 
@@ -623,13 +623,8 @@ pub fn withdraw_irregular(
 
 pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let participation = Actor::may_load(deps.storage, &info.sender)?;
-
-    if participation.is_none() {
-        return Err(ContractError::NotFound {});
-    }
-
-    let mut participation = participation.unwrap();
+    let mut participation = Actor::may_load(deps.storage, &info.sender)?
+        .ok_or(ContractError::NotFound {})?;
 
     if !participation.has_participation_reward() {
         return Err(ContractError::Std(StdError::generic_err("Not exist participation reward")));
@@ -669,13 +664,8 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
 
 pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let participation = Actor::may_load(deps.storage, &info.sender)?;
-
-    if participation.is_none() {
-        return Err(ContractError::NotFound {});
-    }
-
-    let mut participation = participation.unwrap();
+    let mut participation = Actor::may_load(deps.storage, &info.sender)?
+        .ok_or(ContractError::NotFound {})?;
 
     if !participation.has_referral_reward() {
         return Err(ContractError::Std(StdError::generic_err("Not exist referral reward")));
@@ -800,8 +790,12 @@ pub fn participate_qualify_result(
 ) -> ContractResult<Response> {
     let mut response = make_response("participate_qualify_result");
 
+    if reply.result.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(reply.result.unwrap_err())));
+    }
+
     let core_response: MsgExecuteContractResponse = Message::parse_from_bytes(
-        reply.result.unwrap().data.unwrap().as_slice(),
+        reply.result.unwrap() .data.unwrap_or_default().as_slice(),
     ).map_err(|_| {
         StdError::parse_err("MsgExecuteContractResponse", "failed to parse data")
     })?;

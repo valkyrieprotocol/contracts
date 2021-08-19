@@ -79,16 +79,12 @@ pub fn unstake_governance_token(
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
     // Validate
-    let staker_state = StakerState::may_load(deps.storage, &info.sender)?;
-
-    if staker_state.is_none() {
-        return Err(ContractError::Std(StdError::generic_err("Nothing staked")));
-    }
+    let mut staker_state = StakerState::may_load(deps.storage, &info.sender)?
+        .ok_or(ContractError::Std(StdError::generic_err("Nothing staked")))?;
 
     // Execute
     let mut response = make_response("unstake_governance_token");
 
-    let mut staker_state = staker_state.unwrap();
     let mut staking_state = StakingState::load(deps.storage)?;
 
     staker_state.clean_votes(deps.storage);

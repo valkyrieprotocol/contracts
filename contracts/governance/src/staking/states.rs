@@ -63,9 +63,9 @@ impl StakerState {
 
     pub fn clean_votes(&mut self, storage: &dyn Storage) -> () {
         self.votes.retain(|(poll_id, _)| {
-            let poll = Poll::load(storage, &poll_id).unwrap();
-
-            poll.status == PollStatus::InProgress
+            Poll::load(storage, &poll_id).ok()
+                .map(|p| p.status == PollStatus::InProgress)
+                .unwrap_or(false)
         });
     }
 

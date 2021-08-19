@@ -124,11 +124,11 @@ impl Ord for Execution {
 }
 
 impl Execution {
-    pub fn from(api: &dyn Api, msg: &ExecutionMsg) -> Execution {
-        Execution {
+    pub fn from(api: &dyn Api, msg: &ExecutionMsg) -> StdResult<Execution> {
+        Ok(Execution {
             order: msg.order,
-            contract: api.addr_validate(&msg.contract).unwrap(),
+            contract: api.addr_validate(&msg.contract)?,
             msg: msg.msg.clone(),
-        }
+        })
     }
 }

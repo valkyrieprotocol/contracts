@@ -253,6 +253,10 @@ pub fn created_campaign(
     msg: Reply,
 ) -> ContractResult<Response> {
     // Validate
+    if msg.result.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(msg.result.unwrap_err())));
+    }
+
     let events = msg.result.unwrap().events;
     let event = find(&events, |e| e.ty == "instantiate_contract");
     if event.is_none() {

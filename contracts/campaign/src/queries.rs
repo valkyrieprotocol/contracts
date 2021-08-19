@@ -148,7 +148,7 @@ pub fn query_participations(
     limit: Option<u32>,
     order_by: Option<OrderBy>,
 ) -> ContractResult<ActorsResponse> {
-    let start_after = start_after.map(|v| deps.api.addr_validate(&v).unwrap());
+    let start_after = start_after.map(|v| deps.api.addr_validate(&v)).transpose()?;
     let participations = Actor::query(deps.storage, start_after, limit, order_by)?
         .iter()
         .map(|actor| {

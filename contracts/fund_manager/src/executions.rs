@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Decimal};
+use cosmwasm_std::{coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Decimal, Addr, StdResult};
 use cw20::Cw20ExecuteMsg;
 use terraswap::asset::AssetInfo;
 use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
@@ -22,7 +22,7 @@ pub fn instantiate(
     let response = make_response("instantiate");
 
     ContractConfig {
-        admins: msg.admins.iter().map(|v| deps.api.addr_validate(v).unwrap()).collect(),
+        admins: msg.admins.iter().map(|v| deps.api.addr_validate(v)).collect::<StdResult<Vec<Addr>>>()?,
         managing_token: deps.api.addr_validate(msg.managing_token.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
         campaign_deposit_fee_burn_ratio: msg.campaign_deposit_fee_burn_ratio,
@@ -57,8 +57,8 @@ pub fn update_config(
 
     if let Some(admins) = admins.as_ref() {
         config.admins = admins.iter()
-            .map(|v| deps.api.addr_validate(v).unwrap())
-            .collect();
+            .map(|v| deps.api.addr_validate(v))
+            .collect::<StdResult<Vec<Addr>>>()?;
         response = response.add_attribute("is_updated_admins", "true");
     }
 

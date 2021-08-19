@@ -146,7 +146,7 @@ pub fn create_poll(
 
     let executions = executions.iter()
         .map(|execution| Execution::from(deps.api, execution))
-        .collect();
+        .collect::<StdResult<Vec<Execution>>>()?;
 
     let mut poll = Poll {
         id: get_poll_id(deps.storage, &deposit_amount)?,
