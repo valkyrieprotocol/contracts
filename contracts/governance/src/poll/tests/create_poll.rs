@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128};
+use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128, StdResult};
 use cosmwasm_std::testing::mock_info;
 use cw20::Cw20ExecuteMsg;
 
@@ -118,7 +118,7 @@ fn succeed() {
 
     let executions = execution_msgs.iter()
         .map(|e| Execution::from(&deps.api, e))
-        .collect();
+        .collect::<StdResult<Vec<Execution>>>().unwrap();
     let poll = Poll::load(&deps.storage, &1).unwrap();
     assert_eq!(poll, Poll {
         id: 1,

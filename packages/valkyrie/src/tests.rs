@@ -15,7 +15,6 @@ fn query_cw20_balance() {
         Uint128::from(123u128),
         crate::cw20::query_cw20_balance(
             &deps.as_ref().querier,
-            deps.as_ref().api,
             &Addr::unchecked("liquidity0000"),
             &Addr::unchecked(MOCK_CONTRACT_ADDR),
         )

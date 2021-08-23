@@ -1,5 +1,5 @@
 use cw_storage_plus::{Item, Map};
-use cosmwasm_std::{Addr, Storage, StdResult, Uint128, QuerierWrapper, Api, Env, Decimal};
+use cosmwasm_std::{Addr, Storage, StdResult, Uint128, QuerierWrapper, Env, Decimal};
 use valkyrie::common::OrderBy;
 use valkyrie::fund_manager::query_msgs::{AllowancesResponse, AllowanceResponse, BalanceResponse};
 use valkyrie::pagination::addr_range_option;
@@ -54,13 +54,11 @@ impl ContractState {
     pub fn load_balance(
         &self,
         querier: &QuerierWrapper,
-        api: &dyn Api,
         env: &Env,
         token_address: &Addr,
     ) -> StdResult<BalanceResponse> {
         let total_balance = query_cw20_balance(
             querier,
-            api,
             token_address,
             &env.contract.address,
         )?;

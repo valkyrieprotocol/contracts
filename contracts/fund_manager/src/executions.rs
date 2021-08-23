@@ -100,7 +100,7 @@ pub fn increase_allowance(
     }
 
     let mut state = ContractState::load(deps.storage)?;
-    let free_balance = state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?.free_balance;
+    let free_balance = state.load_balance(&deps.querier, &env, &config.managing_token)?.free_balance;
     if free_balance < amount {
         return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
     }
@@ -188,7 +188,7 @@ pub fn transfer(
     let mut response = make_response("transfer");
 
     let remain_amount = if config.is_admin(&info.sender) {
-        let balance = state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?;
+        let balance = state.load_balance(&deps.querier, &env, &config.managing_token)?;
 
         if balance.free_balance < amount {
             return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
@@ -268,7 +268,6 @@ pub fn swap(
 
     let balance = query_balance(
         &deps.querier,
-        deps.api,
         denom.to_cw20(deps.api),
         env.contract.address.clone(),
     )?;

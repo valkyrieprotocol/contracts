@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery, from_binary, BankQuery, AllBalanceResponse, Addr, QuerierWrapper};
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
-use cw20::TokenInfoResponse;
+use cw20::{TokenInfoResponse, Cw20QueryMsg};
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse, StakerStateResponse};
 use crate::terra::calc_tax_one_plus;
@@ -261,6 +261,10 @@ impl WasmMockQuerier {
         }
 
         if result.is_none() {
+            result = self.handle_cw20(contract_addr, msg);
+        }
+
+        if result.is_none() {
             return QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart".to_string(),
             });
@@ -279,12 +283,12 @@ impl WasmMockQuerier {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
                     &self.campaign_manager_config_querier.config,
                 ))))
-            },
+            }
             Ok(CampaignManagerQueryMsg::ReferralRewardLimitOption {}) => {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
                     &self.campaign_manager_config_querier.referral_reward_limit_option,
                 ))))
-            },
+            }
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart:campaign_manager".to_string(),
             })),
@@ -304,7 +308,7 @@ impl WasmMockQuerier {
                 };
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
-            },
+            }
             Ok(GovQueryMsg::VotingPower { address }) => {
                 let voting_power = match self.voting_powers_querier.powers.get(&address) {
                     Some(v) => v.clone(),
@@ -319,7 +323,7 @@ impl WasmMockQuerier {
                 let response = VotingPowerResponse { voting_power };
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(&response))))
-            },
+            }
             Ok(GovQueryMsg::StakerState { address }) => {
                 let default = StakerStateResponse::default();
                 let response = self.governance_querier.staker_state
@@ -327,7 +331,7 @@ impl WasmMockQuerier {
                     .unwrap_or(&default);
 
                 Some(SystemResult::Ok(ContractResult::from(to_binary(response))))
-            },
+            }
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart:governance".to_string(),
             })),
@@ -345,7 +349,7 @@ impl WasmMockQuerier {
                 Some(SystemResult::Ok(ContractResult::from(to_binary(
                     &self.campaign_state_querier.states[contract_addr],
                 ))))
-            },
+            }
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart:campaign".to_string(),
             })),
@@ -361,7 +365,7 @@ impl WasmMockQuerier {
         match from_binary(msg) {
             Ok(TerraswapRouterQueryMsg::SimulateSwapOperations { offer_amount, operations }) => {
                 let mut amount = offer_amount.u128();
-                for operation  in operations.iter() {
+                for operation in operations.iter() {
                     let price = self.terraswap_router_querier.prices
                         .get(&terraswap_operation_to_string(operation))
                         .unwrap();
@@ -374,9 +378,27 @@ impl WasmMockQuerier {
                         amount: Uint128::new(amount),
                     }
                 ))))
-            },
+            }
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
                 kind: "handle_wasm_smart:terraswap_router".to_string(),
+            })),
+            Err(_) => None,
+        }
+    }
+
+    fn handle_cw20(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        match from_binary(msg) {
+            Ok(Cw20QueryMsg::Balance { address }) => {
+                let default = Uint128::zero();
+                let balance = self.token_querier.balances[contract_addr].get(address.as_str())
+                    .unwrap_or(&default).clone();
+
+                Some(SystemResult::Ok(ContractResult::from(to_binary(
+                    &cw20::BalanceResponse { balance },
+                ))))
+            },
+            Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
+                kind: "handle_wasm_smart:cw20".to_string(),
             })),
             Err(_) => None,
         }

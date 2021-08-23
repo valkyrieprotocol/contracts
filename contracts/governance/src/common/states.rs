@@ -32,7 +32,6 @@ pub fn load_available_balance(deps: Deps) -> StdResult<Uint128> {
     let contract_config = ContractConfig::load(deps.storage)?;
     let contract_balance = query_cw20_balance(
         &deps.querier,
-        deps.api,
         &contract_config.governance_token,
         &contract_config.address,
     )?;

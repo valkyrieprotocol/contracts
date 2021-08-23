@@ -21,7 +21,7 @@ pub fn get_balance(deps: Deps, env: Env) -> ContractResult<BalanceResponse> {
     let config = ContractConfig::load(deps.storage)?;
     let state = ContractState::load(deps.storage)?;
 
-    Ok(state.load_balance(&deps.querier, deps.api, &env, &config.managing_token)?)
+    Ok(state.load_balance(&deps.querier, &env, &config.managing_token)?)
 }
 
 pub fn get_allowance(deps: Deps, _env: Env, address: String) -> ContractResult<AllowanceResponse> {

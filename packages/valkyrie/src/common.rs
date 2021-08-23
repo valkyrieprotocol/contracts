@@ -55,7 +55,7 @@ impl Denom {
         api: &dyn Api,
         address: Addr,
     ) -> StdResult<Uint128> {
-        query_balance(querier, api, self.to_cw20(api), address)
+        query_balance(querier, self.to_cw20(api), address)
     }
 }
 
