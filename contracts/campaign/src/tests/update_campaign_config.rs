@@ -20,6 +20,7 @@ pub fn exec(
     collateral_amount: Option<Uint128>,
     collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
+    qualification_description: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
 ) -> ContractResult<Response> {
@@ -34,6 +35,7 @@ pub fn exec(
         collateral_amount,
         collateral_lock_period,
         qualifier,
+        qualification_description,
         executions,
         admin,
     )
@@ -48,6 +50,7 @@ pub fn will_success(
     collateral_amount: Option<Uint128>,
     collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
+    qualification_description: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
 ) -> (Env, MessageInfo, Response) {
@@ -65,6 +68,7 @@ pub fn will_success(
         collateral_amount,
         collateral_lock_period,
         qualifier,
+        qualification_description,
         executions,
         admin,
     ).unwrap();
@@ -85,6 +89,7 @@ fn succeed() {
     let collateral_amount = Uint128::new(99);
     let collateral_lock_period = 199u64;
     let qualifier = "Qualifier2".to_string();
+    let qualification_description = "QualificationDescription2".to_string();
     let executions = vec![
         ExecutionMsg {
             order: 1,
@@ -103,6 +108,7 @@ fn succeed() {
         Some(collateral_amount),
         Some(collateral_lock_period),
         Some(qualifier.clone()),
+        Some(qualification_description.clone()),
         Some(executions.clone()),
         Some(admin.clone()),
     );
@@ -136,6 +142,7 @@ fn succeed_update_info_after_activation() {
     let collateral_amount = Uint128::new(99);
     let collateral_lock_period = 199u64;
     let qualifier = "Qualifier2".to_string();
+    let qualification_description = "QualificationDescription2".to_string();
     let executions = vec![
         ExecutionMsg {
             order: 1,
@@ -154,6 +161,7 @@ fn succeed_update_info_after_activation() {
         Some(collateral_amount),
         Some(collateral_lock_period),
         Some(qualifier.clone()),
+        Some(qualification_description.clone()),
         Some(executions.clone()),
         Some(admin.clone()),
     );
@@ -164,6 +172,7 @@ fn succeed_update_info_after_activation() {
     assert_eq!(campaign_config.collateral_amount, collateral_amount);
     assert_eq!(campaign_config.collateral_lock_period, collateral_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
+    assert_eq!(campaign_config.qualification_description, Some(qualification_description));
     assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
         contract: Addr::unchecked(e.contract.as_str()),
@@ -193,6 +202,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         None,
+        None,
     );
 
     expect_generic_err(&result, "Only modifiable in pending status");
@@ -205,6 +215,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         Some("vkr2".to_string()),
+        None,
         None,
         None,
         None,
@@ -225,6 +236,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_env(),
         default_sender(),
+        None,
         None,
         None,
         None,
@@ -258,6 +270,7 @@ fn failed_invalid_title() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Title too short");
 
@@ -266,6 +279,7 @@ fn failed_invalid_title() {
         campaign_env(),
         campaign_admin_sender(),
         Some(std::iter::repeat('b').take(MAX_TITLE_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -297,6 +311,7 @@ fn failed_invalid_description() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Description too short");
 
@@ -306,6 +321,7 @@ fn failed_invalid_description() {
         campaign_admin_sender(),
         None,
         Some(std::iter::repeat('b').take(MAX_DESC_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -336,6 +352,7 @@ fn failed_invalid_url() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Url too short");
 
@@ -346,6 +363,7 @@ fn failed_invalid_url() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_URL_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -375,6 +393,7 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "ParameterKey too short");
 
@@ -386,6 +405,7 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_PARAM_KEY_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -421,6 +441,7 @@ fn test_execution_order() {
 
     will_success(
         &mut deps,
+        None,
         None,
         None,
         None,

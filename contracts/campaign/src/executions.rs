@@ -42,6 +42,10 @@ pub fn instantiate(
     validate_description(&campaign_config.description)?;
     validate_parameter_key(&campaign_config.parameter_key)?;
 
+    if let Some(desc) = msg.qualification_description.as_ref() {
+        validate_qualification_description(desc)?;
+    }
+
     // Execute
     let response = make_response("instantiate");
 
@@ -63,6 +67,7 @@ pub fn instantiate(
         collateral_amount: msg.collateral_amount,
         collateral_lock_period: msg.collateral_lock_period,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str())).transpose()?,
+        qualification_description: msg.qualification_description,
         executions,
         admin: deps.api.addr_validate(&msg.admin)?,
         creator: deps.api.addr_validate(&msg.creator)?,
@@ -110,6 +115,7 @@ pub fn update_campaign_config(
     collateral_amount: Option<Uint128>,
     collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
+    qualification_description: Option<String>,
     mut executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
 ) -> ContractResult<Response> {
@@ -173,6 +179,12 @@ pub fn update_campaign_config(
     if let Some(qualifier) = qualifier.as_ref() {
         campaign_config.qualifier = Some(deps.api.addr_validate(qualifier)?);
         response = response.add_attribute("is_updated_qualifier", "true");
+    }
+
+    if let Some(qualification_description) = qualification_description {
+        validate_qualification_description(&qualification_description)?;
+        campaign_config.qualification_description = Some(qualification_description);
+        response = response.add_attribute("is_updated_qualification_description", "true");
     }
 
     if let Some(executions) = executions.as_mut() {
@@ -1187,6 +1199,16 @@ fn validate_parameter_key(parameter_key: &str) -> StdResult<()> {
     }
 }
 
+fn validate_qualification_description(description: &str) -> StdResult<()> {
+    if description.len() < MIN_DESC_LENGTH {
+        Err(StdError::generic_err("Qualification description too short"))
+    } else if description.len() > MAX_DESC_LENGTH {
+        Err(StdError::generic_err("Qualification description too long"))
+    } else {
+        Ok(())
+    }
+}
+
 fn make_send_msg(
     querier: &QuerierWrapper,
     denom: Cw20Denom,
@@ -1289,5 +1311,33 @@ fn test_validate_url() {
                 .collect::<String>()
         ),
         Err(StdError::generic_err("Url too long"))
+    );
+}
+
+#[test]
+fn test_validate_qualification_description() {
+    assert_eq!(
+        validate_qualification_description(
+            &std::iter::repeat("X")
+                .take(MIN_DESC_LENGTH - 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Qualification description too short"))
+    );
+    assert_eq!(
+        validate_qualification_description(
+            &std::iter::repeat("X")
+                .take(MIN_DESC_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        validate_qualification_description(
+            &std::iter::repeat("X")
+                .take(MAX_DESC_LENGTH + 1)
+                .collect::<String>()
+        ),
+        Err(StdError::generic_err("Qualification description too long"))
     );
 }

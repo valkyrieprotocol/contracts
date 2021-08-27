@@ -55,6 +55,7 @@ pub enum ExecuteMsg {
         collateral_amount: Option<Uint128>,
         collateral_lock_period: Option<u64>,
         qualifier: Option<String>,
+        qualification_description: Option<String>,
         executions: Vec<ExecutionMsg>,
     },
 }
@@ -74,6 +75,7 @@ pub struct CampaignInstantiateMsg {
     pub collateral_amount: Uint128,
     pub collateral_lock_period: u64,
     pub qualifier: Option<String>,
+    pub qualification_description: Option<String>,
     pub executions: Vec<ExecutionMsg>,
     pub referral_reward_token: String,
 }

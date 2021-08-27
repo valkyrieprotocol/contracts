@@ -46,6 +46,7 @@ pub struct CampaignConfigResponse {
     pub collateral_amount: Uint128,
     pub collateral_lock_period: u64,
     pub qualifier: Option<String>,
+    pub qualification_description: Option<String>,
     pub executions: Vec<ExecutionMsg>,
     pub admin: String,
     pub creator: String,

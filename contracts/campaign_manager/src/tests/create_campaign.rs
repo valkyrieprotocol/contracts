@@ -22,6 +22,7 @@ pub fn exec(
     collateral_amount: Option<Uint128>,
     collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
+    qualification_description: Option<String>,
     executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     create_campaign(
@@ -33,6 +34,7 @@ pub fn exec(
         collateral_amount,
         collateral_lock_period,
         qualifier,
+        qualification_description,
         executions,
     )
 }
@@ -59,6 +61,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         Some(Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
         Some(COLLATERAL_AMOUNT),
         Some(COLLATERAL_LOCK_PERIOD),
+        None,
         None,
         vec![],
     ).unwrap();
@@ -99,6 +102,7 @@ fn succeed() {
                     collateral_amount: COLLATERAL_AMOUNT,
                     collateral_lock_period: COLLATERAL_LOCK_PERIOD,
                     qualifier: None,
+                    qualification_description: None,
                     executions: vec![],
                     referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
                 }).unwrap(),

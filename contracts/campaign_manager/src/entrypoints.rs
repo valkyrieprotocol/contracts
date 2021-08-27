@@ -75,6 +75,7 @@ pub fn execute(
             collateral_amount,
             collateral_lock_period,
             qualifier,
+            qualification_description,
             executions,
         } => executions::create_campaign(
             deps,
@@ -85,6 +86,7 @@ pub fn execute(
             collateral_amount,
             collateral_lock_period,
             qualifier,
+            qualification_description,
             executions,
         ),
     }

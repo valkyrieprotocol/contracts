@@ -201,6 +201,7 @@ pub fn create_campaign(
     collateral_amount: Option<Uint128>,
     collateral_lock_period: Option<u64>,
     qualifier: Option<String>,
+    qualification_description: Option<String>,
     executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     // Validate
@@ -228,6 +229,7 @@ pub fn create_campaign(
             collateral_amount: collateral_amount.unwrap_or_default(),
             collateral_lock_period: collateral_lock_period.unwrap_or_default(),
             qualifier,
+            qualification_description,
             executions,
             referral_reward_token: config.referral_reward_token.to_string(),
         })?,

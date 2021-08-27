@@ -28,6 +28,7 @@ pub enum ExecuteMsg {
         collateral_amount: Option<Uint128>,
         collateral_lock_period: Option<u64>,
         qualifier: Option<String>,
+        qualification_description: Option<String>,
         executions: Option<Vec<ExecutionMsg>>,
         admin: Option<String>,
     },

@@ -23,6 +23,7 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
         collateral_amount: campaign_config.collateral_amount,
         collateral_lock_period: campaign_config.collateral_lock_period,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
+        qualification_description: campaign_config.qualification_description,
         executions: campaign_config.executions.iter()
             .map(|v| ExecutionMsg::from(v))
             .collect(),

@@ -41,6 +41,7 @@ pub fn execute(
             collateral_amount,
             collateral_lock_period,
             qualifier,
+            qualification_description,
             executions,
             admin,
         } => crate::executions::update_campaign_config(
@@ -54,6 +55,7 @@ pub fn execute(
             collateral_amount,
             collateral_lock_period,
             qualifier,
+            qualification_description,
             executions,
             admin,
         ),

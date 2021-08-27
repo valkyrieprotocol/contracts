@@ -28,6 +28,7 @@ pub struct CampaignConfig {
     pub collateral_amount: Uint128,
     pub collateral_lock_period: u64,
     pub qualifier: Option<Addr>,
+    pub qualification_description: Option<String>,
     pub executions: Vec<Execution>,
     pub admin: Addr,
     pub creator: Addr,
