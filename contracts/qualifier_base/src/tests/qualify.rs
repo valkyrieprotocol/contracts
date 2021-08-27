@@ -6,6 +6,7 @@ use valkyrie_qualifier::{QualificationMsg, QualificationResult, QualifiedContinu
 use crate::executions::{ExecuteResult, qualify};
 use crate::tests::{CONTINUE_OPTION_ON_FAIL, MIN_LUNA_STAKING, MIN_TOKEN_BALANCE_AMOUNT};
 use crate::tests::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::campaign::query_msgs::ActorResponse;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -44,7 +45,23 @@ fn satisfy() {
 
     deps.querier.plus_delegation("Actor", "Delegator", MIN_LUNA_STAKING);
 
+
     let (_, _, response) = will_success(&mut deps, "Actor".to_string());
+    let result: QualificationResult = from_binary(&response.data.unwrap()).unwrap();
+    assert_eq!(result.continue_option, QualifiedContinueOption::Eligible);
+
+    deps.querier.with_balance(&[("Actor2", &[
+        (coin(MIN_TOKEN_BALANCE_AMOUNT.u128(), "uluna")),
+    ])]);
+
+    deps.querier.plus_delegation("Actor2", "Delegator", MIN_LUNA_STAKING);
+
+    let mut actor = ActorResponse::new("Actor2".to_string(), None);
+    actor.participation_count = 1;
+    deps.querier.with_actor(actor);
+
+
+    let (_, _, response) = will_success(&mut deps, "Actor2".to_string());
     let result: QualificationResult = from_binary(&response.data.unwrap()).unwrap();
     assert_eq!(result.continue_option, QualifiedContinueOption::Eligible);
 }
@@ -71,6 +88,27 @@ fn dissatisfy_min_luna_staking() {
     deps.querier.with_balance(&[("Actor", &[
         (coin(MIN_TOKEN_BALANCE_AMOUNT.u128(), "uluna")),
     ])]);
+
+    let (_, _, response) = will_success(&mut deps, "Actor".to_string());
+    let result: QualificationResult = from_binary(&response.data.unwrap()).unwrap();
+    assert_eq!(result.continue_option, CONTINUE_OPTION_ON_FAIL);
+}
+
+#[test]
+fn dissatisfy_participation_limit() {
+    let mut deps = custom_deps();
+
+    super::instantiate::default(&mut deps);
+
+    deps.querier.with_balance(&[("Actor", &[
+        (coin(MIN_TOKEN_BALANCE_AMOUNT.u128(), "uluna")),
+    ])]);
+
+    deps.querier.plus_delegation("Actor", "Delegator", MIN_LUNA_STAKING);
+
+    let mut actor = ActorResponse::new("Actor".to_string(), None);
+    actor.participation_count = 2;
+    deps.querier.with_actor(actor);
 
     let (_, _, response) = will_success(&mut deps, "Actor".to_string());
     let result: QualificationResult = from_binary(&response.data.unwrap()).unwrap();

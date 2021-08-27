@@ -25,27 +25,37 @@ pub fn instantiate(
     Requirement {
         min_token_balances: msg.min_token_balances,
         min_luna_staking: msg.min_luna_staking,
+        participation_limit: msg.participation_limit,
     }.save(deps.storage)?;
 
     Ok(response)
 }
 
-pub fn update_admin(
+pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    new_admin: String,
+    admin: Option<String>,
+    continue_option_on_fail: Option<QualifiedContinueOption>,
 ) -> ExecuteResult {
     if !is_admin(deps.storage, &info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
 
     let mut response = Response::new();
-    response = response.add_attribute("action", "update_admin");
+    response = response.add_attribute("action", "update_config");
 
     let mut config = QualifierConfig::load(deps.storage)?;
 
-    config.admin = deps.api.addr_validate(new_admin.as_str())?;
+    if let Some(admin) = admin {
+        config.admin = deps.api.addr_validate(admin.as_str())?;
+        response = response.add_attribute("is_updated_admin", "true");
+    }
+
+    if let Some(continue_option_on_fail) = continue_option_on_fail {
+        config.continue_option_on_fail = continue_option_on_fail;
+        response = response.add_attribute("is_updated_continue_option_on_fail", "true");
+    }
 
     config.save(deps.storage)?;
 
@@ -56,9 +66,9 @@ pub fn update_requirement(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    continue_option_on_fail: Option<QualifiedContinueOption>,
     min_token_balances: Option<Vec<(Denom, Uint128)>>,
     min_luna_staking: Option<Uint128>,
+    participation_limit: Option<u64>,
 ) -> ExecuteResult {
     if !is_admin(deps.storage, &info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -66,15 +76,6 @@ pub fn update_requirement(
 
     let mut response = Response::new();
     response = response.add_attribute("action", "update_requirement");
-
-    if let Some(continue_option_on_fail) = continue_option_on_fail {
-        let mut config = QualifierConfig::load(deps.storage)?;
-
-        config.continue_option_on_fail = continue_option_on_fail;
-        response = response.add_attribute("is_updated_continue_option_on_fail", "true");
-
-        config.save(deps.storage)?;
-    }
 
     let mut requirement = Requirement::load(deps.storage)?;
 
@@ -105,6 +106,11 @@ pub fn update_requirement(
         response = response.add_attribute("is_updated_min_luna_staking", "true");
     }
 
+    if let Some(participation_limit) = participation_limit {
+        requirement.participation_limit = participation_limit;
+        response = response.add_attribute("is_updated_participation_limit", "true");
+    }
+
     requirement.save(deps.storage)?;
 
     Ok(response)
@@ -120,12 +126,13 @@ pub fn qualify(
 
     response = response.add_attribute("action", "qualify");
 
+    let campaign = deps.api.addr_validate(msg.campaign.as_str())?;
     let actor = deps.api.addr_validate(msg.actor.as_str())?;
 
     let requirement = Requirement::load(deps.storage)?;
     let querier = Querier::new(&deps.querier);
 
-    let (is_valid, error_msg) = requirement.is_satisfy_requirements(&querier, &actor)?;
+    let (is_valid, error_msg) = requirement.is_satisfy_requirements(&querier, &campaign, &actor)?;
     let result = if is_valid {
         QualificationResult {
             continue_option: QualifiedContinueOption::Eligible,

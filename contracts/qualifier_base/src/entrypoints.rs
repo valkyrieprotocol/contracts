@@ -25,20 +25,21 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ExecuteResult {
     match msg {
-        ExecuteMsg::UpdateAdmin {
-            address,
-        } => executions::update_admin(deps, env, info, address),
-        ExecuteMsg::UpdateRequirement {
+        ExecuteMsg::UpdateConfig {
+            admin,
             continue_option_on_fail,
+        } => executions::update_config(deps, env, info, admin, continue_option_on_fail),
+        ExecuteMsg::UpdateRequirement {
             min_token_balances,
             min_luna_staking,
+            participation_limit,
         } => executions::update_requirement(
             deps,
             env,
             info,
-            continue_option_on_fail,
             min_token_balances,
             min_luna_staking,
+            participation_limit,
         ),
         ExecuteMsg::Qualify(msg) => executions::qualify(deps, env, info, msg),
     }

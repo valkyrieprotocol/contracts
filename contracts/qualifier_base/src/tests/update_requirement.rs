@@ -3,34 +3,33 @@ use cosmwasm_std::{Env, MessageInfo, Response, Uint128};
 use crate::executions::{ExecuteResult, update_requirement};
 use cosmwasm_std::testing::{mock_env, mock_info};
 use crate::tests::admin_sender;
-use crate::states::{QualifierConfig, Requirement};
+use crate::states::Requirement;
 use crate::errors::ContractError;
-use valkyrie_qualifier::QualifiedContinueOption;
 use cw20::Denom;
 
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
-    continue_option_on_fail: Option<QualifiedContinueOption>,
     min_token_balances: Option<Vec<(Denom, Uint128)>>,
     min_luna_staking: Option<Uint128>,
+    participation_limit: Option<u64>,
 ) -> ExecuteResult {
     update_requirement(
         deps.as_mut(),
         env,
         info,
-        continue_option_on_fail,
         min_token_balances,
         min_luna_staking,
+        participation_limit,
     )
 }
 
 pub fn will_success(
     deps: &mut CustomDeps,
-    continue_option_on_fail: Option<QualifiedContinueOption>,
     min_token_balances: Option<Vec<(Denom, Uint128)>>,
     min_luna_staking: Option<Uint128>,
+    participation_limit: Option<u64>,
 ) -> (Env, MessageInfo, Response) {
     let env = mock_env();
     let info = admin_sender();
@@ -39,9 +38,9 @@ pub fn will_success(
         deps,
         env.clone(),
         info.clone(),
-        continue_option_on_fail,
         min_token_balances,
         min_luna_staking,
+        participation_limit,
     ).unwrap();
 
     (env, info, response)
@@ -53,23 +52,21 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let continue_option_on_fail = QualifiedContinueOption::ExecuteOnly;
     let min_token_balances = vec![(Denom::Native("ukrw".to_string()), Uint128::new(500))];
     let min_luna_staking = Uint128::new(300);
+    let participation_limit = 99u64;
 
     will_success(
         &mut deps,
-        Some(continue_option_on_fail.clone()),
         Some(min_token_balances.clone()),
         Some(min_luna_staking.clone()),
+        Some(participation_limit.clone()),
     );
-
-    let config = QualifierConfig::load(&deps.storage).unwrap();
-    assert_eq!(config.continue_option_on_fail, continue_option_on_fail);
 
     let requirement = Requirement::load(&deps.storage).unwrap();
     assert_eq!(requirement.min_token_balances, min_token_balances);
     assert_eq!(requirement.min_luna_staking, min_luna_staking);
+    assert_eq!(requirement.participation_limit, participation_limit);
 }
 
 #[test]

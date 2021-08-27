@@ -726,7 +726,6 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
- "terra-cosmwasm",
  "thiserror",
 ]
 
@@ -742,6 +741,7 @@ dependencies = [
  "serde",
  "terra-cosmwasm",
  "thiserror",
+ "valkyrie",
  "valkyrie-qualifier",
 ]
 

@@ -4,6 +4,7 @@ use cosmwasm_std::*;
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::TokenInfoResponse;
 use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
+use valkyrie::campaign::query_msgs::ActorResponse;
 
 pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
 
@@ -26,6 +27,7 @@ pub struct WasmMockQuerier {
     base: MockQuerier<TerraQueryWrapper>,
     token_querier: TokenQuerier,
     tax_querier: TaxQuerier,
+    campaign_querier: CampaignQuerier,
 }
 
 #[derive(Clone, Default)]
@@ -72,6 +74,21 @@ impl TaxQuerier {
         TaxQuerier {
             rate,
             caps: caps_to_map(caps),
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct CampaignQuerier {
+    // this lets us iterate over all pairs that match the first string
+    actors: HashMap<String, ActorResponse>,
+}
+
+impl CampaignQuerier {
+    #[allow(dead_code)]
+    pub fn new(actors: HashMap<String, ActorResponse>) -> Self {
+        CampaignQuerier {
+            actors,
         }
     }
 }
@@ -153,10 +170,36 @@ impl WasmMockQuerier {
         result.unwrap()
     }
 
-    fn handle_wasm_smart(&self, _contract_addr: &String, _msg: &Binary) -> QuerierResult {
-        return QuerierResult::Err(SystemError::UnsupportedRequest {
-            kind: "handle_wasm_smart".to_string(),
-        });
+    fn handle_wasm_smart(&self, contract_addr: &String, msg: &Binary) -> QuerierResult {
+        let result = self.handle_wasm_smart_campaign(contract_addr, msg);
+
+        if result.is_none() {
+            return QuerierResult::Err(SystemError::UnsupportedRequest {
+                kind: "handle_wasm_smart".to_string(),
+            });
+        }
+
+        result.unwrap()
+    }
+
+    fn handle_wasm_smart_campaign(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        if contract_addr != "Campaign" {
+            return None;
+        }
+
+        match from_binary(msg) {
+            Ok(valkyrie::campaign::query_msgs::QueryMsg::Actor { address }) => {
+                let default = ActorResponse::new(address.clone(), None);
+                let actor = self.campaign_querier.actors.get(address.as_str())
+                    .unwrap_or(&default);
+
+                Some(SystemResult::Ok(ContractResult::from(to_binary(actor))))
+            }
+            Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
+                kind: "handle_wasm_smart:campaign".to_string(),
+            })),
+            Err(_) => None,
+        }
     }
 
     fn query_tax_rate(&self) -> QuerierResult {
@@ -267,6 +310,7 @@ impl WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
             tax_querier: TaxQuerier::default(),
+            campaign_querier: CampaignQuerier::default(),
         }
     }
 
@@ -405,6 +449,10 @@ impl WasmMockQuerier {
         }).collect();
 
         self.base.update_staking("uluna", validators.as_slice(), delegations.as_slice())
+    }
+
+    pub fn with_actor(&mut self, actor: ActorResponse) {
+        self.campaign_querier.actors.insert(actor.address.clone(), actor);
     }
 }
 

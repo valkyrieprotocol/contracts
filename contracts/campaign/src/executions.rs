@@ -858,11 +858,9 @@ fn _participate(
     referrer: Option<Addr>,
 ) -> ContractResult<()> {
     let mut my_participation = Actor::may_load(storage, &actor)?
-        .unwrap_or_else(|| Actor::new(
-            actor.clone(),
-            referrer,
-            &env.block,
-        ));
+        .unwrap_or_else(|| Actor::new(actor.clone(), referrer));
+
+    my_participation.last_participated_at = env.block.time.clone();
 
     let campaign_config = CampaignConfig::load(storage)?;
     let mut campaign_state = CampaignState::load(storage)?;

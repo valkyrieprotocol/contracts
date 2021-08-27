@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::campaign::enumerations::Referrer;
-use crate::common::{OrderBy, Denom, ExecutionMsg};
+use crate::common::{Denom, ExecutionMsg, OrderBy};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -104,6 +104,22 @@ pub struct ActorResponse {
     pub participation_count: u64,
     pub referral_count: u64,
     pub last_participated_at: Timestamp,
+}
+
+impl ActorResponse {
+    pub fn new(address: String, referrer: Option<String>) -> ActorResponse {
+        ActorResponse {
+            address,
+            referrer_address: referrer,
+            participation_reward_amount: Uint128::zero(),
+            referral_reward_amount: Uint128::zero(),
+            cumulative_participation_reward_amount: Uint128::zero(),
+            cumulative_referral_reward_amount: Uint128::zero(),
+            participation_count: 0,
+            referral_count: 0,
+            last_participated_at: Timestamp::default(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

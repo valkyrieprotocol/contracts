@@ -257,7 +257,7 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn new(address: Addr, referrer: Option<Addr>, block: &BlockInfo) -> Actor {
+    pub fn new(address: Addr, referrer: Option<Addr>) -> Actor {
         Actor {
             address,
             referrer,
@@ -267,7 +267,7 @@ impl Actor {
             cumulative_referral_reward_amount: Uint128::zero(),
             participation_count: 0,
             referral_count: 0,
-            last_participated_at: block.time,
+            last_participated_at: Timestamp::default(),
         }
     }
 

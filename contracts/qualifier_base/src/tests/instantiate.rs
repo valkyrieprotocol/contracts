@@ -17,11 +17,13 @@ pub fn exec(
     continue_option_on_fail: QualifiedContinueOption,
     min_token_balances: Vec<(Denom, Uint128)>,
     min_luna_staking: Uint128,
+    participation_limit: u64,
 ) -> ExecuteResult {
     let msg = InstantiateMsg {
         continue_option_on_fail,
         min_token_balances,
         min_luna_staking,
+        participation_limit,
     };
 
     instantiate(deps.as_mut(), env, info, msg)
@@ -32,6 +34,7 @@ pub fn will_success(
     continue_option_on_fail: QualifiedContinueOption,
     min_token_balances: Vec<(Denom, Uint128)>,
     min_luna_staking: Uint128,
+    participation_limit: u64,
 ) -> (Env, MessageInfo, Response) {
     let env = mock_env();
     let info = mock_info(ADMIN, &[]);
@@ -43,6 +46,7 @@ pub fn will_success(
         continue_option_on_fail,
         min_token_balances,
         min_luna_staking,
+        participation_limit,
     ).unwrap();
 
     (env, info, response)
@@ -54,6 +58,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         CONTINUE_OPTION_ON_FAIL,
         vec![(Denom::Native(MIN_TOKEN_BALANCE_DENOM_NATIVE.to_string()), MIN_TOKEN_BALANCE_AMOUNT)],
         MIN_LUNA_STAKING,
+        PARTICIPATION_LIMIT,
     )
 }
 
@@ -73,5 +78,6 @@ fn succeed() {
     assert_eq!(requirement, Requirement {
         min_token_balances: vec![(Denom::Native(MIN_TOKEN_BALANCE_DENOM_NATIVE.to_string()), MIN_TOKEN_BALANCE_AMOUNT)],
         min_luna_staking: MIN_LUNA_STAKING,
+        participation_limit: PARTICIPATION_LIMIT,
     });
 }

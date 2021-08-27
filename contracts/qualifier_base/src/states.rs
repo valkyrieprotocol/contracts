@@ -5,6 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use valkyrie_qualifier::QualifiedContinueOption;
+use valkyrie::campaign::query_msgs::ActorResponse;
 
 const QUALIFIER_CONFIG: Item<QualifierConfig> = Item::new("qualifier_config");
 
@@ -39,6 +40,7 @@ const REQUIREMENT: Item<Requirement> = Item::new("requirement");
 pub struct Requirement {
     pub min_token_balances: Vec<(Denom, Uint128)>,
     pub min_luna_staking: Uint128,
+    pub participation_limit: u64,
 }
 
 impl Requirement {
@@ -50,13 +52,18 @@ impl Requirement {
         REQUIREMENT.load(storage)
     }
 
-    pub fn is_satisfy_requirements(&self, querier: &Querier, actor: &Addr) -> StdResult<(bool, String)> {
-        let result = self.is_satisfy_luna_staking_amount(&querier, &actor)?;
+    pub fn is_satisfy_requirements(&self, querier: &Querier, campaign: &Addr, actor: &Addr) -> StdResult<(bool, String)> {
+        let result = self.is_satisfy_luna_staking_amount(&querier, actor)?;
         if !result.0 {
             return Ok(result);
         }
 
-        let result = self.is_satisfy_min_token_balances(&querier, &actor)?;
+        let result = self.is_satisfy_min_token_balances(&querier, actor)?;
+        if !result.0 {
+            return Ok(result);
+        }
+
+        let result = self.is_satisfy_participation_count(&querier, campaign, actor)?;
         if !result.0 {
             return Ok(result);
         }
@@ -98,6 +105,24 @@ impl Requirement {
                     current_balance.to_string(),
                 )));
             }
+        }
+
+        Ok((true, String::default()))
+    }
+
+    fn is_satisfy_participation_count(&self, querier: &Querier, campaign: &Addr, actor: &Addr) -> StdResult<(bool, String)> {
+        if self.participation_limit == 0 {
+            return Ok((true, String::default()));
+        }
+
+        let participation_count = querier.load_participation_count(campaign, actor)?;
+
+        if participation_count >= self.participation_limit {
+            return Ok((false, format!(
+                "Exceed participation limit(limit: {}, current: {})",
+                self.participation_limit.to_string(),
+                participation_count.to_string(),
+            )));
         }
 
         Ok((true, String::default()))
@@ -150,6 +175,17 @@ impl Querier<'_> {
         )?;
 
         Ok(balance.balance)
+    }
+
+    fn load_participation_count(&self, campaign: &Addr, address: &Addr) -> StdResult<u64> {
+        let actor: ActorResponse = self.querier.query_wasm_smart(
+            campaign,
+            &valkyrie::campaign::query_msgs::QueryMsg::Actor {
+                address: address.to_string(),
+            },
+        )?;
+
+        Ok(actor.participation_count)
     }
 }
 

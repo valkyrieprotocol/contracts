@@ -168,7 +168,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             start_after,
             limit,
             order_by,
-        } => to_binary(&crate::queries::query_participations(
+        } => to_binary(&crate::queries::query_actors(
             deps,
             env,
             start_after,

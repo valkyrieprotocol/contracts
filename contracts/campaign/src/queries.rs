@@ -124,10 +124,9 @@ pub fn get_actor(
     _env: Env,
     address: String,
 ) -> ContractResult<ActorResponse> {
-    let actor = Actor::load(
-        deps.storage,
-        &deps.api.addr_validate(&address)?,
-    )?;
+    let address = deps.api.addr_validate(&address)?;
+    let actor = Actor::may_load(deps.storage, &address)?
+        .unwrap_or_else(|| Actor::new(address.clone(), None));
 
     Ok(ActorResponse {
         address: actor.address.to_string(),
@@ -142,7 +141,7 @@ pub fn get_actor(
     })
 }
 
-pub fn query_participations(
+pub fn query_actors(
     deps: Deps,
     _env: Env,
     start_after: Option<String>,
