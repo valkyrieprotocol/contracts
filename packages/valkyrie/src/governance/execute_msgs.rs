@@ -5,11 +5,13 @@ use serde::{Deserialize, Serialize};
 
 use super::enumerations::VoteOption;
 use crate::common::ExecutionMsg;
+use crate::governance::models::DistributionPlan;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
+    pub distribution_config: DistributionConfigMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -25,6 +27,11 @@ pub struct PollConfigInitMsg {
     pub execution_delay_period: u64,
     pub proposal_deposit: Uint128,
     pub snapshot_period: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DistributionConfigMsg {
+    pub plan: Vec<DistributionPlan>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

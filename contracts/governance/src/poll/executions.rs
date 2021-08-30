@@ -201,7 +201,7 @@ pub fn cast_vote(
         return Err(ContractError::Std(StdError::generic_err("User has already voted.")));
     }
 
-    let contract_available_balance = load_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref(), env.block.height)?;
     let mut staker_state = StakerState::load_safe(deps.storage, &info.sender)?;
 
     if !staker_state.can_vote(deps.storage, contract_available_balance, amount)? {
@@ -248,7 +248,7 @@ pub fn end_poll(
     let contract_config = ContractConfig::load(deps.storage)?;
     let mut poll_state = PollState::load(deps.storage)?;
 
-    let (poll_result, staked_amount) = poll.get_result(deps.as_ref())?;
+    let (poll_result, staked_amount) = poll.get_result(deps.as_ref(), env.block.height)?;
 
     poll.status = if poll_result == PollResult::Passed {
         PollStatus::Passed
@@ -408,7 +408,7 @@ pub fn snapshot_poll(
     // Execute
     let mut response = make_response("snapshot_poll");
 
-    let contract_available_balance = load_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref(), env.block.height)?;
     let staked_amount = poll.snapshot_staked_amount(
         deps.storage,
         env.block.height,

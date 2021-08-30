@@ -10,11 +10,14 @@ use crate::common::states::{ContractConfig, load_available_balance};
 use super::states::{StakerState, StakingState};
 use valkyrie::utils::make_response;
 use valkyrie::message_factories;
+use crate::staking::states::DistributionConfig;
+use valkyrie::governance::execute_msgs::DistributionConfigMsg;
 
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
+    msg: DistributionConfigMsg,
 ) -> ContractResult<Response> {
     // Execute
     let response = make_response("instantiate");
@@ -23,12 +26,16 @@ pub fn instantiate(
         total_share: Uint128::zero(),
     }.save(deps.storage)?;
 
+    DistributionConfig {
+        plan: msg.plan,
+    }.save(deps.storage)?;
+
     Ok(response)
 }
 
 pub fn stake_governance_token(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     sender: Addr,
     amount: Uint128,
@@ -49,7 +56,7 @@ pub fn stake_governance_token(
     let mut staking_state = StakingState::load(deps.storage)?;
     let mut staker_state = StakerState::load_safe(deps.storage, &sender)?;
 
-    let contract_available_balance = load_available_balance(deps.as_ref())?
+    let contract_available_balance = load_available_balance(deps.as_ref(), env.block.height)?
         .checked_sub(amount)?;
 
     let share = if contract_available_balance.is_zero() || staking_state.total_share.is_zero() {
@@ -74,7 +81,7 @@ pub fn stake_governance_token(
 // Withdraw amount if not staked. By default all funds will be withdrawn.
 pub fn unstake_governance_token(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
@@ -89,7 +96,7 @@ pub fn unstake_governance_token(
 
     staker_state.clean_votes(deps.storage);
 
-    let contract_available_balance = load_available_balance(deps.as_ref())?;
+    let contract_available_balance = load_available_balance(deps.as_ref(), env.block.height)?;
     let total_share = staking_state.total_share;
     let locked_balance = staker_state.get_locked_balance();
     let locked_share = locked_balance.multiply_ratio(

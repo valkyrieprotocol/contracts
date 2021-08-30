@@ -28,6 +28,7 @@ pub fn instantiate(
         deps.branch(),
         env.clone(),
         info.clone(),
+        msg.distribution_config,
     )?;
     crate::poll::executions::instantiate(
         deps.branch(),

@@ -234,10 +234,10 @@ impl Poll {
         self.yes_votes + self.no_votes + self.abstain_votes
     }
 
-    pub fn calculate_quorum(&self, deps: Deps) -> StdResult<(Decimal, Uint128)> {
+    pub fn calculate_quorum(&self, deps: Deps, height: u64) -> StdResult<(Decimal, Uint128)> {
         let snapped_staked_amount = self.snapped_staked_amount.unwrap_or(Uint128::zero());
         let staked_amount = if snapped_staked_amount.is_zero() {
-            load_available_balance(deps)?
+            load_available_balance(deps, height)?
         } else {
             snapped_staked_amount
         };
@@ -248,7 +248,7 @@ impl Poll {
         ))
     }
 
-    pub fn get_result(&self, deps: Deps) -> StdResult<(PollResult, Uint128)> {
+    pub fn get_result(&self, deps: Deps, height: u64) -> StdResult<(PollResult, Uint128)> {
         let poll_config = PollConfig::load(deps.storage)?;
         let staking_state = StakingState::load(deps.storage)?;
 
@@ -256,7 +256,7 @@ impl Poll {
         let (quorum, staked_amount) = if staking_state.total_share.is_zero() {
             (Decimal::zero(), Uint128::zero())
         } else {
-            self.calculate_quorum(deps)?
+            self.calculate_quorum(deps, height)?
         };
 
         if votes.is_zero() || quorum < poll_config.quorum {

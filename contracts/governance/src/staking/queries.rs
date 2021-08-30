@@ -19,7 +19,7 @@ pub fn get_staking_state(deps: Deps, _env: Env) -> ContractResult<StakingStateRe
 
 pub fn get_staker_state(
     deps: Deps,
-    _env: Env,
+    env: Env,
     address: String,
 ) -> ContractResult<StakerStateResponse> {
     let address = deps.api.addr_validate(&address)?;
@@ -31,7 +31,7 @@ pub fn get_staker_state(
 
     let mut staker_state = staker_state.unwrap();
 
-    let contract_available_balance = load_available_balance(deps.clone())?;
+    let contract_available_balance = load_available_balance(deps.clone(), env.block.height)?;
     let balance = staker_state.load_balance(deps.storage, contract_available_balance)?;
 
     staker_state.clean_votes(deps.storage);

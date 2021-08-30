@@ -1,6 +1,6 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo};
 
-use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg};
+use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg, DistributionConfigMsg};
 use valkyrie::test_constants::contract_creator;
 use valkyrie::test_constants::governance::*;
 
@@ -21,6 +21,9 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
             execution_delay_period: POLL_EXECUTION_DELAY_PERIOD,
             proposal_deposit: POLL_PROPOSAL_DEPOSIT,
             snapshot_period: POLL_SNAPSHOT_PERIOD,
+        },
+        distribution_config: DistributionConfigMsg {
+            plan: vec![],
         },
     };
 

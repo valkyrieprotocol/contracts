@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use valkyrie::governance::enumerations::PollStatus;
 
 use crate::poll::states::{Poll, VoteInfo};
+use valkyrie::governance::models::DistributionPlan;
 
 
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
@@ -108,5 +109,35 @@ impl StakerState {
 
     pub fn vote(&mut self, poll_id: u64, vote: VoteInfo) {
         self.votes.push((poll_id, vote));
+    }
+}
+
+
+const DISTRIBUTION_CONFIG: Item<DistributionConfig> = Item::new("distribution-config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DistributionConfig {
+    pub plan: Vec<DistributionPlan>,
+}
+
+impl DistributionConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        DISTRIBUTION_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<DistributionConfig> {
+        DISTRIBUTION_CONFIG.load(storage)
+    }
+
+    pub fn locked_amount(&self, height: u64) -> StdResult<Uint128> {
+        let mut total_amount = Uint128::zero();
+        let mut release_amount = Uint128::zero();
+
+        for plan in self.plan.iter() {
+            total_amount += plan.amount;
+            release_amount += plan.release_amount(height);
+        }
+
+        Ok(total_amount.checked_sub(release_amount)?)
     }
 }

@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use valkyrie::cw20::query_cw20_balance;
 use crate::poll::states::PollState;
+use crate::staking::states::DistributionConfig;
 
 
 const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
@@ -28,7 +29,7 @@ impl ContractConfig {
     }
 }
 
-pub fn load_available_balance(deps: Deps) -> StdResult<Uint128> {
+pub fn load_available_balance(deps: Deps, height: u64) -> StdResult<Uint128> {
     let contract_config = ContractConfig::load(deps.storage)?;
     let contract_balance = query_cw20_balance(
         &deps.querier,
@@ -36,7 +37,9 @@ pub fn load_available_balance(deps: Deps) -> StdResult<Uint128> {
         &contract_config.address,
     )?;
     let poll_state = PollState::load(deps.storage)?;
-    let available_balance = contract_balance.checked_sub(poll_state.total_deposit)?;
+    let distribution_config = DistributionConfig::load(deps.storage)?;
+    let available_balance = contract_balance.checked_sub(poll_state.total_deposit)?
+        .checked_sub(distribution_config.locked_amount(height)?)?;
 
     Ok(available_balance)
 }
