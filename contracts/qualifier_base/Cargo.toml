@@ -1,10 +1,13 @@
 [package]
 name = "valkyrie-qualifier-base"
-version = "0.0.0"
-authors = ["Terraform Labs, PTE."]
+version = "0.1.0"
+authors = ["Valkyrie Protocol"]
 edition = "2018"
-description = "A qualifier base contract for Valkyrie Protocol"
+description = "Basic implementation of Campaign Qualifier in Valkyrie Protocol"
 license = "Apache-2.0"
+repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
+homepage = "https://valkyrieprotocol.com"
+documentation = "https://docs.valkyrieprotocol.com"
 
 exclude = [
     # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -37,8 +40,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
 cosmwasm-std = { version = "0.16.0", features = ["staking"] }
-cw-storage-plus = { version = "0.8.0", features = ["iterator"] }
-cw20 = { version = "0.8.0" }
+cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
+cw20 = { version = "0.8.1" }
 thiserror = { version = "1.0.26" }
 valkyrie-qualifier = { path = "../../packages/valkyrie_qualifier", default-features = false, version = "0.1.0" }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "0.1.0" }

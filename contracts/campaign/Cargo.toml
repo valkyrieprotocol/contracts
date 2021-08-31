@@ -1,11 +1,11 @@
 [package]
 name = "valkyrie-campaign"
 version = "0.1.0"
-authors = ["Terraform Labs, PTE."]
+authors = ["Valkyrie Protocol"]
 edition = "2018"
-description = "Valkyrie protocol campaign implementation"
+description = "A Campaign contract for Valkyrie Protocol - distribute reward when participate"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/contracts.git"
+repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
 homepage = "https://valkyrieprotocol.com"
 documentation = "https://docs.valkyrieprotocol.com"
 
@@ -37,8 +37,8 @@ overflow-checks = true
 serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
 cosmwasm-std = { version = "0.16.0" }
-cw-storage-plus = { version = "0.8.0", features = ["iterator"] }
-cw20 = { version = "0.8.0" }
+cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
+cw20 = { version = "0.8.1" }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "0.1.0" }
 valkyrie-qualifier = { path = "../../packages/valkyrie_qualifier", default-features = false, version = "0.1.0" }
 protobuf = { version = "2", features = ["with-bytes"] }

@@ -1,10 +1,13 @@
 [package]
 name = "valkyrie-lp-staking"
-version = "1.0.0"
-authors = ["Terraform Labs, PTE."]
+version = "0.1.0"
+authors = ["Valkyrie Protocol"]
 edition = "2018"
-description = "A Staking contract for valkyrie Protocol - distribute rewards to stakers"
+description = "A Staking contract for Valkyrie Protocol - distribute rewards to stakers"
 license = "Apache-2.0"
+repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
+homepage = "https://valkyrieprotocol.com"
+documentation = "https://docs.valkyrieprotocol.com"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -35,8 +38,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cosmwasm-std = { version = "0.16.0" }
-cw-storage-plus = { version = "0.8.0", features = ["iterator"] }
-cw20 = { version = "0.8.0" }
+cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
+cw20 = { version = "0.8.1" }
 valkyrie = { version = "0.1.0", path = "../../packages/valkyrie" }
 schemars = "0.8.3"
 terraswap = "2.4.0"

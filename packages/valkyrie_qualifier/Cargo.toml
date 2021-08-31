@@ -1,11 +1,11 @@
 [package]
 name = "valkyrie-qualifier"
 version = "0.1.0"
-authors = ["Terraform Labs, PTE."]
+authors = ["Valkyrie Protocol"]
 edition = "2018"
-description = "Common valkyrie types"
+description = "Definition and types for the Valkyrie Qualifier"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/contracts.git"
+repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
 homepage = "https://valkyrieprotocol.com"
 documentation = "https://docs.valkyrieprotocol.com"
 
@@ -29,7 +29,6 @@ overflow-checks = true
 serde = { version = "1.0.126", default-features = false, features = ["derive"] }
 schemars = { version = "0.8.3" }
 cosmwasm-std = { version = "0.16.0" }
-thiserror = { version = "1.0.26" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.0" }

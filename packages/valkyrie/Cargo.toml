@@ -1,11 +1,11 @@
 [package]
 name = "valkyrie"
 version = "0.1.0"
-authors = ["Terraform Labs, PTE."]
+authors = ["Valkyrie Protocol"]
 edition = "2018"
-description = "Common valkyrie types"
+description = "Definition and types for the Valkyrie"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/contracts.git"
+repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
 homepage = "https://valkyrieprotocol.com"
 documentation = "https://docs.valkyrieprotocol.com"
 
@@ -31,8 +31,8 @@ schemars = { version = "0.8.3" }
 terraswap = "2.4.0"
 cosmwasm-std = { version = "0.16.0" }
 cosmwasm-storage = { version = "0.16.0", features = ["iterator"] }
-cw-storage-plus = { version = "0.8.0", features = ["iterator"] }
-cw20 = { version = "0.8.0" }
+cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
+cw20 = { version = "0.8.1" }
 terra-cosmwasm = { version = "2.2.0" }
 thiserror = { version = "1.0.26" }
 bigint = { version = "4.4.3"}
