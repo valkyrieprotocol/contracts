@@ -170,5 +170,5 @@ pub fn query_actors(
 }
 
 pub fn collateral(deps: Deps, _env: Env, address: String) -> ContractResult<Collateral> {
-    Ok(Collateral::load(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
+    Ok(Collateral::load_or_new(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
 }
