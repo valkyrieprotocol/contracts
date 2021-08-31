@@ -729,22 +729,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "valkyrie-qualifier-base"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw20",
- "schemars",
- "serde",
- "terra-cosmwasm",
- "thiserror",
- "valkyrie",
- "valkyrie-qualifier",
-]
-
-[[package]]
 name = "version_check"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
