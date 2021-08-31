@@ -1,45 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "PollStateResponse",
   "type": "object",
   "required": [
-    "distribution_schedule",
-    "lp_token",
-    "pair",
-    "token"
+    "poll_count",
+    "total_deposit"
   ],
   "properties": {
-    "distribution_schedule": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": [
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "$ref": "#/definitions/Uint128"
-          }
-        ],
-        "maxItems": 3,
-        "minItems": 3
-      }
+    "poll_count": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     },
-    "lp_token": {
-      "type": "string"
-    },
-    "pair": {
-      "type": "string"
-    },
-    "token": {
-      "type": "string"
+    "total_deposit": {
+      "$ref": "#/definitions/Uint128"
     }
   },
   "definitions": {

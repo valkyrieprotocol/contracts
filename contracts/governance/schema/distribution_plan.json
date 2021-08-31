@@ -1,45 +1,25 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "DistributionPlan",
   "type": "object",
   "required": [
-    "distribution_schedule",
-    "lp_token",
-    "pair",
-    "token"
+    "amount",
+    "end_height",
+    "start_height"
   ],
   "properties": {
-    "distribution_schedule": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": [
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "$ref": "#/definitions/Uint128"
-          }
-        ],
-        "maxItems": 3,
-        "minItems": 3
-      }
+    "amount": {
+      "$ref": "#/definitions/Uint128"
     },
-    "lp_token": {
-      "type": "string"
+    "end_height": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     },
-    "pair": {
-      "type": "string"
-    },
-    "token": {
-      "type": "string"
+    "start_height": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     }
   },
   "definitions": {

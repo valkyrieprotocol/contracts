@@ -1,45 +1,25 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "BalanceResponse",
   "type": "object",
   "required": [
-    "distribution_schedule",
-    "lp_token",
-    "pair",
-    "token"
+    "allowance_amount",
+    "campaign_deposit_fee_amount",
+    "free_balance",
+    "total_balance"
   ],
   "properties": {
-    "distribution_schedule": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": [
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          },
-          {
-            "$ref": "#/definitions/Uint128"
-          }
-        ],
-        "maxItems": 3,
-        "minItems": 3
-      }
+    "allowance_amount": {
+      "$ref": "#/definitions/Uint128"
     },
-    "lp_token": {
-      "type": "string"
+    "campaign_deposit_fee_amount": {
+      "$ref": "#/definitions/Uint128"
     },
-    "pair": {
-      "type": "string"
+    "free_balance": {
+      "$ref": "#/definitions/Uint128"
     },
-    "token": {
-      "type": "string"
+    "total_balance": {
+      "$ref": "#/definitions/Uint128"
     }
   },
   "definitions": {

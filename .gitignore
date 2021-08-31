@@ -37,4 +37,5 @@ artifacts/
 **/*.rs.bk
 *.pdb
 
-bin/
+bin/*/
+!bin/generate_schema.sh

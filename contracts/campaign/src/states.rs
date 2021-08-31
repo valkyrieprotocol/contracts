@@ -199,8 +199,8 @@ pub struct Balance {
     pub locked: Uint128,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Balance {
+    #[allow(dead_code)]
     pub fn available(&self) -> Uint128 {
         self.total.checked_sub(self.locked).unwrap()
     }
@@ -275,6 +275,7 @@ impl Actor {
         ACTORS.save(storage, &self.address, self)
     }
 
+    #[allow(dead_code)]
     pub fn load(storage: &dyn Storage, address: &Addr) -> StdResult<Actor> {
         ACTORS.load(storage, address)
     }
