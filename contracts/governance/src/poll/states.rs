@@ -1,17 +1,15 @@
-use std::cmp::Ordering;
 use std::fmt;
 
-use cosmwasm_std::{Addr, Api, Binary, Decimal, Deps, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use valkyrie::common::OrderBy;
+use valkyrie::common::{OrderBy, Execution, ExecutionMsg};
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
-use valkyrie::governance::models::ExecutionMsg;
 use valkyrie::governance::query_msgs::PollResponse;
 
-use crate::common::states::load_contract_available_balance;
+use crate::common::states::load_available_balance;
 use crate::staking::states::{StakerState, StakingState};
 
 const MAX_LIMIT: u32 = 30;
@@ -81,7 +79,7 @@ pub struct Poll {
     pub title: String,
     pub description: String,
     pub link: Option<String>,
-    pub executions: Option<Vec<Execution>>,
+    pub executions: Vec<Execution>,
     pub creator: Addr,
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
@@ -218,8 +216,8 @@ impl Poll {
     pub fn snapshot_staked_amount(&mut self, storage: &dyn Storage, block_height: u64, contract_available_balance: Uint128) -> StdResult<Uint128> {
         let poll_config = PollConfig::load(storage)?;
 
-        let remain_to_end = self.end_height - block_height;
-        if remain_to_end >= poll_config.snapshot_period {
+        let remain_to_end: i128 = self.end_height as i128 - block_height as i128;
+        if remain_to_end >= poll_config.snapshot_period as i128 {
             return Err(StdError::generic_err("Cannot snapshot at this height"));
         }
 
@@ -236,10 +234,10 @@ impl Poll {
         self.yes_votes + self.no_votes + self.abstain_votes
     }
 
-    pub fn calculate_quorum(&self, deps: Deps) -> StdResult<(Decimal, Uint128)> {
+    pub fn calculate_quorum(&self, deps: Deps, height: u64) -> StdResult<(Decimal, Uint128)> {
         let snapped_staked_amount = self.snapped_staked_amount.unwrap_or(Uint128::zero());
         let staked_amount = if snapped_staked_amount.is_zero() {
-            load_contract_available_balance(deps)?
+            load_available_balance(deps, height)?
         } else {
             snapped_staked_amount
         };
@@ -250,7 +248,7 @@ impl Poll {
         ))
     }
 
-    pub fn get_result(&self, deps: Deps) -> StdResult<(PollResult, Uint128)> {
+    pub fn get_result(&self, deps: Deps, height: u64) -> StdResult<(PollResult, Uint128)> {
         let poll_config = PollConfig::load(deps.storage)?;
         let staking_state = StakingState::load(deps.storage)?;
 
@@ -258,7 +256,7 @@ impl Poll {
         let (quorum, staked_amount) = if staking_state.total_share.is_zero() {
             (Decimal::zero(), Uint128::zero())
         } else {
-            self.calculate_quorum(deps)?
+            self.calculate_quorum(deps, height)?
         };
 
         if votes.is_zero() || quorum < poll_config.quorum {
@@ -278,27 +276,21 @@ impl Poll {
     }
 
     pub fn to_response(&self) -> PollResponse {
-        let mut executions: Option<Vec<ExecutionMsg>> = None;
-        if let Some(all_executions) = self.executions.clone() {
-            executions = Some(
-                all_executions.iter().map(|v| ExecutionMsg {
-                    order: v.order,
-                    contract: v.contract.to_string(),
-                    msg: v.msg.clone(),
-                }).collect()
-            )
-        }
-
         PollResponse {
             id: self.id,
             title: self.title.to_string(),
             description: self.description.to_string(),
             link: self.link.clone(),
-            executions,
+            executions: self.executions.iter().map(|v| ExecutionMsg {
+                order: v.order,
+                contract: v.contract.to_string(),
+                msg: v.msg.clone(),
+            }).collect(),
             creator: self.creator.to_string(),
             deposit_amount: self.deposit_amount,
             yes_votes: self.yes_votes,
             no_votes: self.no_votes,
+            abstain_votes: self.abstain_votes,
             end_height: self.end_height,
             status: self.status.clone(),
             staked_amount: self.snapped_staked_amount,
@@ -313,7 +305,7 @@ const POLL_EXECUTION_TEMP: Item<PollExecutionContext> = Item::new("poll-executio
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PollExecutionContext {
     pub poll_id: u64,
-    pub execution_count: usize,
+    pub execution_count: u64,
 }
 
 impl PollExecutionContext {
@@ -323,6 +315,11 @@ impl PollExecutionContext {
 
     pub fn load(storage: &dyn Storage) -> StdResult<PollExecutionContext> {
         POLL_EXECUTION_TEMP.load(storage)
+    }
+
+    #[cfg(test)]
+    pub fn may_load(storage: &dyn Storage) -> StdResult<Option<PollExecutionContext>> {
+        POLL_EXECUTION_TEMP.may_load(storage)
     }
 
     pub fn clear(storage: &mut dyn Storage) {
@@ -335,43 +332,6 @@ pub struct VoteInfo {
     pub voter: Addr,
     pub option: VoteOption,
     pub amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct Execution {
-    pub order: u64,
-    pub contract: Addr,
-    pub msg: Binary,
-}
-
-impl PartialEq for Execution {
-    fn eq(&self, other: &Self) -> bool {
-        self.order == other.order
-    }
-}
-
-impl Eq for Execution {}
-
-impl PartialOrd for Execution {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Execution {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.order.cmp(&other.order)
-    }
-}
-
-impl Execution {
-    pub fn from(api: &dyn Api, msg: &ExecutionMsg) -> Execution {
-        Execution {
-            order: msg.order,
-            contract: api.addr_validate(&msg.contract).unwrap(),
-            msg: msg.msg.clone(),
-        }
-    }
 }
 
 #[derive(PartialEq)]

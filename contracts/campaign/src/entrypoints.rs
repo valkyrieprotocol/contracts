@@ -1,17 +1,21 @@
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary, from_binary, Addr};
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw20::Cw20ReceiveMsg;
 
-use valkyrie::campaign::execute_msgs::{ExecuteMsg, InstantiateMsg};
+use valkyrie::campaign::execute_msgs::{ExecuteMsg, MigrateMsg, Cw20HookMsg};
 use valkyrie::campaign::query_msgs::QueryMsg;
+use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::ContractResult;
+use valkyrie::errors::ContractError;
+
+use crate::executions;
+use cw20::Cw20ReceiveMsg;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: CampaignInstantiateMsg,
 ) -> ContractResult<Response> {
     let mut deps_mut = deps;
 
@@ -29,59 +33,124 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UpdateCampaignInfo {
+        ExecuteMsg::UpdateCampaignConfig {
             title,
-            url,
             description,
-        } => crate::executions::update_campaign_info(deps, env, info, title, url, description),
-        ExecuteMsg::UpdateDistributionConfig { denom, amounts } => {
-            crate::executions::update_distribution_config(deps, env, info, denom, amounts)
-        }
-        ExecuteMsg::UpdateAdmin { address } => {
-            crate::executions::update_admin(deps, env, info, address)
-        }
-        ExecuteMsg::UpdateActivation { active } => {
-            crate::executions::update_activation(deps, env, info, active)
-        }
-        ExecuteMsg::WithdrawReward { denom, amount } => {
-            crate::executions::withdraw_reward(deps, env, info, denom, amount)
-        }
-        ExecuteMsg::ClaimReward {} => crate::executions::claim_reward(deps, env, info),
-        ExecuteMsg::Participate { referrer } => {
-            crate::executions::participate(deps, env, info, referrer)
-        }
-        ExecuteMsg::RegisterBooster {
-            drop_booster_amount,
-            activity_booster_amount,
-            plus_booster_amount,
-        } => crate::executions::register_booster(
+            url,
+            parameter_key,
+            collateral_amount,
+            collateral_lock_period,
+            qualifier,
+            qualification_description,
+            executions,
+            admin,
+        } => crate::executions::update_campaign_config(
             deps,
             env,
             info,
-            drop_booster_amount,
-            activity_booster_amount,
-            plus_booster_amount,
+            title,
+            description,
+            url,
+            parameter_key,
+            collateral_amount,
+            collateral_lock_period,
+            qualifier,
+            qualification_description,
+            executions,
+            admin,
         ),
-        ExecuteMsg::DeregisterBooster {} => crate::executions::deregister_booster(deps, env, info),
+        ExecuteMsg::UpdateRewardConfig {
+            participation_reward_amount,
+            referral_reward_amounts,
+        } => crate::executions::update_reward_config(
+            deps,
+            env,
+            info,
+            participation_reward_amount,
+            referral_reward_amounts,
+        ),
+        ExecuteMsg::SetNoQualification {} => crate::executions::set_no_qualification(
+            deps,
+            env,
+            info,
+        ),
+        ExecuteMsg::UpdateActivation { active } => {
+            crate::executions::update_activation(deps, env, info, active)
+        }
+        ExecuteMsg::Deposit {
+            participation_reward_amount,
+            referral_reward_amount,
+        } => crate::executions::deposit(
+            deps,
+            env,
+            info,
+            participation_reward_amount,
+            referral_reward_amount,
+        ),
+        ExecuteMsg::Withdraw { denom, amount } => {
+            crate::executions::withdraw(deps, env, info, denom, amount)
+        }
+        ExecuteMsg::WithdrawIrregular {
+            denom,
+        } => crate::executions::withdraw_irregular(deps, env, info, denom),
+        ExecuteMsg::ClaimParticipationReward {} => crate::executions::claim_participation_reward(deps, env, info),
+        ExecuteMsg::ClaimReferralReward {} => crate::executions::claim_referral_reward(deps, env, info),
+        ExecuteMsg::Participate { actor, referrer } => {
+            crate::executions::participate(deps, env, info, actor, referrer)
+        },
+        ExecuteMsg::DepositCollateral {} => {
+            let sender = info.sender.clone();
+            let funds = info.funds.iter()
+                .map(|c| (cw20::Denom::Native(c.denom.clone()), c.amount))
+                .collect();
+
+            executions::deposit_collateral(deps, env, info, sender, funds)
+        },
+        ExecuteMsg::WithdrawCollateral {
+            amount,
+        } => executions::withdraw_collateral(deps, env, info, amount),
     }
 }
 
 pub fn receive_cw20(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _cw20_msg: Cw20ReceiveMsg,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
-    Ok(Response::default())
+    match from_binary(&cw20_msg.msg)? {
+        Cw20HookMsg::DepositCollateral {} => {
+            let sender = info.sender.clone();
+
+            executions::deposit_collateral(
+                deps,
+                env,
+                info,
+                Addr::unchecked(cw20_msg.sender),
+                vec![(cw20::Denom::Cw20(sender), cw20_msg.amount)],
+            )
+        },
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    crate::executions::migrate(deps, env, msg)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+    match msg.id {
+        executions::REPLY_QUALIFY_PARTICIPATION => executions::participate_qualify_result(deps, env, msg),
+        _ => Err(ContractError::Std(StdError::not_found("reply_id")))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let result = match msg {
-        QueryMsg::CampaignInfo {} => to_binary(&crate::queries::get_campaign_info(deps, env)?),
-        QueryMsg::DistributionConfig {} => {
-            to_binary(&crate::queries::get_distribution_config(deps, env)?)
-        }
+        QueryMsg::CampaignConfig {} => to_binary(&crate::queries::get_campaign_config(deps, env)?),
+        QueryMsg::RewardConfig {} => to_binary(&crate::queries::get_reward_config(deps, env)?),
         QueryMsg::CampaignState {} => to_binary(&crate::queries::get_campaign_state(deps, env)?),
         QueryMsg::ShareUrl { address } => {
             to_binary(&crate::queries::get_share_url(deps, env, address)?)
@@ -89,20 +158,24 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::GetAddressFromReferrer { referrer } => to_binary(
             &crate::queries::get_address_from_referrer(deps, env, referrer)?,
         ),
-        QueryMsg::Participation { address } => {
-            to_binary(&crate::queries::get_participation(deps, env, address)?)
+        QueryMsg::ReferralRewardLimitAmount { address } => to_binary(
+            &crate::queries::get_referral_reward_limit_amount(deps, env, address)?,
+        ),
+        QueryMsg::Actor { address } => {
+            to_binary(&crate::queries::get_actor(deps, env, address)?)
         }
-        QueryMsg::Participations {
+        QueryMsg::Actors {
             start_after,
             limit,
             order_by,
-        } => to_binary(&crate::queries::query_participations(
+        } => to_binary(&crate::queries::query_actors(
             deps,
             env,
             start_after,
             limit,
             order_by,
         )?),
+        QueryMsg::Collateral { address } => to_binary(&crate::queries::collateral(deps, env, address)?),
     }?;
 
     Ok(result)

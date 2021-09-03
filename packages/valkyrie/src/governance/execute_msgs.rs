@@ -1,27 +1,22 @@
-use cosmwasm_std::{Decimal, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::enumerations::VoteOption;
-use super::models::ExecutionMsg;
+use crate::common::ExecutionMsg;
+use crate::governance::models::DistributionPlan;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
-    pub staking_config: StakingConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
-    pub valkyrie_config: ValkyrieConfigInitMsg,
+    pub distribution_config: DistributionConfigMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigInitMsg {
-    pub token_contract: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingConfigInitMsg {
-    pub withdraw_delay: Uint64,
+    pub governance_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,21 +30,14 @@ pub struct PollConfigInitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigInitMsg {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
+pub struct DistributionConfigMsg {
+    pub plan: Vec<DistributionPlan>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    UpdateStakingConfig {
-        withdraw_delay: Option<Uint64>,
-    },
-    UnstakeVotingToken { amount: Option<Uint128> },
-    WithdrawVotingToken {},
     UpdatePollConfig {
         quorum: Option<Decimal>,
         threshold: Option<Decimal>,
@@ -58,29 +46,29 @@ pub enum ExecuteMsg {
         proposal_deposit: Option<Uint128>,
         snapshot_period: Option<u64>,
     },
+    UnstakeGovernanceToken { amount: Option<Uint128> },
     CastVote {
         poll_id: u64,
         vote: VoteOption,
         amount: Uint128,
     },
+    SnapshotPoll { poll_id: u64 },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
-    SnapshotPoll { poll_id: u64 },
-    UpdateValkyrieConfig {
-        burn_contract: Option<String>,
-        reward_withdraw_burn_rate: Option<Decimal>,
-        campaign_deactivate_period: Option<Uint64>,
-    },
+    RunExecution { executions: Vec<ExecutionMsg> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    StakeVotingToken {},
+    StakeGovernanceToken {},
     CreatePoll {
         title: String,
         description: String,
         link: Option<String>,
-        execution: Option<Vec<ExecutionMsg>>,
+        executions: Vec<ExecutionMsg>,
     },
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MigrateMsg {}

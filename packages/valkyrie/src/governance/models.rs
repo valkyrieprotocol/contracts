@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Uint128};
+use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -14,9 +14,23 @@ pub struct VoteInfoMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct ExecutionMsg {
-    pub order: u64,
-    pub contract: String,
-    pub msg: Binary,
+pub struct DistributionPlan {
+    pub start_height: u64,
+    pub end_height: u64,
+    pub amount: Uint128,
+}
+
+impl DistributionPlan {
+    pub fn release_amount(&self, height: u64) -> Uint128 {
+        if self.start_height > height {
+            return Uint128::zero();
+        }
+
+        let release_amount = self.amount.multiply_ratio(
+            height - self.start_height,
+            self.end_height - self.start_height,
+        );
+
+        std::cmp::min(release_amount, self.amount)
+    }
 }

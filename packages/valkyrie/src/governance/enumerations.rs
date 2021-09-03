@@ -28,7 +28,6 @@ pub enum PollStatus {
     Passed,
     Rejected,
     Executed,
-    Expired,
     Failed,
 }
 

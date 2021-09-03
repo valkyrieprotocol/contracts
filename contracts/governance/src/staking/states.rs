@@ -6,23 +6,7 @@ use serde::{Deserialize, Serialize};
 use valkyrie::governance::enumerations::PollStatus;
 
 use crate::poll::states::{Poll, VoteInfo};
-
-const STAKING_CONFIG: Item<StakingConfig> = Item::new("staking-config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingConfig {
-    pub withdraw_delay: u64,
-}
-
-impl StakingConfig {
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        STAKING_CONFIG.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<StakingConfig> {
-        STAKING_CONFIG.load(storage)
-    }
-}
+use valkyrie::governance::models::DistributionPlan;
 
 
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
@@ -51,7 +35,6 @@ pub struct StakerState {
     pub share: Uint128,
     // total staked balance
     pub votes: Vec<(u64, VoteInfo)>, // maps poll_id to weight voted
-    pub withdraw_unstaked_amounts: Vec<(u64, Uint128)>,
 }
 
 impl StakerState {
@@ -60,7 +43,6 @@ impl StakerState {
             address: address.clone(),
             share: Uint128::zero(),
             votes: vec![],
-            withdraw_unstaked_amounts: vec![],
         }
     }
 
@@ -82,9 +64,9 @@ impl StakerState {
 
     pub fn clean_votes(&mut self, storage: &dyn Storage) -> () {
         self.votes.retain(|(poll_id, _)| {
-            let poll = Poll::load(storage, &poll_id).unwrap();
-
-            poll.status == PollStatus::InProgress
+            Poll::load(storage, &poll_id).ok()
+                .map(|p| p.status == PollStatus::InProgress)
+                .unwrap_or(false)
         });
     }
 
@@ -128,23 +110,34 @@ impl StakerState {
     pub fn vote(&mut self, poll_id: u64, vote: VoteInfo) {
         self.votes.push((poll_id, vote));
     }
+}
 
-    pub fn withdraw_unstaked(&mut self, storage: &dyn Storage, block_height: u64) -> Vec<(u64, Uint128)> {
-        let config = StakingConfig::load(storage).unwrap();
 
-        let mut pending: Vec<(u64, Uint128)> = vec![];
-        let mut withdrawable: Vec<(u64, Uint128)> = vec![];
+const DISTRIBUTION_CONFIG: Item<DistributionConfig> = Item::new("distribution-config");
 
-        for each in self.withdraw_unstaked_amounts.iter() {
-            if block_height > each.0 + config.withdraw_delay {
-                withdrawable.push(*each)
-            } else {
-                pending.push(*each)
-            }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DistributionConfig {
+    pub plan: Vec<DistributionPlan>,
+}
+
+impl DistributionConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        DISTRIBUTION_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<DistributionConfig> {
+        DISTRIBUTION_CONFIG.load(storage)
+    }
+
+    pub fn locked_amount(&self, height: u64) -> StdResult<Uint128> {
+        let mut total_amount = Uint128::zero();
+        let mut release_amount = Uint128::zero();
+
+        for plan in self.plan.iter() {
+            total_amount += plan.amount;
+            release_amount += plan.release_amount(height);
         }
 
-        self.withdraw_unstaked_amounts = pending;
-
-        withdrawable
+        Ok(total_amount.checked_sub(release_amount)?)
     }
 }

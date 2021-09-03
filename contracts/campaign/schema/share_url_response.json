@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ShareUrlResponse",
+  "type": "object",
+  "required": [
+    "address",
+    "compressed",
+    "url"
+  ],
+  "properties": {
+    "address": {
+      "type": "string"
+    },
+    "compressed": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    }
+  }
+}

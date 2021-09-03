@@ -1,16 +1,16 @@
-use cosmwasm_std::{Decimal, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::super::common::OrderBy;
-use super::enumerations::{PollStatus, VoteOption};
-use super::models::{ExecutionMsg, VoteInfoMsg};
+use super::enumerations::PollStatus;
+use super::models::VoteInfoMsg;
+use crate::common::ExecutionMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     ContractConfig {},
-    StakingConfig {},
     PollConfig {},
     PollState {},
     Poll {
@@ -35,17 +35,11 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
-    ValkyrieConfig {},
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
-    pub token_contract: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-pub struct StakingConfigResponse {
-    pub withdraw_delay: Uint64,
+    pub governance_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -58,6 +52,16 @@ pub struct StakerStateResponse {
     pub balance: Uint128,
     pub share: Uint128,
     pub votes: Vec<(u64, VoteInfoMsg)>,
+}
+
+impl Default for StakerStateResponse {
+    fn default() -> Self {
+        StakerStateResponse {
+            balance: Uint128::zero(),
+            share: Uint128::zero(),
+            votes: vec![],
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -82,11 +86,12 @@ pub struct PollResponse {
     pub title: String,
     pub description: String,
     pub link: Option<String>,
-    pub executions: Option<Vec<ExecutionMsg>>,
+    pub executions: Vec<ExecutionMsg>,
     pub creator: String,
     pub deposit_amount: Uint128,
     pub yes_votes: Uint128,
     pub no_votes: Uint128,
+    pub abstain_votes: Uint128,
     pub end_height: u64,
     pub status: PollStatus,
     pub staked_amount: Option<Uint128>,
@@ -104,22 +109,8 @@ pub struct PollCountResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct VotersResponseItem {
-    pub voter: String,
-    pub vote: VoteOption,
-    pub balance: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotersResponse {
-    pub voters: Vec<VotersResponseItem>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ValkyrieConfigResponse {
-    pub burn_contract: String,
-    pub reward_withdraw_burn_rate: Decimal,
-    pub campaign_deactivate_period: Uint64,
+    pub voters: Vec<VoteInfoMsg>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

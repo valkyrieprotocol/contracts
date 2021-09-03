@@ -13,7 +13,7 @@ pub fn get_contract_config(
 
     Ok(
         ContractConfigResponse {
-            token_contract: contract_config.token_contract.to_string(),
+            governance_token: contract_config.governance_token.to_string(),
         }
     )
 }

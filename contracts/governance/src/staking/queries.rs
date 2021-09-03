@@ -1,23 +1,13 @@
-use cosmwasm_std::{Decimal, Deps, Env, Uint64};
+use cosmwasm_std::{Decimal, Deps, Env};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
-use valkyrie::governance::query_msgs::{
-    StakerStateResponse, StakingConfigResponse, StakingStateResponse, VotingPowerResponse,
-};
+use valkyrie::governance::query_msgs::{StakerStateResponse, StakingStateResponse, VotingPowerResponse};
 
-use crate::common::states::load_contract_available_balance;
-use crate::staking::states::StakingConfig;
+use crate::common::states::load_available_balance;
 
 use super::states::{StakerState, StakingState};
 
-pub fn get_staking_config(deps: Deps, _env: Env) -> ContractResult<StakingConfigResponse> {
-    let staking_config = StakingConfig::load(deps.storage)?;
-
-    Ok(StakingConfigResponse {
-        withdraw_delay: Uint64::from(staking_config.withdraw_delay),
-    })
-}
 
 pub fn get_staking_state(deps: Deps, _env: Env) -> ContractResult<StakingStateResponse> {
     let staking_state = StakingState::load(deps.storage)?;
@@ -29,13 +19,19 @@ pub fn get_staking_state(deps: Deps, _env: Env) -> ContractResult<StakingStateRe
 
 pub fn get_staker_state(
     deps: Deps,
-    _env: Env,
+    env: Env,
     address: String,
 ) -> ContractResult<StakerStateResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let mut staker_state = StakerState::load(deps.storage, &address)?;
+    let staker_state = StakerState::may_load(deps.storage, &address)?;
 
-    let contract_available_balance = load_contract_available_balance(deps.clone())?;
+    if staker_state.is_none() {
+        return Ok(StakerStateResponse::default())
+    }
+
+    let mut staker_state = staker_state.unwrap();
+
+    let contract_available_balance = load_available_balance(deps.clone(), env.block.height)?;
     let balance = staker_state.load_balance(deps.storage, contract_available_balance)?;
 
     staker_state.clean_votes(deps.storage);

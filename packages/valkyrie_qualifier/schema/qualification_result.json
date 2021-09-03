@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QualificationResult",
+  "type": "object",
+  "required": [
+    "continue_option"
+  ],
+  "properties": {
+    "continue_option": {
+      "$ref": "#/definitions/QualifiedContinueOption"
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "definitions": {
+    "QualifiedContinueOption": {
+      "type": "string",
+      "enum": [
+        "eligible",
+        "participate_only",
+        "execute_only",
+        "ineligible"
+      ]
+    }
+  }
+}

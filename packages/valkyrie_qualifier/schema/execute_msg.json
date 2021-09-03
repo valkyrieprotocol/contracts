@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "qualify"
+      ],
+      "properties": {
+        "qualify": {
+          "$ref": "#/definitions/QualificationMsg"
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "QualificationMsg": {
+      "type": "object",
+      "required": [
+        "actor",
+        "campaign",
+        "sender"
+      ],
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "campaign": {
+          "type": "string"
+        },
+        "referrer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sender": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

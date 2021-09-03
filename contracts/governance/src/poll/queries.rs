@@ -3,11 +3,12 @@ use cosmwasm_std::{Deps, Env, StdError};
 use valkyrie::common::{ContractResult, OrderBy};
 use valkyrie::errors::ContractError;
 use valkyrie::governance::enumerations::PollStatus;
-use valkyrie::governance::query_msgs::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse, VotersResponseItem};
+use valkyrie::governance::query_msgs::{PollConfigResponse, PollResponse, PollsResponse, PollStateResponse, VotersResponse};
 
 use crate::poll::states::Poll;
 
 use super::states::{PollConfig, PollState};
+use valkyrie::governance::models::VoteInfoMsg;
 
 pub fn get_poll_config(
     deps: Deps,
@@ -46,13 +47,10 @@ pub fn get_poll(
     _env: Env,
     poll_id: u64,
 ) -> ContractResult<PollResponse> {
-    let poll = Poll::may_load(deps.storage, &poll_id)?;
+    let poll = Poll::may_load(deps.storage, &poll_id)?
+        .ok_or(ContractError::Std(StdError::generic_err("Poll does not exist")))?;
 
-    if poll.is_none() {
-        return Err(ContractError::Std(StdError::generic_err("Poll does not exist")));
-    }
-
-    Ok(poll.unwrap().to_response())
+    Ok(poll.to_response())
 }
 
 pub fn query_polls(
@@ -82,25 +80,22 @@ pub fn query_voters(
     limit: Option<u32>,
     order_by: Option<OrderBy>,
 ) -> ContractResult<VotersResponse> {
-    let poll = Poll::may_load(deps.storage, &poll_id)?;
+    let poll = Poll::may_load(deps.storage, &poll_id)?
+        .ok_or(ContractError::Std(StdError::generic_err("Poll does not exist")))?;
 
-    if poll.is_none() {
-        return Err(ContractError::Std(StdError::generic_err("Poll does not exist")));
-    }
+    let start_after = start_after.map(|v| deps.api.addr_validate(&v)).transpose()?;
 
-    let start_after = start_after.map(|v| deps.api.addr_validate(&v).unwrap());
-
-    let voters = if poll.unwrap().status != PollStatus::InProgress {
+    let voters = if poll.status != PollStatus::InProgress {
         vec![]
     } else {
         Poll::read_voters(deps.storage, &poll_id, start_after, limit, order_by)?
     };
 
     let response_items = voters.iter().map(|(voter, voter_info)| {
-        VotersResponseItem {
+        VoteInfoMsg {
             voter: voter.to_string(),
-            vote: voter_info.option.clone(),
-            balance: voter_info.amount,
+            option: voter_info.option.clone(),
+            amount: voter_info.amount,
         }
     }).collect();
 
