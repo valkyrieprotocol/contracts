@@ -66,8 +66,8 @@ pub mod fund_manager {
     pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
-    pub const CAMPAIGN_DEPOSIT_FEE_BURN_RATIO_PERCENT: u64 = 50;
-    pub const CAMPAIGN_DEPOSIT_FEE_RECIPIENT: &str = GOVERNANCE;
+    pub const CAMPAIGN_ADD_POOL_FEE_BURN_RATIO_PERCENT: u64 = 50;
+    pub const CAMPAIGN_ADD_POOL_FEE_RECIPIENT: &str = GOVERNANCE;
 
     pub fn fund_manager_env() -> Env {
         mock_env_contract(FUND_MANAGER)
@@ -88,12 +88,12 @@ pub mod campaign_manager {
     pub const CAMPAIGN_MANAGER: &str = "CampaignManager";
 
     pub const CAMPAIGN_CODE_ID: u64 = 1;
-    pub const DEPOSIT_FEE_RATE_PERCENT: u64 = 0;
-    pub const WITHDRAW_FEE_RATE_PERCENT: u64 = 10;
+    pub const ADD_POOL_FEE_RATE_PERCENT: u64 = 0;
+    pub const REMOVE_POOL_FEE_RATE_PERCENT: u64 = 10;
     pub const CAMPAIGN_DEACTIVATE_PERIOD: u64 = 403290;
     pub const KEY_DENOM_NATIVE: &str = "uusd";
     pub const REFERRAL_REWARD_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT: u64 = 20;
+    pub const ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT: u64 = 20;
     pub const REFERRAL_REWARD_LIMIT_BASE_COUNT: u8 = 5;
     pub const REFERRAL_REWARD_LIMIT_STAKING_PERCENT: u16 = 50;
 
@@ -122,9 +122,9 @@ pub mod campaign {
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(5);
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
     pub const QUALIFIER: &str = "Qualifier";
-    pub const COLLATERAL_DENOM_NATIVE: &str = "uusd";
-    pub const COLLATERAL_AMOUNT: Uint128 = Uint128::new(100);
-    pub const COLLATERAL_LOCK_PERIOD: u64 = 10000;
+    pub const DEPOSIT_DENOM_NATIVE: &str = "uusd";
+    pub const DEPOSIT_AMOUNT: Uint128 = Uint128::new(100);
+    pub const DEPOSIT_LOCK_PERIOD: u64 = 10000;
 
     pub fn campaign_env() -> Env {
         mock_env_contract(CAMPAIGN)

@@ -30,13 +30,13 @@ pub struct ConfigResponse {
     pub fund_manager: String,
     pub terraswap_router: String,
     pub code_id: u64,
-    pub deposit_fee_rate: Decimal,
-    pub withdraw_fee_rate: Decimal,
-    pub withdraw_fee_recipient: String,
+    pub add_pool_fee_rate: Decimal,
+    pub remove_pool_fee_rate: Decimal,
+    pub remove_pool_fee_recipient: String,
     pub deactivate_period: u64,
     pub key_denom: Denom,
     pub referral_reward_token: String,
-    pub min_referral_reward_deposit_rate: Decimal,
+    pub add_pool_min_referral_reward_rate: Decimal,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -47,13 +47,13 @@ impl Default for ConfigResponse {
             fund_manager: fund_manager::FUND_MANAGER.to_string(),
             terraswap_router: TERRASWAP_ROUTER.to_string(),
             code_id: CAMPAIGN_CODE_ID,
-            deposit_fee_rate: Decimal::percent(DEPOSIT_FEE_RATE_PERCENT),
-            withdraw_fee_rate: Decimal::percent(WITHDRAW_FEE_RATE_PERCENT),
-            withdraw_fee_recipient: fund_manager::FUND_MANAGER.to_string(),
+            add_pool_fee_rate: Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
+            remove_pool_fee_rate: Decimal::percent(REMOVE_POOL_FEE_RATE_PERCENT),
+            remove_pool_fee_recipient: fund_manager::FUND_MANAGER.to_string(),
             deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
             key_denom: Denom::Native(KEY_DENOM_NATIVE.to_string()),
             referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
-            min_referral_reward_deposit_rate: Decimal::percent(MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT),
+            add_pool_min_referral_reward_rate: Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
         }
     }
 }

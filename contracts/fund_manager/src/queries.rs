@@ -12,8 +12,8 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigRespons
         admins: config.admins.iter().map(|v| v.to_string()).collect(),
         managing_token: config.managing_token.to_string(),
         terraswap_router: config.terraswap_router.to_string(),
-        campaign_deposit_fee_burn_rate: config.campaign_deposit_fee_burn_ratio,
-        campaign_deposit_fee_recipient: config.campaign_deposit_fee_recipient.to_string(),
+        campaign_add_pool_fee_burn_rate: config.campaign_add_pool_fee_burn_ratio,
+        campaign_add_pool_fee_recipient: config.campaign_add_pool_fee_recipient.to_string(),
     })
 }
 

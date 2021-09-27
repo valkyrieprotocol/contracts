@@ -38,8 +38,8 @@ pub fn execute(
             description,
             url,
             parameter_key,
-            collateral_amount,
-            collateral_lock_period,
+            deposit_amount,
+            deposit_lock_period,
             qualifier,
             qualification_description,
             executions,
@@ -52,8 +52,8 @@ pub fn execute(
             description,
             url,
             parameter_key,
-            collateral_amount,
-            collateral_lock_period,
+            deposit_amount,
+            deposit_lock_period,
             qualifier,
             qualification_description,
             executions,
@@ -77,38 +77,38 @@ pub fn execute(
         ExecuteMsg::UpdateActivation { active } => {
             crate::executions::update_activation(deps, env, info, active)
         }
-        ExecuteMsg::Deposit {
+        ExecuteMsg::AddRewardPool {
             participation_reward_amount,
             referral_reward_amount,
-        } => crate::executions::deposit(
+        } => crate::executions::add_reward_pool(
             deps,
             env,
             info,
             participation_reward_amount,
             referral_reward_amount,
         ),
-        ExecuteMsg::Withdraw { denom, amount } => {
-            crate::executions::withdraw(deps, env, info, denom, amount)
+        ExecuteMsg::RemoveRewardPool { denom, amount } => {
+            crate::executions::remove_reward_pool(deps, env, info, denom, amount)
         }
-        ExecuteMsg::WithdrawIrregular {
+        ExecuteMsg::RemoveIrregularRewardPool {
             denom,
-        } => crate::executions::withdraw_irregular(deps, env, info, denom),
+        } => crate::executions::remove_irregular_reward_pool(deps, env, info, denom),
         ExecuteMsg::ClaimParticipationReward {} => crate::executions::claim_participation_reward(deps, env, info),
         ExecuteMsg::ClaimReferralReward {} => crate::executions::claim_referral_reward(deps, env, info),
         ExecuteMsg::Participate { actor, referrer } => {
             crate::executions::participate(deps, env, info, actor, referrer)
         },
-        ExecuteMsg::DepositCollateral {} => {
+        ExecuteMsg::Deposit {} => {
             let sender = info.sender.clone();
             let funds = info.funds.iter()
                 .map(|c| (cw20::Denom::Native(c.denom.clone()), c.amount))
                 .collect();
 
-            executions::deposit_collateral(deps, env, info, sender, funds)
+            executions::deposit(deps, env, info, sender, funds)
         },
-        ExecuteMsg::WithdrawCollateral {
+        ExecuteMsg::Withdraw {
             amount,
-        } => executions::withdraw_collateral(deps, env, info, amount),
+        } => executions::withdraw(deps, env, info, amount),
     }
 }
 
@@ -119,10 +119,10 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
     match from_binary(&cw20_msg.msg)? {
-        Cw20HookMsg::DepositCollateral {} => {
+        Cw20HookMsg::Deposit {} => {
             let sender = info.sender.clone();
 
-            executions::deposit_collateral(
+            executions::deposit(
                 deps,
                 env,
                 info,
@@ -175,7 +175,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             limit,
             order_by,
         )?),
-        QueryMsg::Collateral { address } => to_binary(&crate::queries::collateral(deps, env, address)?),
+        QueryMsg::Deposit { address } => to_binary(&crate::queries::deposit(deps, env, address)?),
     }?;
 
     Ok(result)

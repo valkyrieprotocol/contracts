@@ -11,7 +11,7 @@ use valkyrie::test_constants::fund_manager::FUND_MANAGER;
 use valkyrie::test_constants::governance::GOVERNANCE;
 use valkyrie::test_utils::expect_generic_err;
 
-use crate::executions::{instantiate, MAX_DESC_LENGTH, MAX_PARAM_KEY_LENGTH, MAX_TITLE_LENGTH, MAX_URL_LENGTH, MIN_DESC_LENGTH, MIN_PARAM_KEY_LENGTH, MIN_TITLE_LENGTH, MIN_URL_LENGTH};
+use crate::executions::*;
 use crate::states::{CampaignConfig, CampaignState, RewardConfig};
 
 pub fn exec(
@@ -43,9 +43,9 @@ pub fn exec(
         governance: GOVERNANCE.to_string(),
         campaign_manager: CAMPAIGN_MANAGER.to_string(),
         fund_manager: FUND_MANAGER.to_string(),
-        collateral_denom: Some(Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-        collateral_amount: COLLATERAL_AMOUNT,
-        collateral_lock_period: COLLATERAL_LOCK_PERIOD,
+        deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+        deposit_amount: DEPOSIT_AMOUNT,
+        deposit_lock_period: DEPOSIT_LOCK_PERIOD,
         qualifier,
         qualification_description,
         executions,
@@ -124,9 +124,9 @@ fn succeed() {
         description: CAMPAIGN_DESCRIPTION.to_string(),
         url: CAMPAIGN_URL.to_string(),
         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
-        collateral_denom: Some(cw20::Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-        collateral_amount: COLLATERAL_AMOUNT,
-        collateral_lock_period: COLLATERAL_LOCK_PERIOD,
+        deposit_denom: Some(cw20::Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+        deposit_amount: DEPOSIT_AMOUNT,
+        deposit_lock_period: DEPOSIT_LOCK_PERIOD,
         qualifier: None,
         qualification_description: None,
         executions: vec![],
@@ -143,7 +143,7 @@ fn succeed() {
         cumulative_referral_reward_amount: Uint128::zero(),
         locked_balances: vec![],
         balances: vec![],
-        collateral_amount: Uint128::zero(),
+        deposit_amount: Uint128::zero(),
         active_flag: false,
         last_active_height: None,
         chain_id: env.block.chain_id,

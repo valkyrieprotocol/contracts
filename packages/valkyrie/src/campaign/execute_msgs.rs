@@ -25,8 +25,8 @@ pub enum ExecuteMsg {
         description: Option<String>,
         url: Option<String>,
         parameter_key: Option<String>,
-        collateral_amount: Option<Uint128>,
-        collateral_lock_period: Option<u64>,
+        deposit_amount: Option<Uint128>,
+        deposit_lock_period: Option<u64>,
         qualifier: Option<String>,
         qualification_description: Option<String>,
         executions: Option<Vec<ExecutionMsg>>,
@@ -40,15 +40,15 @@ pub enum ExecuteMsg {
         active: bool,
     },
     SetNoQualification {},
-    Deposit {
+    AddRewardPool {
         participation_reward_amount: Uint128,
         referral_reward_amount: Uint128,
     },
-    Withdraw {
+    RemoveRewardPool {
         denom: Denom,
         amount: Option<Uint128>,
     },
-    WithdrawIrregular {
+    RemoveIrregularRewardPool {
         denom: Denom,
     },
     ClaimParticipationReward {},
@@ -57,8 +57,8 @@ pub enum ExecuteMsg {
         actor: String,
         referrer: Option<Referrer>,
     },
-    DepositCollateral {},
-    WithdrawCollateral {
+    Deposit {},
+    Withdraw {
         amount: Uint128,
     },
 }
@@ -66,7 +66,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    DepositCollateral {},
+    Deposit {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -31,7 +31,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);
@@ -66,7 +66,7 @@ fn failed_no_reward() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);

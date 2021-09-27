@@ -13,13 +13,13 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
         fund_manager: config.fund_manager.to_string(),
         terraswap_router: config.terraswap_router.to_string(),
         code_id: config.code_id,
-        deposit_fee_rate: config.deposit_fee_rate,
-        withdraw_fee_rate: config.withdraw_fee_rate,
-        withdraw_fee_recipient: config.withdraw_fee_recipient.to_string(),
+        add_pool_fee_rate: config.add_pool_fee_rate,
+        remove_pool_fee_rate: config.remove_pool_fee_rate,
+        remove_pool_fee_recipient: config.remove_pool_fee_recipient.to_string(),
         deactivate_period: config.deactivate_period,
         key_denom: Denom::from_cw20(config.key_denom),
         referral_reward_token: config.referral_reward_token.to_string(),
-        min_referral_reward_deposit_rate: config.min_referral_reward_deposit_rate,
+        add_pool_min_referral_reward_rate: config.add_pool_min_referral_reward_rate,
     })
 }
 

@@ -63,9 +63,9 @@ pub fn instantiate(
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
-        collateral_denom: msg.collateral_denom.map(|d| d.to_cw20(deps.api)),
-        collateral_amount: msg.collateral_amount,
-        collateral_lock_period: msg.collateral_lock_period,
+        deposit_denom: msg.deposit_denom.map(|d| d.to_cw20(deps.api)),
+        deposit_amount: msg.deposit_amount,
+        deposit_lock_period: msg.deposit_lock_period,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str())).transpose()?,
         qualification_description: msg.qualification_description,
         executions,
@@ -112,8 +112,8 @@ pub fn update_campaign_config(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    collateral_amount: Option<Uint128>,
-    collateral_lock_period: Option<u64>,
+    deposit_amount: Option<Uint128>,
+    deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     mut executions: Option<Vec<ExecutionMsg>>,
@@ -166,14 +166,14 @@ pub fn update_campaign_config(
         response = response.add_attribute("is_updated_parameter_key", "true");
     }
 
-    if let Some(collateral_amount) = collateral_amount {
-        campaign_config.collateral_amount = collateral_amount;
-        response = response.add_attribute("is_updated_collateral_amount", "true");
+    if let Some(deposit_amount) = deposit_amount {
+        campaign_config.deposit_amount = deposit_amount;
+        response = response.add_attribute("is_updated_deposit_amount", "true");
     }
 
-    if let Some(collateral_lock_period) = collateral_lock_period {
-        campaign_config.collateral_lock_period = collateral_lock_period;
-        response = response.add_attribute("is_updated_collateral_lock_period", "true");
+    if let Some(deposit_lock_period) = deposit_lock_period {
+        campaign_config.deposit_lock_period = deposit_lock_period;
+        response = response.add_attribute("is_updated_deposit_lock_period", "true");
     }
 
     if let Some(qualifier) = qualifier.as_ref() {
@@ -302,7 +302,7 @@ pub fn update_activation(
     Ok(response)
 }
 
-pub fn deposit(
+pub fn add_reward_pool(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -317,7 +317,7 @@ pub fn deposit(
     }
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
-    let (key_denom, referral_reward_pool_ratio, deposit_value) = validate_reward_pool_weight(
+    let (key_denom, referral_reward_pool_ratio, add_pool_value) = validate_reward_pool_weight(
         &deps.querier,
         deps.api,
         &campaign_config,
@@ -331,18 +331,18 @@ pub fn deposit(
     response = response.add_attribute("participation_reward_amount", participation_reward_amount.to_string());
     response = response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
     response = response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
-    response = response.add_attribute("deposit_value", deposit_value);
+    response = response.add_attribute("add_pool_value", add_pool_value);
 
     let global_campaign_config = load_global_campaign_config(&deps.querier, &campaign_config.campaign_manager)?;
 
-    let deposit_fee_amount = calc_deposit_fee_amount(
+    let add_pool_fee_amount = calc_add_pool_fee_amount(
         referral_reward_amount,
         referral_reward_pool_ratio,
-        global_campaign_config.deposit_fee_rate,
+        global_campaign_config.add_pool_fee_rate,
     )?;
-    response = response.add_attribute("deposit_fee_amount", deposit_fee_amount.to_string());
+    response = response.add_attribute("add_pool_fee_amount", add_pool_fee_amount.to_string());
 
-    let real_referral_reward_amount = referral_reward_amount.checked_sub(deposit_fee_amount)?;
+    let real_referral_reward_amount = referral_reward_amount.checked_sub(add_pool_fee_amount)?;
     response = response.add_attribute("referral_reward_amount", real_referral_reward_amount.to_string());
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
@@ -379,13 +379,13 @@ pub fn deposit(
         },
     ));
 
-    if !deposit_fee_amount.is_zero() {
+    if !add_pool_fee_amount.is_zero() {
         response = response.add_message(message_factories::wasm_execute(
             &reward_config.referral_reward_token,
             &Cw20ExecuteMsg::Send {
                 contract: global_campaign_config.fund_manager.to_string(),
-                amount: deposit_fee_amount,
-                msg: to_binary(&Cw20HookMsg::CampaignDepositFee {})?,
+                amount: add_pool_fee_amount,
+                msg: to_binary(&Cw20HookMsg::CampaignAddPoolFee {})?,
             },
         ));
     }
@@ -395,7 +395,7 @@ pub fn deposit(
 
 const FRACTION: Uint128 = Uint128::new(1_000_000);
 
-pub fn calc_deposit_fee_amount(
+pub fn calc_add_pool_fee_amount(
     send_amount: Uint128,
     ratio: Decimal,
     fee_rate: Decimal,
@@ -460,10 +460,10 @@ fn validate_reward_pool_weight(
         participation_reward_value + referral_reward_value,
     );
 
-    if referral_reward_pool_rate < global_campaign_config.min_referral_reward_deposit_rate {
+    if referral_reward_pool_rate < global_campaign_config.add_pool_min_referral_reward_rate {
         return Err(StdError::generic_err(format!(
             "Referral reward rate must be greater than {}",
-            global_campaign_config.min_referral_reward_deposit_rate.to_string(),
+            global_campaign_config.add_pool_min_referral_reward_rate.to_string(),
         )));
     }
 
@@ -521,7 +521,7 @@ fn swap_operation(offer: cw20::Denom, ask: cw20::Denom) -> SwapOperation {
     }
 }
 
-pub fn withdraw(
+pub fn remove_reward_pool(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -541,21 +541,21 @@ pub fn withdraw(
     let campaign_balance = balance.total;
     let locked_balance = balance.locked;
     let free_balance = campaign_balance.checked_sub(locked_balance)?;
-    let withdraw_amount = amount.unwrap_or(free_balance);
+    let remove_amount = amount.unwrap_or(free_balance);
 
-    if withdraw_amount.is_zero() || withdraw_amount > free_balance {
+    if remove_amount.is_zero() || remove_amount > free_balance {
         return Err(ContractError::Std(StdError::generic_err(
             "Insufficient balance",
         )));
     }
 
     // Execute
-    let mut response = make_response("withdraw");
-    response = response.add_attribute("pre_campaign_balance", campaign_balance);
-    response = response.add_attribute("pre_locked_balance", locked_balance);
+    let mut response = make_response("remove_reward_pool");
+    response = response.add_attribute("prev_campaign_balance", campaign_balance);
+    response = response.add_attribute("prev_locked_balance", locked_balance);
 
-    let mut receive_amount = withdraw_amount;
-    let mut withdraw_fee_amount = Uint128::zero();
+    let mut receive_amount = remove_amount;
+    let mut remove_pool_fee_amount = Uint128::zero();
     if !campaign_state.is_pending() {
         let global_campaign_config = load_global_campaign_config(
             &deps.querier,
@@ -563,19 +563,19 @@ pub fn withdraw(
         )?;
 
         //destructuring assignments are unstable (https://github.com/rust-lang/rust/issues/71126)
-        let (_withdraw_fee_amount, _receive_amount) = calc_ratio_amount(
-            withdraw_amount,
-            global_campaign_config.withdraw_fee_rate,
+        let (_remove_pool_fee_amount, _receive_amount) = calc_ratio_amount(
+            remove_amount,
+            global_campaign_config.remove_pool_fee_rate,
         );
-        withdraw_fee_amount = _withdraw_fee_amount;
+        remove_pool_fee_amount = _remove_pool_fee_amount;
         receive_amount = _receive_amount;
 
-        campaign_state.withdraw(&denom_cw20, &withdraw_fee_amount)?;
+        campaign_state.withdraw(&denom_cw20, &remove_pool_fee_amount)?;
         response = response.add_message(make_send_msg(
             &deps.querier,
             denom_cw20.clone(),
-            withdraw_fee_amount,
-            &Addr::unchecked(global_campaign_config.withdraw_fee_recipient),
+            remove_pool_fee_amount,
+            &Addr::unchecked(global_campaign_config.remove_pool_fee_recipient),
         )?);
     }
 
@@ -591,12 +591,12 @@ pub fn withdraw(
     campaign_state.save(deps.storage)?;
 
     response = response.add_attribute("receive_amount", receive_amount);
-    response = response.add_attribute("withdraw_fee_amount", withdraw_fee_amount);
+    response = response.add_attribute("remove_pool_fee_amount", remove_pool_fee_amount);
 
     Ok(response)
 }
 
-pub fn withdraw_irregular(
+pub fn remove_irregular_reward_pool(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -612,14 +612,14 @@ pub fn withdraw_irregular(
 
     let contract_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
     let expect_balance = campaign_state.balance(&denom_cw20).total
-        .checked_sub(campaign_state.collateral_amount)?;
+        .checked_sub(campaign_state.deposit_amount)?;
 
     if contract_balance == expect_balance {
         return Err(ContractError::InvalidZeroAmount {});
     }
 
     // Execute
-    let mut response = make_response("withdraw_irregular");
+    let mut response = make_response("remove_irregular_reward_pool");
 
     let diff = contract_balance.checked_sub(expect_balance)?;
 
@@ -849,21 +849,21 @@ fn _participate(
     let mut campaign_state = CampaignState::load(storage)?;
     let reward_config = RewardConfig::load(storage)?;
 
-    if campaign_config.require_collateral() {
-        let mut collateral = Collateral::load_or_new(storage, &actor)?;
+    if campaign_config.require_deposit() {
+        let mut deposit = Deposit::load_or_new(storage, &actor)?;
 
-        let collateral_balance = collateral.balance(env.block.height)?;
+        let deposit_balance = deposit.balance(env.block.height)?;
 
-        if collateral_balance < campaign_config.collateral_amount {
+        if deposit_balance < campaign_config.deposit_amount {
             return Err(ContractError::Std(StdError::generic_err(format!(
-                "Insufficient collateral balance (required: {}, current: {})",
-                campaign_config.collateral_amount.to_string(),
-                collateral_balance.to_string(),
+                "Insufficient deposit balance (required: {}, current: {})",
+                campaign_config.deposit_amount.to_string(),
+                deposit_balance.to_string(),
             ))));
         }
 
-        collateral.lock(campaign_config.collateral_amount, env.block.height, campaign_config.collateral_lock_period)?;
-        collateral.save(storage)?;
+        deposit.lock(campaign_config.deposit_amount, env.block.height, campaign_config.deposit_lock_period)?;
+        deposit.save(storage)?;
     }
 
     let referral_reward_limit_option: ReferralRewardLimitOptionResponse = querier.query_wasm_smart(
@@ -1061,7 +1061,7 @@ fn distribute_referral_reward(
     Ok((distributed_amount, referral_rewards, overflow_amount))
 }
 
-pub fn deposit_collateral(
+pub fn deposit(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
@@ -1069,7 +1069,7 @@ pub fn deposit_collateral(
     funds: Vec<(cw20::Denom, Uint128)>,
 ) -> ContractResult<Response> {
     if funds.len() < 1 {
-        return Err(ContractError::Std(StdError::generic_err("Missing collateral denom")));
+        return Err(ContractError::Std(StdError::generic_err("Missing deposit denom")));
     } else if funds.len() > 1 {
         return Err(ContractError::Std(StdError::generic_err("Too many sent denom")));
     }
@@ -1081,67 +1081,67 @@ pub fn deposit_collateral(
     }
 
     let mut response = Response::new();
-    response = response.add_attribute("action", "deposit_collateral");
+    response = response.add_attribute("action", "deposit");
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
 
-    if let Some(collateral_denom) = campaign_config.collateral_denom {
-        if *send_denom != collateral_denom {
-            return Err(ContractError::Std(StdError::generic_err("Missing collateral denom")));
+    if let Some(deposit_denom) = campaign_config.deposit_denom {
+        if *send_denom != deposit_denom {
+            return Err(ContractError::Std(StdError::generic_err("Missing deposit denom")));
         }
     }
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
-    let mut collateral = Collateral::load_or_new(deps.storage, &sender)?;
+    let mut deposit = Deposit::load_or_new(deps.storage, &sender)?;
 
-    campaign_state.collateral_amount += send_amount;
-    collateral.deposit_amount += send_amount;
+    campaign_state.deposit_amount += send_amount;
+    deposit.deposit_amount += send_amount;
 
     campaign_state.save(deps.storage)?;
-    collateral.save(deps.storage)?;
+    deposit.save(deps.storage)?;
 
     response = response.add_attribute("deposit", send_amount.to_string());
-    response = response.add_attribute("balance", collateral.deposit_amount.to_string());
+    response = response.add_attribute("balance", deposit.deposit_amount.to_string());
 
     Ok(response)
 }
 
-pub fn withdraw_collateral(
+pub fn withdraw(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     amount: Uint128,
 ) -> ContractResult<Response> {
     let mut response = Response::new();
-    response = response.add_attribute("action", "withdraw_collateral");
+    response = response.add_attribute("action", "withdraw");
 
-    let mut collateral = Collateral::load(deps.storage, &info.sender)?;
+    let mut deposit = Deposit::load(deps.storage, &info.sender)?;
 
-    response = response.add_attribute("deposit_amount", collateral.deposit_amount.to_string());
-    response = response.add_attribute("locked_amount", collateral.locked_amount(env.block.height));
+    response = response.add_attribute("deposit_amount", deposit.deposit_amount.to_string());
+    response = response.add_attribute("locked_amount", deposit.locked_amount(env.block.height));
 
-    collateral.clear(env.block.height);
+    deposit.clear(env.block.height);
 
-    let balance = collateral.balance(env.block.height)?;
+    let balance = deposit.balance(env.block.height)?;
 
     if balance.is_zero() {
         return Err(ContractError::InvalidZeroAmount {});
     }
 
     if balance < amount {
-        return Err(ContractError::Std(StdError::generic_err("Overdraw collateral")));
+        return Err(ContractError::Std(StdError::generic_err("Overdraw deposit")));
     }
 
-    collateral.deposit_amount = collateral.deposit_amount.checked_sub(amount)?;
+    deposit.deposit_amount = deposit.deposit_amount.checked_sub(amount)?;
 
-    collateral.save(deps.storage)?;
+    deposit.save(deps.storage)?;
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
 
-    if let Some(denom) = campaign_config.collateral_denom {
+    if let Some(denom) = campaign_config.deposit_denom {
         let mut campaign_state = CampaignState::load(deps.storage)?;
 
-        campaign_state.collateral_amount = campaign_state.collateral_amount.checked_sub(amount)?;
+        campaign_state.deposit_amount = campaign_state.deposit_amount.checked_sub(amount)?;
         campaign_state.save(deps.storage)?;
 
         response = response.add_message(make_send_msg(
@@ -1151,7 +1151,7 @@ pub fn withdraw_collateral(
             &info.sender,
         )?);
     } else {
-        return Err(ContractError::Std(StdError::generic_err("No collateral")));
+        return Err(ContractError::Std(StdError::generic_err("No deposit")));
     }
 
     Ok(response)

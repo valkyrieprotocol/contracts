@@ -17,8 +17,8 @@ pub fn exec(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    collateral_amount: Option<Uint128>,
-    collateral_lock_period: Option<u64>,
+    deposit_amount: Option<Uint128>,
+    deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
@@ -32,8 +32,8 @@ pub fn exec(
         description,
         url,
         parameter_key,
-        collateral_amount,
-        collateral_lock_period,
+        deposit_amount,
+        deposit_lock_period,
         qualifier,
         qualification_description,
         executions,
@@ -47,8 +47,8 @@ pub fn will_success(
     description: Option<String>,
     url: Option<String>,
     parameter_key: Option<String>,
-    collateral_amount: Option<Uint128>,
-    collateral_lock_period: Option<u64>,
+    deposit_amount: Option<Uint128>,
+    deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     executions: Option<Vec<ExecutionMsg>>,
@@ -65,8 +65,8 @@ pub fn will_success(
         description,
         url,
         parameter_key,
-        collateral_amount,
-        collateral_lock_period,
+        deposit_amount,
+        deposit_lock_period,
         qualifier,
         qualification_description,
         executions,
@@ -86,8 +86,8 @@ fn succeed() {
     let description = "Desc2".to_string();
     let url = "https://url2.url".to_string();
     let parameter_key = "vkr2".to_string();
-    let collateral_amount = Uint128::new(99);
-    let collateral_lock_period = 199u64;
+    let deposit_amount = Uint128::new(99);
+    let deposit_lock_period = 199u64;
     let qualifier = "Qualifier2".to_string();
     let qualification_description = "QualificationDescription2".to_string();
     let executions = vec![
@@ -105,8 +105,8 @@ fn succeed() {
         Some(description.clone()),
         Some(url.clone()),
         Some(parameter_key.clone()),
-        Some(collateral_amount),
-        Some(collateral_lock_period),
+        Some(deposit_amount),
+        Some(deposit_lock_period),
         Some(qualifier.clone()),
         Some(qualification_description.clone()),
         Some(executions.clone()),
@@ -118,8 +118,8 @@ fn succeed() {
     assert_eq!(campaign_config.description, description);
     assert_eq!(campaign_config.url, url);
     assert_eq!(campaign_config.parameter_key, parameter_key);
-    assert_eq!(campaign_config.collateral_amount, collateral_amount);
-    assert_eq!(campaign_config.collateral_lock_period, collateral_lock_period);
+    assert_eq!(campaign_config.deposit_amount, deposit_amount);
+    assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {
         order: e.order,
@@ -139,8 +139,8 @@ fn succeed_update_info_after_activation() {
 
     let title = "Title2".to_string();
     let description = "Desc2".to_string();
-    let collateral_amount = Uint128::new(99);
-    let collateral_lock_period = 199u64;
+    let deposit_amount = Uint128::new(99);
+    let deposit_lock_period = 199u64;
     let qualifier = "Qualifier2".to_string();
     let qualification_description = "QualificationDescription2".to_string();
     let executions = vec![
@@ -158,8 +158,8 @@ fn succeed_update_info_after_activation() {
         Some(description.clone()),
         None,
         None,
-        Some(collateral_amount),
-        Some(collateral_lock_period),
+        Some(deposit_amount),
+        Some(deposit_lock_period),
         Some(qualifier.clone()),
         Some(qualification_description.clone()),
         Some(executions.clone()),
@@ -169,8 +169,8 @@ fn succeed_update_info_after_activation() {
     let campaign_config = CampaignConfig::load(&deps.storage).unwrap();
     assert_eq!(campaign_config.title, title);
     assert_eq!(campaign_config.description, description);
-    assert_eq!(campaign_config.collateral_amount, collateral_amount);
-    assert_eq!(campaign_config.collateral_lock_period, collateral_lock_period);
+    assert_eq!(campaign_config.deposit_amount, deposit_amount);
+    assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.qualification_description, Some(qualification_description));
     assert_eq!(campaign_config.executions, executions.iter().map(|e| Execution {

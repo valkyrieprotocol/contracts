@@ -19,9 +19,9 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
-        collateral_denom: campaign_config.collateral_denom.map(|d| Denom::from_cw20(d)),
-        collateral_amount: campaign_config.collateral_amount,
-        collateral_lock_period: campaign_config.collateral_lock_period,
+        deposit_denom: campaign_config.deposit_denom.map(|d| Denom::from_cw20(d)),
+        deposit_amount: campaign_config.deposit_amount,
+        deposit_lock_period: campaign_config.deposit_lock_period,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
         qualification_description: campaign_config.qualification_description,
         executions: campaign_config.executions.iter()
@@ -169,6 +169,6 @@ pub fn query_actors(
     Ok(ActorsResponse { actors: participations })
 }
 
-pub fn collateral(deps: Deps, _env: Env, address: String) -> ContractResult<Collateral> {
-    Ok(Collateral::load_or_new(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
+pub fn deposit(deps: Deps, _env: Env, address: String) -> ContractResult<Deposit> {
+    Ok(Deposit::load_or_new(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
 }

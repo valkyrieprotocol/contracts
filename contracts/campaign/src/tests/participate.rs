@@ -8,7 +8,7 @@ use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::participate;
 use crate::states::{CampaignState, Actor};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, COLLATERAL_AMOUNT};
+use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
 use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
@@ -33,7 +33,7 @@ pub fn will_success(
     let env = campaign_env();
     let info = mock_info(participator, &[]);
 
-    super::deposit_collateral::will_success(deps, participator, COLLATERAL_AMOUNT);
+    super::deposit::will_success(deps, participator, DEPOSIT_AMOUNT);
 
     let response = exec(
         deps,
@@ -52,7 +52,7 @@ fn succeed_without_referrer() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(
+    super::add_reward_pool::will_success(
         &mut deps,
         PARTICIPATION_REWARD_AMOUNT.u128() * 2,
         1000000000,
@@ -90,7 +90,7 @@ fn succeed_with_referrer() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(
+    super::add_reward_pool::will_success(
         &mut deps,
         PARTICIPATION_REWARD_AMOUNT.u128() * 2,
         REFERRAL_REWARD_AMOUNTS[0].u128(),
@@ -153,7 +153,7 @@ fn succeed_twice() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 1000, 10000000000000);
+    super::add_reward_pool::will_success(&mut deps, 1000, 10000000000000);
 
     let participator = Addr::unchecked("participator");
 
@@ -201,11 +201,11 @@ fn failed_insufficient_balance() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 5, 10000000000000);
+    super::add_reward_pool::will_success(&mut deps, 5, 10000000000000);
 
     will_success(&mut deps, "Participator1", None);
 
-    super::deposit_collateral::will_success(&mut deps, "Participator2", COLLATERAL_AMOUNT);
+    super::deposit::will_success(&mut deps, "Participator2", DEPOSIT_AMOUNT);
 
     let result = exec(
         &mut deps,
@@ -223,7 +223,7 @@ fn overflow_referral_reward() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 100, 100);
+    super::add_reward_pool::will_success(&mut deps, 100, 100);
 
     deps.querier.with_referral_reward_limit_option(ReferralRewardLimitOptionResponse {
         overflow_amount_recipient: None,

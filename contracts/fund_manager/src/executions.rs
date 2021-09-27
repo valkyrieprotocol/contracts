@@ -25,13 +25,13 @@ pub fn instantiate(
         admins: msg.admins.iter().map(|v| deps.api.addr_validate(v)).collect::<StdResult<Vec<Addr>>>()?,
         managing_token: deps.api.addr_validate(msg.managing_token.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
-        campaign_deposit_fee_burn_ratio: msg.campaign_deposit_fee_burn_ratio,
-        campaign_deposit_fee_recipient: deps.api.addr_validate(msg.campaign_deposit_fee_recipient.as_str())?,
+        campaign_add_pool_fee_burn_ratio: msg.campaign_add_pool_fee_burn_ratio,
+        campaign_add_pool_fee_recipient: deps.api.addr_validate(msg.campaign_add_pool_fee_recipient.as_str())?,
     }.save(deps.storage)?;
 
     ContractState {
         remain_allowance_amount: Uint128::zero(),
-        campaign_deposit_fee_amount: Uint128::zero(),
+        campaign_add_pool_fee_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
     Ok(response)
@@ -43,8 +43,8 @@ pub fn update_config(
     info: MessageInfo,
     admins: Option<Vec<String>>,
     terraswap_router: Option<String>,
-    campaign_deposit_fee_burn_ratio: Option<Decimal>,
-    campaign_deposit_fee_recipient: Option<String>,
+    campaign_add_pool_fee_burn_ratio: Option<Decimal>,
+    campaign_add_pool_fee_recipient: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = ContractConfig::load(deps.storage)?;
@@ -67,14 +67,14 @@ pub fn update_config(
         response = response.add_attribute("is_updated_terraswap_router", "true");
     }
 
-    if let Some(campaign_deposit_fee_burn_ratio) = campaign_deposit_fee_burn_ratio {
-        config.campaign_deposit_fee_burn_ratio = campaign_deposit_fee_burn_ratio;
-        response = response.add_attribute("is_updated_campaign_deposit_fee_burn_ratio", "true");
+    if let Some(campaign_add_pool_fee_burn_ratio) = campaign_add_pool_fee_burn_ratio {
+        config.campaign_add_pool_fee_burn_ratio = campaign_add_pool_fee_burn_ratio;
+        response = response.add_attribute("is_updated_campaign_add_pool_fee_burn_ratio", "true");
     }
 
-    if let Some(campaign_deposit_fee_recipient) = campaign_deposit_fee_recipient.as_ref() {
-        config.campaign_deposit_fee_recipient = deps.api.addr_validate(campaign_deposit_fee_recipient.as_str())?;
-        response = response.add_attribute("is_updated_campaign_deposit_fee_recipient", "true");
+    if let Some(campaign_add_pool_fee_recipient) = campaign_add_pool_fee_recipient.as_ref() {
+        config.campaign_add_pool_fee_recipient = deps.api.addr_validate(campaign_add_pool_fee_recipient.as_str())?;
+        response = response.add_attribute("is_updated_campaign_add_pool_fee_recipient", "true");
     }
 
     config.save(deps.storage)?;
@@ -340,53 +340,53 @@ fn denom_to_asset_info(denom: Denom) -> AssetInfo {
     }
 }
 
-pub fn receive_campaign_deposit_fee(
+pub fn receive_campaign_add_pool_fee(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     amount: Uint128,
 ) -> ContractResult<Response> {
-    let mut response = make_response("receive_campaign_deposit_fee");
+    let mut response = make_response("receive_campaign_add_pool_fee");
 
     let mut state = ContractState::load(deps.storage)?;
-    state.campaign_deposit_fee_amount += amount;
+    state.campaign_add_pool_fee_amount += amount;
 
     state.save(deps.storage)?;
 
-    response = response.add_attribute("campaign_deposit_fee_balance", state.campaign_deposit_fee_amount.to_string());
+    response = response.add_attribute("campaign_add_pool_fee_balance", state.campaign_add_pool_fee_amount.to_string());
 
     Ok(response)
 }
 
-pub fn distribute_campaign_deposit_fee(
+pub fn distribute_campaign_add_pool_fee(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     amount: Option<Uint128>,
 ) -> ContractResult<Response> {
-    let mut response = make_response("distribute_campaign_deposit_fee");
+    let mut response = make_response("distribute_campaign_add_pool_fee");
 
     let config = ContractConfig::load(deps.storage)?;
     let mut state = ContractState::load(deps.storage)?;
 
     let amount = if let Some(amount) = amount {
-        state.campaign_deposit_fee_amount = state.campaign_deposit_fee_amount.checked_sub(amount)?; //check overflow
+        state.campaign_add_pool_fee_amount = state.campaign_add_pool_fee_amount.checked_sub(amount)?; //check overflow
         amount
     } else {
-        let amount = state.campaign_deposit_fee_amount;
-        state.campaign_deposit_fee_amount = Uint128::zero();
+        let amount = state.campaign_add_pool_fee_amount;
+        state.campaign_add_pool_fee_amount = Uint128::zero();
         amount
     };
 
     state.save(deps.storage)?;
 
-    let burn_amount = amount * config.campaign_deposit_fee_burn_ratio;
+    let burn_amount = amount * config.campaign_add_pool_fee_burn_ratio;
     let distribute_amount = amount.checked_sub(burn_amount)?;
 
     response = response.add_message(message_factories::wasm_execute(
         &config.managing_token,
         &Cw20ExecuteMsg::Transfer {
-            recipient: config.campaign_deposit_fee_recipient.to_string(),
+            recipient: config.campaign_add_pool_fee_recipient.to_string(),
             amount: distribute_amount,
         },
     ));

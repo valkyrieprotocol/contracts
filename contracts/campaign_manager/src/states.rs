@@ -16,13 +16,13 @@ pub struct Config {
     pub fund_manager: Addr,
     pub terraswap_router: Addr,
     pub code_id: u64,
-    pub deposit_fee_rate: Decimal,
-    pub withdraw_fee_rate: Decimal,
-    pub withdraw_fee_recipient: Addr,
+    pub add_pool_fee_rate: Decimal,
+    pub remove_pool_fee_rate: Decimal,
+    pub remove_pool_fee_recipient: Addr,
     pub deactivate_period: u64,
     pub key_denom: Denom,
     pub referral_reward_token: Addr,
-    pub min_referral_reward_deposit_rate: Decimal,
+    pub add_pool_min_referral_reward_rate: Decimal,
 }
 
 impl Config {

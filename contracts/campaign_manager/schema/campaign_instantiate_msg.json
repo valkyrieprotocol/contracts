@@ -5,10 +5,10 @@
   "required": [
     "admin",
     "campaign_manager",
-    "collateral_amount",
-    "collateral_lock_period",
     "config_msg",
     "creator",
+    "deposit_amount",
+    "deposit_lock_period",
     "executions",
     "fund_manager",
     "governance",
@@ -21,10 +21,16 @@
     "campaign_manager": {
       "type": "string"
     },
-    "collateral_amount": {
+    "config_msg": {
+      "$ref": "#/definitions/Binary"
+    },
+    "creator": {
+      "type": "string"
+    },
+    "deposit_amount": {
       "$ref": "#/definitions/Uint128"
     },
-    "collateral_denom": {
+    "deposit_denom": {
       "anyOf": [
         {
           "$ref": "#/definitions/Denom"
@@ -34,16 +40,10 @@
         }
       ]
     },
-    "collateral_lock_period": {
+    "deposit_lock_period": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0
-    },
-    "config_msg": {
-      "$ref": "#/definitions/Binary"
-    },
-    "creator": {
-      "type": "string"
     },
     "executions": {
       "type": "array",

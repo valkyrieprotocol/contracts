@@ -5,11 +5,11 @@
     {
       "type": "object",
       "required": [
-        "qualify"
+        "config"
       ],
       "properties": {
-        "qualify": {
-          "$ref": "#/definitions/QualificationMsg"
+        "config": {
+          "type": "object"
         }
       },
       "additionalProperties": false
@@ -17,41 +17,81 @@
     {
       "type": "object",
       "required": [
-        "requirement"
+        "balance"
       ],
       "properties": {
-        "requirement": {
+        "balance": {
           "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "allowance"
+      ],
+      "properties": {
+        "allowance": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "allowances"
+      ],
+      "properties": {
+        "allowances": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "order_by": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/OrderBy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         }
       },
       "additionalProperties": false
     }
   ],
   "definitions": {
-    "QualificationMsg": {
-      "type": "object",
-      "required": [
-        "actor",
-        "campaign",
-        "sender"
-      ],
-      "properties": {
-        "actor": {
-          "type": "string"
-        },
-        "campaign": {
-          "type": "string"
-        },
-        "referrer": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "sender": {
-          "type": "string"
-        }
-      }
+    "OrderBy": {
+      "type": "string",
+      "enum": [
+        "asc",
+        "desc"
+      ]
     }
   }
 }

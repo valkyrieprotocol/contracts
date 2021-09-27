@@ -5,7 +5,7 @@ use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{DEFAULT_SENDER, default_sender};
-use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, COLLATERAL_DENOM_NATIVE, COLLATERAL_AMOUNT, COLLATERAL_LOCK_PERIOD};
+use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD};
 use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env, REFERRAL_REWARD_TOKEN};
 use valkyrie::test_constants::fund_manager::FUND_MANAGER;
 use valkyrie::test_constants::governance::GOVERNANCE;
@@ -18,9 +18,9 @@ pub fn exec(
     env: Env,
     info: MessageInfo,
     config_msg: Binary,
-    collateral_denom: Option<Denom>,
-    collateral_amount: Option<Uint128>,
-    collateral_lock_period: Option<u64>,
+    deposit_denom: Option<Denom>,
+    deposit_amount: Option<Uint128>,
+    deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     executions: Vec<ExecutionMsg>,
@@ -30,9 +30,9 @@ pub fn exec(
         env,
         info,
         config_msg,
-        collateral_denom,
-        collateral_amount,
-        collateral_lock_period,
+        deposit_denom,
+        deposit_amount,
+        deposit_lock_period,
         qualifier,
         qualification_description,
         executions,
@@ -58,9 +58,9 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         env.clone(),
         info.clone(),
         to_binary(&campaign_config_msg).unwrap(),
-        Some(Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-        Some(COLLATERAL_AMOUNT),
-        Some(COLLATERAL_LOCK_PERIOD),
+        Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+        Some(DEPOSIT_AMOUNT),
+        Some(DEPOSIT_LOCK_PERIOD),
         None,
         None,
         vec![],
@@ -98,9 +98,9 @@ fn succeed() {
                         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
                         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                     }).unwrap(),
-                    collateral_denom: Some(Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-                    collateral_amount: COLLATERAL_AMOUNT,
-                    collateral_lock_period: COLLATERAL_LOCK_PERIOD,
+                    deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+                    deposit_amount: DEPOSIT_AMOUNT,
+                    deposit_lock_period: DEPOSIT_LOCK_PERIOD,
                     qualifier: None,
                     qualification_description: None,
                     executions: vec![],

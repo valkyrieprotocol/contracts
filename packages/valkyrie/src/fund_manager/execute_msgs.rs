@@ -10,8 +10,8 @@ pub struct InstantiateMsg {
     pub admins: Vec<String>,
     pub managing_token: String,
     pub terraswap_router: String,
-    pub campaign_deposit_fee_burn_ratio: Decimal,
-    pub campaign_deposit_fee_recipient: String,
+    pub campaign_add_pool_fee_burn_ratio: Decimal,
+    pub campaign_add_pool_fee_recipient: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -21,8 +21,8 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admins: Option<Vec<String>>,
         terraswap_router: Option<String>,
-        campaign_deposit_fee_burn_ratio: Option<Decimal>,
-        campaign_deposit_fee_recipient: Option<String>,
+        campaign_add_pool_fee_burn_ratio: Option<Decimal>,
+        campaign_add_pool_fee_recipient: Option<String>,
     },
     IncreaseAllowance {
         address: String,
@@ -41,7 +41,7 @@ pub enum ExecuteMsg {
         amount: Option<Uint128>,
         route: Option<Vec<Denom>>,
     },
-    DistributeCampaignDepositFee {
+    DistributeCampaignAddPoolFee {
         amount: Option<Uint128>,
     },
 }
@@ -49,7 +49,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    CampaignDepositFee {},
+    CampaignAddPoolFee {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -15,8 +15,8 @@ pub struct ContractConfig {
     pub admins: Vec<Addr>,
     pub managing_token: Addr,
     pub terraswap_router: Addr,
-    pub campaign_deposit_fee_burn_ratio: Decimal,
-    pub campaign_deposit_fee_recipient: Addr,
+    pub campaign_add_pool_fee_burn_ratio: Decimal,
+    pub campaign_add_pool_fee_recipient: Addr,
 }
 
 impl ContractConfig {
@@ -39,7 +39,7 @@ const CONTRACT_STATE: Item<ContractState> = Item::new("contract-state");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractState {
     pub remain_allowance_amount: Uint128,
-    pub campaign_deposit_fee_amount: Uint128,
+    pub campaign_add_pool_fee_amount: Uint128,
 }
 
 impl ContractState {
@@ -66,9 +66,9 @@ impl ContractState {
         Ok(BalanceResponse {
             total_balance,
             allowance_amount: self.remain_allowance_amount,
-            campaign_deposit_fee_amount: self.campaign_deposit_fee_amount,
+            campaign_add_pool_fee_amount: self.campaign_add_pool_fee_amount,
             free_balance: total_balance.checked_sub(self.remain_allowance_amount)?
-                .checked_sub(self.campaign_deposit_fee_amount)?,
+                .checked_sub(self.campaign_add_pool_fee_amount)?,
         })
     }
 }

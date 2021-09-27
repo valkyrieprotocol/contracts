@@ -30,7 +30,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
 
     let participator = Addr::unchecked("Participator");
     super::participate::will_success(&mut deps, participator.as_str(), None);
@@ -63,7 +63,7 @@ fn failed_no_reward() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::deposit::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
     super::participate::will_success(&mut deps, DEFAULT_SENDER, None);
 
     will_success(&mut deps, DEFAULT_SENDER);

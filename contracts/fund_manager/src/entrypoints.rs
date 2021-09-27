@@ -31,16 +31,16 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             admins,
             terraswap_router,
-            campaign_deposit_fee_burn_ratio,
-            campaign_deposit_fee_recipient,
+            campaign_add_pool_fee_burn_ratio,
+            campaign_add_pool_fee_recipient,
         } => executions::update_config(
             deps,
             env,
             info,
             admins,
             terraswap_router,
-            campaign_deposit_fee_burn_ratio,
-            campaign_deposit_fee_recipient,
+            campaign_add_pool_fee_burn_ratio,
+            campaign_add_pool_fee_recipient,
         ),
         ExecuteMsg::IncreaseAllowance {
             address,
@@ -59,9 +59,9 @@ pub fn execute(
             amount,
             route,
         } => executions::swap(deps, env, info, denom, amount, route),
-        ExecuteMsg::DistributeCampaignDepositFee {
+        ExecuteMsg::DistributeCampaignAddPoolFee {
             amount,
-        } => executions::distribute_campaign_deposit_fee(deps, env, info, amount),
+        } => executions::distribute_campaign_add_pool_fee(deps, env, info, amount),
     }
 }
 
@@ -72,7 +72,7 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> ContractResult<Response> {
     match from_binary(&cw20_msg.msg)? {
-        Cw20HookMsg::CampaignDepositFee {} => executions::receive_campaign_deposit_fee(
+        Cw20HookMsg::CampaignAddPoolFee {} => executions::receive_campaign_add_pool_fee(
             deps,
             env,
             info,

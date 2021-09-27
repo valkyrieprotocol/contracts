@@ -24,15 +24,15 @@ pub struct ContractConfigResponse {
     pub admins: Vec<String>,
     pub managing_token: String,
     pub terraswap_router: String,
-    pub campaign_deposit_fee_burn_rate: Decimal,
-    pub campaign_deposit_fee_recipient: String,
+    pub campaign_add_pool_fee_burn_rate: Decimal,
+    pub campaign_add_pool_fee_recipient: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BalanceResponse {
     pub total_balance: Uint128,
     pub allowance_amount: Uint128,
-    pub campaign_deposit_fee_amount: Uint128,
+    pub campaign_add_pool_fee_amount: Uint128,
     pub free_balance: Uint128,
 }
 

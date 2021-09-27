@@ -28,7 +28,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
-    Collateral {
+    Deposit {
         address: String,
     },
 }
@@ -42,9 +42,9 @@ pub struct CampaignConfigResponse {
     pub description: String,
     pub url: String,
     pub parameter_key: String,
-    pub collateral_denom: Option<Denom>,
-    pub collateral_amount: Uint128,
-    pub collateral_lock_period: u64,
+    pub deposit_denom: Option<Denom>,
+    pub deposit_amount: Uint128,
+    pub deposit_lock_period: u64,
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
     pub executions: Vec<ExecutionMsg>,

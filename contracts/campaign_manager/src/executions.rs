@@ -22,13 +22,13 @@ pub fn instantiate(
         fund_manager: deps.api.addr_validate(msg.fund_manager.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
         code_id: msg.code_id,
-        deposit_fee_rate: msg.deposit_fee_rate,
-        withdraw_fee_rate: msg.withdraw_fee_rate,
-        withdraw_fee_recipient: deps.api.addr_validate(msg.withdraw_fee_recipient.as_str())?,
+        add_pool_fee_rate: msg.add_pool_fee_rate,
+        remove_pool_fee_rate: msg.remove_pool_fee_rate,
+        remove_pool_fee_recipient: deps.api.addr_validate(msg.remove_pool_fee_recipient.as_str())?,
         deactivate_period: msg.deactivate_period,
         key_denom: msg.key_denom.to_cw20(deps.api),
         referral_reward_token: deps.api.addr_validate(msg.referral_reward_token.as_str())?,
-        min_referral_reward_deposit_rate: msg.min_referral_reward_deposit_rate,
+        add_pool_min_referral_reward_rate: msg.add_pool_min_referral_reward_rate,
     }.save(deps.storage)?;
 
     ReferralRewardLimitOption {
@@ -49,13 +49,13 @@ pub fn update_config(
     fund_manager: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
-    deposit_fee_rate: Option<Decimal>,
-    withdraw_fee_rate: Option<Decimal>,
-    withdraw_fee_recipient: Option<String>,
+    add_pool_fee_rate: Option<Decimal>,
+    remove_pool_fee_rate: Option<Decimal>,
+    remove_pool_fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
     referral_reward_token: Option<String>,
-    min_referral_reward_deposit_rate: Option<Decimal>,
+    add_pool_min_referral_reward_rate: Option<Decimal>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = Config::load(deps.storage)?;
@@ -87,19 +87,19 @@ pub fn update_config(
         response = response.add_attribute("is_updated_code_id", "true");
     }
 
-    if let Some(deposit_fee_rate) = deposit_fee_rate.as_ref() {
-        config.deposit_fee_rate = *deposit_fee_rate;
-        response = response.add_attribute("is_updated_deposit_fee_rate", "true");
+    if let Some(add_pool_fee_rate) = add_pool_fee_rate.as_ref() {
+        config.add_pool_fee_rate = *add_pool_fee_rate;
+        response = response.add_attribute("is_updated_add_pool_fee_rate", "true");
     }
 
-    if let Some(withdraw_fee_rate) = withdraw_fee_rate.as_ref() {
-        config.withdraw_fee_rate = *withdraw_fee_rate;
-        response = response.add_attribute("is_updated_withdraw_fee_rate", "true");
+    if let Some(remove_pool_fee_rate) = remove_pool_fee_rate.as_ref() {
+        config.remove_pool_fee_rate = *remove_pool_fee_rate;
+        response = response.add_attribute("is_updated_remove_pool_fee_rate", "true");
     }
 
-    if let Some(withdraw_fee_recipient) = withdraw_fee_recipient.as_ref() {
-        config.withdraw_fee_recipient = deps.api.addr_validate(withdraw_fee_recipient)?;
-        response = response.add_attribute("is_updated_withdraw_fee_recipient", "true");
+    if let Some(remove_pool_fee_recipient) = remove_pool_fee_recipient.as_ref() {
+        config.remove_pool_fee_recipient = deps.api.addr_validate(remove_pool_fee_recipient)?;
+        response = response.add_attribute("is_updated_remove_pool_fee_recipient", "true");
     }
 
     if let Some(deactivate_period) = deactivate_period.as_ref() {
@@ -117,9 +117,9 @@ pub fn update_config(
         response = response.add_attribute("is_updated_referral_reward_token", "true");
     }
 
-    if let Some(min_referral_reward_deposit_rate) = min_referral_reward_deposit_rate.as_ref() {
-        config.min_referral_reward_deposit_rate = *min_referral_reward_deposit_rate;
-        response = response.add_attribute("is_updated_min_referral_reward_deposit_rate", "true");
+    if let Some(add_pool_min_referral_reward_rate) = add_pool_min_referral_reward_rate.as_ref() {
+        config.add_pool_min_referral_reward_rate = *add_pool_min_referral_reward_rate;
+        response = response.add_attribute("is_updated_add_pool_min_referral_reward_rate", "true");
     }
 
     config.save(deps.storage)?;
@@ -197,9 +197,9 @@ pub fn create_campaign(
     env: Env,
     info: MessageInfo,
     config_msg: Binary,
-    collateral_denom: Option<Denom>,
-    collateral_amount: Option<Uint128>,
-    collateral_lock_period: Option<u64>,
+    deposit_denom: Option<Denom>,
+    deposit_amount: Option<Uint128>,
+    deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     executions: Vec<ExecutionMsg>,
@@ -225,9 +225,9 @@ pub fn create_campaign(
             admin: info.sender.to_string(),
             creator: info.sender.to_string(),
             config_msg,
-            collateral_denom,
-            collateral_amount: collateral_amount.unwrap_or_default(),
-            collateral_lock_period: collateral_lock_period.unwrap_or_default(),
+            deposit_denom,
+            deposit_amount: deposit_amount.unwrap_or_default(),
+            deposit_lock_period: deposit_lock_period.unwrap_or_default(),
             qualifier,
             qualification_description,
             executions,
