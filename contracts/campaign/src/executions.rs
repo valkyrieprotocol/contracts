@@ -913,11 +913,14 @@ fn _participate(
     campaign_state.validate_balance().map_err(|_| StdError::generic_err("Insufficient balance"))?;
     let participation_reward_denom = Denom::from_cw20(reward_config.participation_reward_denom);
 
-    response.data = Some(to_binary(&DistributeResult {
-        participation_reward_denom: participation_reward_denom.clone(),
-        participation_reward_amount: distributed_participation_reward_amount,
-        referral_rewards,
-    })?);
+    response.attributes.push(attr(
+        "distribute_result",
+        to_binary(&DistributeResult {
+            participation_reward_denom: participation_reward_denom.clone(),
+            participation_reward_amount: distributed_participation_reward_amount,
+            referral_rewards,
+        })?.to_base64(),
+    ));
 
     response.attributes.push(attr(
         "configured_participation_reward_amount",
