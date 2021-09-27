@@ -735,23 +735,6 @@ pub fn participate(
     let mut response = make_response("participate");
     response = response.add_attribute("actor", actor.to_string());
 
-    if campaign_config.require_collateral() {
-        let mut collateral = Collateral::load_or_new(deps.storage, &actor)?;
-
-        let collateral_balance = collateral.balance(env.block.height)?;
-
-        if collateral_balance < campaign_config.collateral_amount {
-            return Err(ContractError::Std(StdError::generic_err(format!(
-                "Insufficient collateral balance (required: {}, current: {})",
-                campaign_config.collateral_amount.to_string(),
-                collateral_balance.to_string(),
-            ))));
-        }
-
-        collateral.lock(campaign_config.collateral_amount, env.block.height, campaign_config.collateral_lock_period)?;
-        collateral.save(deps.storage)?;
-    }
-
     let referrer_address = referrer.and_then(|v| v.to_address(deps.api).ok());
 
     if let Some(qualifier) = campaign_config.qualifier {
@@ -865,6 +848,23 @@ fn _participate(
     let campaign_config = CampaignConfig::load(storage)?;
     let mut campaign_state = CampaignState::load(storage)?;
     let reward_config = RewardConfig::load(storage)?;
+
+    if campaign_config.require_collateral() {
+        let mut collateral = Collateral::load_or_new(storage, &actor)?;
+
+        let collateral_balance = collateral.balance(env.block.height)?;
+
+        if collateral_balance < campaign_config.collateral_amount {
+            return Err(ContractError::Std(StdError::generic_err(format!(
+                "Insufficient collateral balance (required: {}, current: {})",
+                campaign_config.collateral_amount.to_string(),
+                collateral_balance.to_string(),
+            ))));
+        }
+
+        collateral.lock(campaign_config.collateral_amount, env.block.height, campaign_config.collateral_lock_period)?;
+        collateral.save(storage)?;
+    }
 
     let referral_reward_limit_option: ReferralRewardLimitOptionResponse = querier.query_wasm_smart(
         &campaign_config.campaign_manager,
