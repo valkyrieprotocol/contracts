@@ -675,7 +675,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "valkyrie-fund-manager"
+name = "valkyrie-community"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",

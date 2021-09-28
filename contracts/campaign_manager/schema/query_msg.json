@@ -17,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "referral_reward_limit_option"
+        "balance"
       ],
       "properties": {
-        "referral_reward_limit_option": {
+        "balance": {
           "type": "object"
         }
       },
@@ -29,10 +29,10 @@
     {
       "type": "object",
       "required": [
-        "campaign"
+        "allowance"
       ],
       "properties": {
-        "campaign": {
+        "allowance": {
           "type": "object",
           "required": [
             "address"
@@ -49,10 +49,10 @@
     {
       "type": "object",
       "required": [
-        "campaigns"
+        "allowances"
       ],
       "properties": {
-        "campaigns": {
+        "allowances": {
           "type": "object",
           "properties": {
             "limit": {

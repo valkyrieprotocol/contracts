@@ -51,7 +51,7 @@ pub mod governance {
     }
 }
 
-pub mod fund_manager {
+pub mod community {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
@@ -60,19 +60,19 @@ pub mod fund_manager {
     use crate::test_constants::VALKYRIE_TOKEN;
     use crate::test_utils::mock_env_contract;
 
-    pub const FUND_MANAGER: &str = "FundManager";
+    pub const COMMUNITY: &str = "Community";
 
     pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
     pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
 
-    pub fn fund_manager_env() -> Env {
-        mock_env_contract(FUND_MANAGER)
+    pub fn community_env() -> Env {
+        mock_env_contract(COMMUNITY)
     }
 
-    pub fn fund_manager_sender() -> MessageInfo {
-        mock_info(FUND_MANAGER, &[])
+    pub fn community_sender() -> MessageInfo {
+        mock_info(COMMUNITY, &[])
     }
 }
 

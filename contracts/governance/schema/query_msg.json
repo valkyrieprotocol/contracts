@@ -5,10 +5,10 @@
     {
       "type": "object",
       "required": [
-        "contract_config"
+        "config"
       ],
       "properties": {
-        "contract_config": {
+        "config": {
           "type": "object"
         }
       },
@@ -17,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "poll_config"
+        "balance"
       ],
       "properties": {
-        "poll_config": {
+        "balance": {
           "type": "object"
         }
       },
@@ -29,31 +29,17 @@
     {
       "type": "object",
       "required": [
-        "poll_state"
+        "allowance"
       ],
       "properties": {
-        "poll_state": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "poll"
-      ],
-      "properties": {
-        "poll": {
+        "allowance": {
           "type": "object",
           "required": [
-            "poll_id"
+            "address"
           ],
           "properties": {
-            "poll_id": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
+            "address": {
+              "type": "string"
             }
           }
         }
@@ -63,64 +49,11 @@
     {
       "type": "object",
       "required": [
-        "polls"
+        "allowances"
       ],
       "properties": {
-        "polls": {
+        "allowances": {
           "type": "object",
-          "properties": {
-            "filter": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/PollStatus"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "order_by": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/OrderBy"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "start_after": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "voters"
-      ],
-      "properties": {
-        "voters": {
-          "type": "object",
-          "required": [
-            "poll_id"
-          ],
           "properties": {
             "limit": {
               "type": [
@@ -139,69 +72,12 @@
                   "type": "null"
                 }
               ]
-            },
-            "poll_id": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
             },
             "start_after": {
               "type": [
                 "string",
                 "null"
               ]
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "staking_state"
-      ],
-      "properties": {
-        "staking_state": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "staker_state"
-      ],
-      "properties": {
-        "staker_state": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "voting_power"
-      ],
-      "properties": {
-        "voting_power": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
             }
           }
         }
@@ -215,16 +91,6 @@
       "enum": [
         "asc",
         "desc"
-      ]
-    },
-    "PollStatus": {
-      "type": "string",
-      "enum": [
-        "in_progress",
-        "passed",
-        "rejected",
-        "executed",
-        "failed"
       ]
     }
   }

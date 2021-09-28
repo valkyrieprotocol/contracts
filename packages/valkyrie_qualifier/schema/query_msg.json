@@ -17,19 +17,29 @@
     {
       "type": "object",
       "required": [
-        "state"
+        "balance"
       ],
       "properties": {
-        "state": {
+        "balance": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "allowance"
+      ],
+      "properties": {
+        "allowance": {
           "type": "object",
+          "required": [
+            "address"
+          ],
           "properties": {
-            "block_height": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
+            "address": {
+              "type": "string"
             }
           }
         }
@@ -39,22 +49,49 @@
     {
       "type": "object",
       "required": [
-        "staker_info"
+        "allowances"
       ],
       "properties": {
-        "staker_info": {
+        "allowances": {
           "type": "object",
-          "required": [
-            "staker"
-          ],
           "properties": {
-            "staker": {
-              "type": "string"
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "order_by": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/OrderBy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           }
         }
       },
       "additionalProperties": false
     }
-  ]
+  ],
+  "definitions": {
+    "OrderBy": {
+      "type": "string",
+      "enum": [
+        "asc",
+        "desc"
+      ]
+    }
+  }
 }
