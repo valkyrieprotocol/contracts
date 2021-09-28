@@ -4,8 +4,7 @@ use valkyrie::campaign_manager::execute_msgs::{InstantiateMsg, ReferralRewardLim
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign_manager::*;
-use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER};
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER, VALKYRIE_TOKEN};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
 use crate::executions::instantiate;
@@ -16,32 +15,32 @@ pub fn exec(
     env: Env,
     info: MessageInfo,
     governance: String,
-    fund_manager: String,
+    valkyrie_token: String,
     terraswap_router: String,
     code_id: u64,
     add_pool_fee_rate: Decimal,
+    add_pool_min_referral_reward_rate: Decimal,
     remove_pool_fee_rate: Decimal,
-    remove_pool_fee_recipient: String,
+    fee_burn_ratio: Decimal,
+    fee_recipient: String,
     deactivate_period: u64,
     key_denom: Denom,
-    referral_reward_token: String,
-    add_pool_min_referral_reward_rate: Decimal,
     overflow_amount_recipient: Option<String>,
     base_count: u8,
     percent_for_governance_staking: u16,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
         governance,
-        fund_manager,
+        valkyrie_token,
         terraswap_router,
         code_id,
         add_pool_fee_rate,
+        add_pool_min_referral_reward_rate,
         remove_pool_fee_rate,
-        remove_pool_fee_recipient,
+        fee_burn_ratio,
+        fee_recipient,
         deactivate_period,
         key_denom,
-        referral_reward_token,
-        add_pool_min_referral_reward_rate,
         referral_reward_limit_option: ReferralRewardLimitOptionMsg {
             overflow_amount_recipient,
             base_count,
@@ -66,16 +65,16 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         env.clone(),
         info.clone(),
         GOVERNANCE.to_string(),
-        FUND_MANAGER.to_string(),
+        VALKYRIE_TOKEN.to_string(),
         TERRASWAP_ROUTER.to_string(),
         CAMPAIGN_CODE_ID,
         Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
+        Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
         Decimal::percent(REMOVE_POOL_FEE_RATE_PERCENT),
-        FUND_MANAGER.to_string(),
+        Decimal::percent(FEE_BURN_RATIO_PERCENT),
+        FEE_RECIPIENT.to_string(),
         CAMPAIGN_DEACTIVATE_PERIOD,
         Denom::Native(KEY_DENOM_NATIVE.to_string()),
-        REFERRAL_REWARD_TOKEN.to_string(),
-        Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
         None,
         REFERRAL_REWARD_LIMIT_BASE_COUNT,
         REFERRAL_REWARD_LIMIT_STAKING_PERCENT,
@@ -93,16 +92,16 @@ fn succeed() {
     let config = Config::load(&deps.storage).unwrap();
     assert_eq!(config, Config {
         governance: Addr::unchecked(GOVERNANCE),
-        fund_manager: Addr::unchecked(FUND_MANAGER),
+        valkyrie_token: Addr::unchecked(VALKYRIE_TOKEN),
         terraswap_router: Addr::unchecked(TERRASWAP_ROUTER),
         code_id: CAMPAIGN_CODE_ID,
         add_pool_fee_rate: Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
+        add_pool_min_referral_reward_rate: Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
         remove_pool_fee_rate: Decimal::percent(REMOVE_POOL_FEE_RATE_PERCENT),
-        remove_pool_fee_recipient: Addr::unchecked(FUND_MANAGER),
+        fee_burn_ratio: Decimal::percent(FEE_BURN_RATIO_PERCENT),
+        fee_recipient: Addr::unchecked(FEE_RECIPIENT),
         deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
         key_denom: cw20::Denom::Native(KEY_DENOM_NATIVE.to_string()),
-        referral_reward_token: Addr::unchecked(REFERRAL_REWARD_TOKEN),
-        add_pool_min_referral_reward_rate: Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
     });
 
     let referral_reward_limit_option = ReferralRewardLimitOption::load(&deps.storage).unwrap();

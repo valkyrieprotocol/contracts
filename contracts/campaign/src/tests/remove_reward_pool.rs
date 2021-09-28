@@ -6,10 +6,9 @@ use valkyrie::common::{ContractResult, Denom};
 use valkyrie::message_matchers;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::terra::extract_tax;
-use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::{default_sender, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign::{CAMPAIGN, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS};
-use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::campaign_manager::CAMPAIGN_MANAGER;
 use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 use valkyrie::utils::calc_ratio_amount;
 
@@ -92,12 +91,12 @@ fn succeed_at_pending() {
         })),
     ]);
 
-    denom = Denom::Token(REFERRAL_REWARD_TOKEN.to_string());
+    denom = Denom::Token(VALKYRIE_TOKEN.to_string());
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount,
@@ -109,7 +108,7 @@ fn succeed_at_pending() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: remain_amount,
@@ -139,7 +138,7 @@ fn succeed_at_active() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
-            to_address: FUND_MANAGER.to_string(),
+            to_address: CAMPAIGN_MANAGER.to_string(),
             amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
         })),
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
@@ -155,7 +154,7 @@ fn succeed_at_active() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
-            to_address: FUND_MANAGER.to_string(),
+            to_address: CAMPAIGN_MANAGER.to_string(),
             amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
         })),
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
@@ -164,21 +163,21 @@ fn succeed_at_active() {
         })),
     ]);
 
-    denom = Denom::Token(REFERRAL_REWARD_TOKEN.to_string());
+    denom = Denom::Token(VALKYRIE_TOKEN.to_string());
 
     let (burn_amount, expect_amount) = calc_ratio_amount(amount, burn_rate);
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: FUND_MANAGER.to_string(),
+                recipient: CAMPAIGN_MANAGER.to_string(),
                 amount: burn_amount,
             }).unwrap(),
             funds: vec![],
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
@@ -191,15 +190,15 @@ fn succeed_at_active() {
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: FUND_MANAGER.to_string(),
+                recipient: CAMPAIGN_MANAGER.to_string(),
                 amount: burn_amount,
             }).unwrap(),
             funds: vec![],
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: CAMPAIGN_ADMIN.to_string(),
                 amount: expect_amount,
@@ -234,7 +233,7 @@ fn succeed_free_balance() {
     );
     will_success(
         &mut deps,
-        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Denom::Token(VALKYRIE_TOKEN.to_string()),
         Some(REFERRAL_REWARD_AMOUNTS[0]),
     );
 }
@@ -276,7 +275,7 @@ fn failed_overflow() {
         &mut deps,
         campaign_env(),
         campaign_admin_sender(),
-        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Denom::Token(VALKYRIE_TOKEN.to_string()),
         Some(Uint128::new(1001)),
     );
     expect_generic_err(&result, "Insufficient balance");
@@ -308,7 +307,7 @@ fn failed_overflow() {
         &mut deps,
         campaign_env(),
         campaign_admin_sender(),
-        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Denom::Token(VALKYRIE_TOKEN.to_string()),
         Some(
             Uint128::new(1000)
                 .checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap()

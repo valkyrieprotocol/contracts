@@ -37,7 +37,6 @@ pub enum QueryMsg {
 pub struct CampaignConfigResponse {
     pub governance: String,
     pub campaign_manager: String,
-    pub fund_manager: String,
     pub title: String,
     pub description: String,
     pub url: String,

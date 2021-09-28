@@ -7,12 +7,11 @@ use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_DENO
 use crate::states::CampaignState;
 use crate::executions::{add_reward_pool, calc_add_pool_fee_amount};
 use cosmwasm_std::testing::mock_info;
-use valkyrie::test_constants::campaign_manager::{REFERRAL_REWARD_TOKEN, KEY_DENOM_NATIVE, ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT};
+use valkyrie::test_constants::campaign_manager::{KEY_DENOM_NATIVE, ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT, CAMPAIGN_MANAGER};
 use valkyrie::test_utils::expect_generic_err;
 use cw20::Cw20ExecuteMsg;
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
-use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 use valkyrie::campaign_manager::query_msgs::ConfigResponse;
+use valkyrie::test_constants::VALKYRIE_TOKEN;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -22,7 +21,7 @@ pub fn exec(
     referral_reward_amount: Uint128,
 ) -> ContractResult<Response> {
     deps.querier.with_terraswap_price(
-        REFERRAL_REWARD_TOKEN.to_string(),
+        VALKYRIE_TOKEN.to_string(),
         KEY_DENOM_NATIVE.to_string(),
         1f64,
     );
@@ -40,7 +39,7 @@ pub fn exec(
         contract_address.as_str(),
         vec![coin(participation_reward_amount.u128(), PARTICIPATION_REWARD_DENOM_NATIVE)],
     );
-    deps.querier.plus_token_balances(&[(REFERRAL_REWARD_TOKEN, &[
+    deps.querier.plus_token_balances(&[(VALKYRIE_TOKEN, &[
         (contract_address.as_str(), &referral_reward_amount),
     ])]);
 
@@ -85,7 +84,7 @@ fn succeed() {
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: info.sender.to_string(),
@@ -94,12 +93,11 @@ fn succeed() {
             }).unwrap(),
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: FUND_MANAGER.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: CAMPAIGN_MANAGER.to_string(),
                 amount: Uint128::new(1),
-                msg: to_binary(&Cw20HookMsg::CampaignAddPoolFee {}).unwrap(),
             }).unwrap(),
         })),
     ]);
@@ -110,7 +108,7 @@ fn succeed() {
         Uint128::from(100 - ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
     );
     assert_eq!(
-        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
+        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).total,
         Uint128::new(19),
     );
 }
@@ -132,7 +130,7 @@ fn succeed_more_referral_token() {
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: info.sender.to_string(),
@@ -141,12 +139,11 @@ fn succeed_more_referral_token() {
             }).unwrap(),
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: FUND_MANAGER.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: CAMPAIGN_MANAGER.to_string(),
                 amount: Uint128::new(3),
-                msg: to_binary(&Cw20HookMsg::CampaignAddPoolFee {}).unwrap(),
             }).unwrap(),
         })),
     ]);
@@ -157,7 +154,7 @@ fn succeed_more_referral_token() {
         Uint128::new(100),
     );
     assert_eq!(
-        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
+        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).total,
         Uint128::new(197),
     );
 }
@@ -179,7 +176,7 @@ fn succeed_zero_participation_token() {
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: info.sender.to_string(),
@@ -188,12 +185,11 @@ fn succeed_zero_participation_token() {
             }).unwrap(),
         })),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: FUND_MANAGER.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: CAMPAIGN_MANAGER.to_string(),
                 amount: Uint128::new(2),
-                msg: to_binary(&Cw20HookMsg::CampaignAddPoolFee {}).unwrap(),
             }).unwrap(),
         })),
     ]);
@@ -204,7 +200,7 @@ fn succeed_zero_participation_token() {
         Uint128::zero(),
     );
     assert_eq!(
-        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).total,
+        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).total,
         Uint128::new(198),
     );
 }

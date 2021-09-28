@@ -10,16 +10,16 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
 
     Ok(ConfigResponse {
         governance: config.governance.to_string(),
-        fund_manager: config.fund_manager.to_string(),
+        valkyrie_token: config.valkyrie_token.to_string(),
         terraswap_router: config.terraswap_router.to_string(),
         code_id: config.code_id,
         add_pool_fee_rate: config.add_pool_fee_rate,
+        add_pool_min_referral_reward_rate: config.add_pool_min_referral_reward_rate,
         remove_pool_fee_rate: config.remove_pool_fee_rate,
-        remove_pool_fee_recipient: config.remove_pool_fee_recipient.to_string(),
+        fee_burn_ratio: config.fee_burn_ratio,
+        fee_recipient: config.fee_recipient.to_string(),
         deactivate_period: config.deactivate_period,
         key_denom: Denom::from_cw20(config.key_denom),
-        referral_reward_token: config.referral_reward_token.to_string(),
-        add_pool_min_referral_reward_rate: config.add_pool_min_referral_reward_rate,
     })
 }
 

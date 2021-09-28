@@ -30,31 +30,31 @@ pub fn execute(
     match msg {
         ExecuteMsg::UpdateConfig {
             governance,
-            fund_manager,
+            valkyrie_token,
             terraswap_router,
             code_id,
             add_pool_fee_rate,
+            add_pool_min_referral_reward_rate,
             remove_pool_fee_rate,
-            remove_pool_fee_recipient,
+            fee_burn_ratio,
+            fee_recipient,
             deactivate_period,
             key_denom,
-            referral_reward_token,
-            add_pool_min_referral_reward_rate,
         } => executions::update_config(
             deps,
             env,
             info,
             governance,
-            fund_manager,
             terraswap_router,
+            valkyrie_token,
             code_id,
             add_pool_fee_rate,
+            add_pool_min_referral_reward_rate,
             remove_pool_fee_rate,
-            remove_pool_fee_recipient,
+            fee_burn_ratio,
+            fee_recipient,
             deactivate_period,
             key_denom,
-            referral_reward_token,
-            add_pool_min_referral_reward_rate,
         ),
         ExecuteMsg::UpdateReferralRewardLimitOption {
             overflow_amount_recipient,
@@ -89,6 +89,14 @@ pub fn execute(
             qualification_description,
             executions,
         ),
+        ExecuteMsg::SpendFee {
+            amount,
+        } => executions::spend_fee(deps, env, info, amount),
+        ExecuteMsg::SwapFee {
+            denom,
+            amount,
+            route,
+        } => executions::swap_fee(deps, env, info, denom, amount, route),
     }
 }
 

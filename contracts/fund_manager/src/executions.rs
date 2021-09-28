@@ -1,10 +1,7 @@
-use cosmwasm_std::{coin, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Decimal, Addr, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128, Addr, StdResult};
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::AssetInfo;
-use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
 
-use valkyrie::common::{ContractResult, Denom};
-use valkyrie::cw20::query_balance;
+use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::fund_manager::execute_msgs::InstantiateMsg;
 use valkyrie::message_factories;
@@ -24,14 +21,10 @@ pub fn instantiate(
     ContractConfig {
         admins: msg.admins.iter().map(|v| deps.api.addr_validate(v)).collect::<StdResult<Vec<Addr>>>()?,
         managing_token: deps.api.addr_validate(msg.managing_token.as_str())?,
-        terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
-        campaign_add_pool_fee_burn_ratio: msg.campaign_add_pool_fee_burn_ratio,
-        campaign_add_pool_fee_recipient: deps.api.addr_validate(msg.campaign_add_pool_fee_recipient.as_str())?,
     }.save(deps.storage)?;
 
     ContractState {
         remain_allowance_amount: Uint128::zero(),
-        campaign_add_pool_fee_amount: Uint128::zero(),
     }.save(deps.storage)?;
 
     Ok(response)
@@ -42,9 +35,6 @@ pub fn update_config(
     _env: Env,
     info: MessageInfo,
     admins: Option<Vec<String>>,
-    terraswap_router: Option<String>,
-    campaign_add_pool_fee_burn_ratio: Option<Decimal>,
-    campaign_add_pool_fee_recipient: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = ContractConfig::load(deps.storage)?;
@@ -60,21 +50,6 @@ pub fn update_config(
             .map(|v| deps.api.addr_validate(v))
             .collect::<StdResult<Vec<Addr>>>()?;
         response = response.add_attribute("is_updated_admins", "true");
-    }
-
-    if let Some(terraswap_router) = terraswap_router.as_ref() {
-        config.terraswap_router = deps.api.addr_validate(terraswap_router.as_str())?;
-        response = response.add_attribute("is_updated_terraswap_router", "true");
-    }
-
-    if let Some(campaign_add_pool_fee_burn_ratio) = campaign_add_pool_fee_burn_ratio {
-        config.campaign_add_pool_fee_burn_ratio = campaign_add_pool_fee_burn_ratio;
-        response = response.add_attribute("is_updated_campaign_add_pool_fee_burn_ratio", "true");
-    }
-
-    if let Some(campaign_add_pool_fee_recipient) = campaign_add_pool_fee_recipient.as_ref() {
-        config.campaign_add_pool_fee_recipient = deps.api.addr_validate(campaign_add_pool_fee_recipient.as_str())?;
-        response = response.add_attribute("is_updated_campaign_add_pool_fee_recipient", "true");
     }
 
     config.save(deps.storage)?;
@@ -227,176 +202,6 @@ pub fn transfer(
     response = response.add_attribute("recipient", recipient);
     response = response.add_attribute("amount", amount);
     response = response.add_attribute("remain_amount", remain_amount);
-
-    Ok(response)
-}
-
-pub fn swap(
-    deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
-    denom: Denom,
-    amount: Option<Uint128>,
-    route: Option<Vec<Denom>>,
-) -> ContractResult<Response> {
-    // Validate
-    let config = ContractConfig::load(deps.storage)?;
-    let token_denom = Denom::Token(config.managing_token.to_string());
-    let route = route.unwrap_or_else(|| vec![denom.clone(), token_denom.clone()]);
-
-    if route.len() < 2 || *route.first().unwrap() != denom || *route.last().unwrap() != token_denom {
-        return Err(ContractError::Std(StdError::generic_err(
-            format!(
-                "route must start with '{}' and end with '{}'",
-                denom.to_string(), token_denom.to_string(),
-            )
-        )));
-    }
-
-    // Execute
-    let mut response = make_response("swap");
-
-    let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
-        pair_to_terraswap_operation(pair)
-    }).collect();
-
-    let terraswap_msg = TerraswapExecuteMsg::ExecuteSwapOperations {
-        operations,
-        minimum_receive: None,
-        to: None,
-    };
-
-    let balance = query_balance(
-        &deps.querier,
-        denom.to_cw20(deps.api),
-        env.contract.address.clone(),
-    )?;
-    let amount = if let Some(amount) = amount {
-        if amount > balance {
-            return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
-        } else {
-            amount
-        }
-    } else {
-        balance
-    };
-
-    if amount.is_zero() {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    let swap_msg = match denom {
-        Denom::Native(denom) => {
-            message_factories::wasm_execute_with_funds(
-                &config.terraswap_router,
-                vec![coin(amount.u128(), denom)],
-                &terraswap_msg,
-            )
-        }
-        Denom::Token(address) => {
-            message_factories::wasm_execute(
-                &deps.api.addr_validate(&address)?,
-                &Cw20ExecuteMsg::Send {
-                    contract: config.terraswap_router.to_string(),
-                    msg: to_binary(&terraswap_msg)?,
-                    amount,
-                },
-            )
-        }
-    };
-
-    response = response.add_message(swap_msg);
-
-    Ok(response)
-}
-
-fn pair_to_terraswap_operation(pair: &[Denom]) -> SwapOperation {
-    let left = pair[0].clone();
-    let right = pair[1].clone();
-
-    if let Denom::Native(left_denom) = left.clone() {
-        if let Denom::Native(right_denom) = right.clone() {
-            return SwapOperation::NativeSwap {
-                offer_denom: left_denom,
-                ask_denom: right_denom,
-            };
-        }
-    }
-
-    SwapOperation::TerraSwap {
-        offer_asset_info: denom_to_asset_info(left),
-        ask_asset_info: denom_to_asset_info(right),
-    }
-}
-
-fn denom_to_asset_info(denom: Denom) -> AssetInfo {
-    match denom {
-        Denom::Native(denom) => AssetInfo::NativeToken {
-            denom,
-        },
-        Denom::Token(address) => AssetInfo::Token {
-            contract_addr: address,
-        },
-    }
-}
-
-pub fn receive_campaign_add_pool_fee(
-    deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    amount: Uint128,
-) -> ContractResult<Response> {
-    let mut response = make_response("receive_campaign_add_pool_fee");
-
-    let mut state = ContractState::load(deps.storage)?;
-    state.campaign_add_pool_fee_amount += amount;
-
-    state.save(deps.storage)?;
-
-    response = response.add_attribute("campaign_add_pool_fee_balance", state.campaign_add_pool_fee_amount.to_string());
-
-    Ok(response)
-}
-
-pub fn distribute_campaign_add_pool_fee(
-    deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    amount: Option<Uint128>,
-) -> ContractResult<Response> {
-    let mut response = make_response("distribute_campaign_add_pool_fee");
-
-    let config = ContractConfig::load(deps.storage)?;
-    let mut state = ContractState::load(deps.storage)?;
-
-    let amount = if let Some(amount) = amount {
-        state.campaign_add_pool_fee_amount = state.campaign_add_pool_fee_amount.checked_sub(amount)?; //check overflow
-        amount
-    } else {
-        let amount = state.campaign_add_pool_fee_amount;
-        state.campaign_add_pool_fee_amount = Uint128::zero();
-        amount
-    };
-
-    state.save(deps.storage)?;
-
-    let burn_amount = amount * config.campaign_add_pool_fee_burn_ratio;
-    let distribute_amount = amount.checked_sub(burn_amount)?;
-
-    response = response.add_message(message_factories::wasm_execute(
-        &config.managing_token,
-        &Cw20ExecuteMsg::Transfer {
-            recipient: config.campaign_add_pool_fee_recipient.to_string(),
-            amount: distribute_amount,
-        },
-    ));
-
-    response = response.add_message(message_factories::wasm_execute(
-        &config.managing_token,
-        &Cw20ExecuteMsg::Burn {
-            amount: burn_amount,
-        },
-    ));
 
     Ok(response)
 }

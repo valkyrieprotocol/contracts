@@ -10,7 +10,6 @@
     "deposit_amount",
     "deposit_lock_period",
     "executions",
-    "fund_manager",
     "governance",
     "referral_reward_token"
   ],
@@ -50,9 +49,6 @@
       "items": {
         "$ref": "#/definitions/ExecutionMsg"
       }
-    },
-    "fund_manager": {
-      "type": "string"
     },
     "governance": {
       "type": "string"

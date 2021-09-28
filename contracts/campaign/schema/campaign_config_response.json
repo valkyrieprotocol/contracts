@@ -11,7 +11,6 @@
     "deposit_lock_period",
     "description",
     "executions",
-    "fund_manager",
     "governance",
     "parameter_key",
     "title",
@@ -56,9 +55,6 @@
       "items": {
         "$ref": "#/definitions/ExecutionMsg"
       }
-    },
-    "fund_manager": {
-      "type": "string"
     },
     "governance": {
       "type": "string"

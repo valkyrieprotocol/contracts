@@ -3,12 +3,11 @@ use cosmwasm_std::{Env, MessageInfo, Response, Addr, coin, Uint128, SubMsg, Cosm
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign::*;
-use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::{default_sender, VALKYRIE_TOKEN};
 use valkyrie::test_utils::expect_unauthorized_err;
 
 use crate::executions::remove_irregular_reward_pool;
 use crate::states::{CampaignState, Balance};
-use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
 use cw20::Cw20ExecuteMsg;
 
 pub fn exec(
@@ -44,7 +43,7 @@ fn succeed() {
         coin(1000, "ukrw"),
         coin(1000, PARTICIPATION_REWARD_DENOM_NATIVE),
     ]);
-    deps.querier.plus_token_balances(&[(REFERRAL_REWARD_TOKEN, &[
+    deps.querier.plus_token_balances(&[(VALKYRIE_TOKEN, &[
         (CAMPAIGN, &Uint128::new(1000)),
     ])]);
 
@@ -61,7 +60,7 @@ fn succeed() {
         },
     );
     assert_eq!(
-        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))),
+        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))),
         Balance {
             total: Uint128::new(500),
             locked: Uint128::zero(),
@@ -92,11 +91,11 @@ fn succeed() {
 
     let (_, info, response) = will_success(
         &mut deps,
-        Denom::Token(REFERRAL_REWARD_TOKEN.to_string()),
+        Denom::Token(VALKYRIE_TOKEN.to_string()),
     );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.to_string(),

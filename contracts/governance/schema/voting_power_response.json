@@ -1,32 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ContractConfigResponse",
+  "title": "VotingPowerResponse",
   "type": "object",
   "required": [
-    "admins",
-    "campaign_add_pool_fee_burn_rate",
-    "campaign_add_pool_fee_recipient",
-    "managing_token",
-    "terraswap_router"
+    "voting_power"
   ],
   "properties": {
-    "admins": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "campaign_add_pool_fee_burn_rate": {
+    "voting_power": {
       "$ref": "#/definitions/Decimal"
-    },
-    "campaign_add_pool_fee_recipient": {
-      "type": "string"
-    },
-    "managing_token": {
-      "type": "string"
-    },
-    "terraswap_router": {
-      "type": "string"
     }
   },
   "definitions": {

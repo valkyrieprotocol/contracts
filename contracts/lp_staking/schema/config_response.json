@@ -1,25 +1,45 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ReferralRewardLimitAmount",
+  "title": "ConfigResponse",
   "type": "object",
   "required": [
-    "actor_limit_amount",
-    "address",
-    "base_limit_amount",
-    "limit_amount"
+    "distribution_schedule",
+    "lp_token",
+    "pair",
+    "token"
   ],
   "properties": {
-    "actor_limit_amount": {
-      "$ref": "#/definitions/Uint128"
+    "distribution_schedule": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          {
+            "$ref": "#/definitions/Uint128"
+          }
+        ],
+        "maxItems": 3,
+        "minItems": 3
+      }
     },
-    "address": {
+    "lp_token": {
       "type": "string"
     },
-    "base_limit_amount": {
-      "$ref": "#/definitions/Uint128"
+    "pair": {
+      "type": "string"
     },
-    "limit_amount": {
-      "$ref": "#/definitions/Uint128"
+    "token": {
+      "type": "string"
     }
   },
   "definitions": {

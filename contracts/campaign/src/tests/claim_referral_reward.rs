@@ -9,8 +9,8 @@ use valkyrie::test_utils::expect_generic_err;
 use crate::executions::claim_referral_reward;
 use crate::states::{Actor, CampaignState};
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
 use cw20::Cw20ExecuteMsg;
+use valkyrie::test_constants::VALKYRIE_TOKEN;
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResult<Response> {
     claim_referral_reward(deps.as_mut(), env, info)
@@ -40,7 +40,7 @@ fn succeed() {
     let (_, info, response) = will_success(&mut deps, referrer.as_str());
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.to_string(),
@@ -55,7 +55,7 @@ fn succeed() {
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(
-        campaign_state.locked_balance(&cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))),
+        campaign_state.locked_balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))),
         Uint128::zero(),
     );
 }

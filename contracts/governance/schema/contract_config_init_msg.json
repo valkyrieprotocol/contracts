@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "GetAddressFromReferrerResponse",
+  "title": "ContractConfigInitMsg",
   "type": "object",
   "required": [
-    "address"
+    "governance_token"
   ],
   "properties": {
-    "address": {
+    "governance_token": {
       "type": "string"
     }
   }

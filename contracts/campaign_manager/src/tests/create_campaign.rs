@@ -4,10 +4,9 @@ use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::{DEFAULT_SENDER, default_sender};
+use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD};
-use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env, REFERRAL_REWARD_TOKEN};
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
 use crate::executions::{create_campaign, REPLY_CREATE_CAMPAIGN};
@@ -85,7 +84,6 @@ fn succeed() {
                 code_id: CAMPAIGN_CODE_ID,
                 msg: to_binary(&CampaignInstantiateMsg {
                     governance: GOVERNANCE.to_string(),
-                    fund_manager: FUND_MANAGER.to_string(),
                     campaign_manager: CAMPAIGN_MANAGER.to_string(),
                     admin: DEFAULT_SENDER.to_string(),
                     creator: DEFAULT_SENDER.to_string(),
@@ -104,7 +102,7 @@ fn succeed() {
                     qualifier: None,
                     qualification_description: None,
                     executions: vec![],
-                    referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
+                    referral_reward_token: VALKYRIE_TOKEN.to_string(),
                 }).unwrap(),
                 funds: vec![],
                 label: String::new(),

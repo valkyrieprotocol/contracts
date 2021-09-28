@@ -14,7 +14,6 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
     Ok(CampaignConfigResponse {
         governance: campaign_config.governance.to_string(),
         campaign_manager: campaign_config.campaign_manager.to_string(),
-        fund_manager: campaign_config.fund_manager.to_string(),
         title: campaign_config.title,
         description: campaign_config.description,
         url: campaign_config.url,

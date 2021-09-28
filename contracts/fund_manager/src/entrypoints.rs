@@ -1,13 +1,12 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, to_binary, from_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, to_binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use valkyrie::common::ContractResult;
-use valkyrie::fund_manager::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg, Cw20HookMsg};
+use valkyrie::fund_manager::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::fund_manager::query_msgs::QueryMsg;
 
 use crate::{executions, queries};
-use cw20::Cw20ReceiveMsg;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -27,20 +26,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::UpdateConfig {
             admins,
-            terraswap_router,
-            campaign_add_pool_fee_burn_ratio,
-            campaign_add_pool_fee_recipient,
         } => executions::update_config(
             deps,
             env,
             info,
             admins,
-            terraswap_router,
-            campaign_add_pool_fee_burn_ratio,
-            campaign_add_pool_fee_recipient,
         ),
         ExecuteMsg::IncreaseAllowance {
             address,
@@ -54,30 +46,6 @@ pub fn execute(
             recipient,
             amount,
         } => executions::transfer(deps, env, info, recipient, amount),
-        ExecuteMsg::Swap {
-            denom,
-            amount,
-            route,
-        } => executions::swap(deps, env, info, denom, amount, route),
-        ExecuteMsg::DistributeCampaignAddPoolFee {
-            amount,
-        } => executions::distribute_campaign_add_pool_fee(deps, env, info, amount),
-    }
-}
-
-pub fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> ContractResult<Response> {
-    match from_binary(&cw20_msg.msg)? {
-        Cw20HookMsg::CampaignAddPoolFee {} => executions::receive_campaign_add_pool_fee(
-            deps,
-            env,
-            info,
-            cw20_msg.amount,
-        ),
     }
 }
 

@@ -670,6 +670,7 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
+ "terraswap",
  "valkyrie",
 ]
 
@@ -684,7 +685,6 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
- "terraswap",
  "valkyrie",
 ]
 

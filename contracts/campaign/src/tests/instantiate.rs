@@ -6,13 +6,13 @@ use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign::*;
-use valkyrie::test_constants::campaign_manager::{CAMPAIGN_MANAGER, campaign_manager_sender, REFERRAL_REWARD_TOKEN};
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::campaign_manager::{CAMPAIGN_MANAGER, campaign_manager_sender};
 use valkyrie::test_constants::governance::GOVERNANCE;
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::*;
 use crate::states::{CampaignConfig, CampaignState, RewardConfig};
+use valkyrie::test_constants::VALKYRIE_TOKEN;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -42,7 +42,6 @@ pub fn exec(
     let msg = CampaignInstantiateMsg {
         governance: GOVERNANCE.to_string(),
         campaign_manager: CAMPAIGN_MANAGER.to_string(),
-        fund_manager: FUND_MANAGER.to_string(),
         deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
         deposit_amount: DEPOSIT_AMOUNT,
         deposit_lock_period: DEPOSIT_LOCK_PERIOD,
@@ -51,7 +50,7 @@ pub fn exec(
         executions,
         admin: CAMPAIGN_ADMIN.to_string(),
         creator: CAMPAIGN_ADMIN.to_string(),
-        referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
+        referral_reward_token: VALKYRIE_TOKEN.to_string(),
         config_msg: to_binary(&config_msg)?,
     };
 
@@ -119,7 +118,6 @@ fn succeed() {
     assert_eq!(campaign_info, CampaignConfig {
         governance: Addr::unchecked(GOVERNANCE),
         campaign_manager: Addr::unchecked(CAMPAIGN_MANAGER),
-        fund_manager: Addr::unchecked(FUND_MANAGER),
         title: CAMPAIGN_TITLE.to_string(),
         description: CAMPAIGN_DESCRIPTION.to_string(),
         url: CAMPAIGN_URL.to_string(),
@@ -153,7 +151,7 @@ fn succeed() {
     assert_eq!(distribution_config, RewardConfig {
         participation_reward_denom: cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
-        referral_reward_token: Addr::unchecked(REFERRAL_REWARD_TOKEN),
+        referral_reward_token: Addr::unchecked(VALKYRIE_TOKEN),
         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
     });
 }

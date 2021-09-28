@@ -5,10 +5,10 @@
     {
       "type": "object",
       "required": [
-        "campaign_config"
+        "config"
       ],
       "properties": {
-        "campaign_config": {
+        "config": {
           "type": "object"
         }
       },
@@ -17,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "reward_config"
+        "referral_reward_limit_option"
       ],
       "properties": {
-        "reward_config": {
+        "referral_reward_limit_option": {
           "type": "object"
         }
       },
@@ -29,22 +29,10 @@
     {
       "type": "object",
       "required": [
-        "campaign_state"
+        "campaign"
       ],
       "properties": {
-        "campaign_state": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "share_url"
-      ],
-      "properties": {
-        "share_url": {
+        "campaign": {
           "type": "object",
           "required": [
             "address"
@@ -61,70 +49,10 @@
     {
       "type": "object",
       "required": [
-        "get_address_from_referrer"
+        "campaigns"
       ],
       "properties": {
-        "get_address_from_referrer": {
-          "type": "object",
-          "required": [
-            "referrer"
-          ],
-          "properties": {
-            "referrer": {
-              "$ref": "#/definitions/Referrer"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "referral_reward_limit_amount"
-      ],
-      "properties": {
-        "referral_reward_limit_amount": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "actor"
-      ],
-      "properties": {
-        "actor": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "actors"
-      ],
-      "properties": {
-        "actors": {
+        "campaigns": {
           "type": "object",
           "properties": {
             "limit": {
@@ -155,26 +83,6 @@
         }
       },
       "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "deposit"
-      ],
-      "properties": {
-        "deposit": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -183,34 +91,6 @@
       "enum": [
         "asc",
         "desc"
-      ]
-    },
-    "Referrer": {
-      "anyOf": [
-        {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "compressed"
-          ],
-          "properties": {
-            "compressed": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
       ]
     }
   }

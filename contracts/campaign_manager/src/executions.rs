@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, to_binary, Uint128};
+use cosmwasm_std::{Binary, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, to_binary, Uint128, coin};
 
 use valkyrie::campaign_manager::execute_msgs::{CampaignInstantiateMsg, InstantiateMsg};
 use valkyrie::common::{ContractResult, ExecutionMsg, Denom};
@@ -7,6 +7,10 @@ use valkyrie::message_factories;
 use valkyrie::utils::{find, make_response};
 
 use crate::states::*;
+use valkyrie::cw20::{query_cw20_balance, query_balance};
+use cw20::Cw20ExecuteMsg;
+use terraswap::asset::AssetInfo;
+use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
 
 pub fn instantiate(
     deps: DepsMut,
@@ -19,16 +23,16 @@ pub fn instantiate(
 
     Config {
         governance: deps.api.addr_validate(msg.governance.as_str())?,
-        fund_manager: deps.api.addr_validate(msg.fund_manager.as_str())?,
+        valkyrie_token: deps.api.addr_validate(msg.valkyrie_token.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
         code_id: msg.code_id,
         add_pool_fee_rate: msg.add_pool_fee_rate,
+        add_pool_min_referral_reward_rate: msg.add_pool_min_referral_reward_rate,
         remove_pool_fee_rate: msg.remove_pool_fee_rate,
-        remove_pool_fee_recipient: deps.api.addr_validate(msg.remove_pool_fee_recipient.as_str())?,
+        fee_burn_ratio: msg.fee_burn_ratio,
+        fee_recipient: deps.api.addr_validate(msg.fee_recipient.as_str())?,
         deactivate_period: msg.deactivate_period,
         key_denom: msg.key_denom.to_cw20(deps.api),
-        referral_reward_token: deps.api.addr_validate(msg.referral_reward_token.as_str())?,
-        add_pool_min_referral_reward_rate: msg.add_pool_min_referral_reward_rate,
     }.save(deps.storage)?;
 
     ReferralRewardLimitOption {
@@ -46,16 +50,16 @@ pub fn update_config(
     _env: Env,
     info: MessageInfo,
     governance: Option<String>,
-    fund_manager: Option<String>,
+    valkyrie_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
+    add_pool_min_referral_reward_rate: Option<Decimal>,
     remove_pool_fee_rate: Option<Decimal>,
-    remove_pool_fee_recipient: Option<String>,
+    fee_burn_ratio: Option<Decimal>,
+    fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
-    referral_reward_token: Option<String>,
-    add_pool_min_referral_reward_rate: Option<Decimal>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = Config::load(deps.storage)?;
@@ -72,9 +76,9 @@ pub fn update_config(
         response = response.add_attribute("is_updated_governance", "true");
     }
 
-    if let Some(fund_manager) = fund_manager.as_ref() {
-        config.fund_manager = deps.api.addr_validate(fund_manager)?;
-        response = response.add_attribute("is_updated_fund_manager", "true");
+    if let Some(valkyrie_token) = valkyrie_token.as_ref() {
+        config.valkyrie_token = deps.api.addr_validate(valkyrie_token)?;
+        response = response.add_attribute("is_updated_valkyrie_token", "true");
     }
 
     if let Some(terraswap_router) = terraswap_router.as_ref() {
@@ -92,14 +96,24 @@ pub fn update_config(
         response = response.add_attribute("is_updated_add_pool_fee_rate", "true");
     }
 
+    if let Some(add_pool_min_referral_reward_rate) = add_pool_min_referral_reward_rate.as_ref() {
+        config.add_pool_min_referral_reward_rate = *add_pool_min_referral_reward_rate;
+        response = response.add_attribute("is_updated_add_pool_min_referral_reward_rate", "true");
+    }
+
     if let Some(remove_pool_fee_rate) = remove_pool_fee_rate.as_ref() {
         config.remove_pool_fee_rate = *remove_pool_fee_rate;
         response = response.add_attribute("is_updated_remove_pool_fee_rate", "true");
     }
 
-    if let Some(remove_pool_fee_recipient) = remove_pool_fee_recipient.as_ref() {
-        config.remove_pool_fee_recipient = deps.api.addr_validate(remove_pool_fee_recipient)?;
-        response = response.add_attribute("is_updated_remove_pool_fee_recipient", "true");
+    if let Some(fee_burn_ratio) = fee_burn_ratio.as_ref() {
+        config.fee_burn_ratio = *fee_burn_ratio;
+        response = response.add_attribute("is_updated_fee_burn_ratio", "true");
+    }
+
+    if let Some(fee_recipient) = fee_recipient.as_ref() {
+        config.fee_recipient = deps.api.addr_validate(fee_recipient)?;
+        response = response.add_attribute("is_updated_fee_recipient", "true");
     }
 
     if let Some(deactivate_period) = deactivate_period.as_ref() {
@@ -110,16 +124,6 @@ pub fn update_config(
     if let Some(key_denom) = key_denom.as_ref() {
         config.key_denom = key_denom.to_cw20(deps.api);
         response = response.add_attribute("is_updated_key_denom", "true");
-    }
-
-    if let Some(referral_reward_token) = referral_reward_token.as_ref() {
-        config.referral_reward_token = deps.api.addr_validate(referral_reward_token)?;
-        response = response.add_attribute("is_updated_referral_reward_token", "true");
-    }
-
-    if let Some(add_pool_min_referral_reward_rate) = add_pool_min_referral_reward_rate.as_ref() {
-        config.add_pool_min_referral_reward_rate = *add_pool_min_referral_reward_rate;
-        response = response.add_attribute("is_updated_add_pool_min_referral_reward_rate", "true");
     }
 
     config.save(deps.storage)?;
@@ -220,7 +224,6 @@ pub fn create_campaign(
         Some(config.governance.clone()),
         to_binary(&CampaignInstantiateMsg {
             governance: config.governance.to_string(),
-            fund_manager: config.fund_manager.to_string(),
             campaign_manager: env.contract.address.to_string(),
             admin: info.sender.to_string(),
             creator: info.sender.to_string(),
@@ -231,7 +234,7 @@ pub fn create_campaign(
             qualifier,
             qualification_description,
             executions,
-            referral_reward_token: config.referral_reward_token.to_string(),
+            referral_reward_token: config.valkyrie_token.to_string(),
         })?,
     );
 
@@ -287,4 +290,154 @@ pub fn created_campaign(
     response = response.add_attribute("campaign_address", contract_address.to_string());
 
     Ok(response)
+}
+
+pub fn spend_fee(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    amount: Option<Uint128>,
+) -> ContractResult<Response> {
+    let mut response = make_response("spend_fee");
+
+    let config = Config::load(deps.storage)?;
+
+    let amount = if let Some(amount) = amount {
+        amount
+    } else {
+        query_cw20_balance(
+            &deps.querier,
+            &config.valkyrie_token,
+            &env.contract.address,
+        )?
+    };
+
+    let burn_amount = amount * config.fee_burn_ratio;
+    let distribute_amount = amount.checked_sub(burn_amount)?;
+
+    response = response.add_message(message_factories::wasm_execute(
+        &config.valkyrie_token,
+        &Cw20ExecuteMsg::Transfer {
+            recipient: config.fee_recipient.to_string(),
+            amount: distribute_amount,
+        },
+    ));
+
+    response = response.add_message(message_factories::wasm_execute(
+        &config.valkyrie_token,
+        &Cw20ExecuteMsg::Burn {
+            amount: burn_amount,
+        },
+    ));
+
+    Ok(response)
+}
+
+pub fn swap_fee(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    denom: Denom,
+    amount: Option<Uint128>,
+    route: Option<Vec<Denom>>,
+) -> ContractResult<Response> {
+    // Validate
+    let config = Config::load(deps.storage)?;
+    let token_denom = Denom::Token(config.valkyrie_token.to_string());
+    let route = route.unwrap_or_else(|| vec![denom.clone(), token_denom.clone()]);
+
+    if route.len() < 2 || *route.first().unwrap() != denom || *route.last().unwrap() != token_denom {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!(
+                "route must start with '{}' and end with '{}'",
+                denom.to_string(), token_denom.to_string(),
+            )
+        )));
+    }
+
+    // Execute
+    let mut response = make_response("swap_fee");
+
+    let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
+        pair_to_terraswap_operation(pair)
+    }).collect();
+
+    let terraswap_msg = TerraswapExecuteMsg::ExecuteSwapOperations {
+        operations,
+        minimum_receive: None,
+        to: None,
+    };
+
+    let balance = query_balance(
+        &deps.querier,
+        denom.to_cw20(deps.api),
+        env.contract.address.clone(),
+    )?;
+    let amount = if let Some(amount) = amount {
+        if amount > balance {
+            return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
+        } else {
+            amount
+        }
+    } else {
+        balance
+    };
+
+    if amount.is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    let swap_msg = match denom {
+        Denom::Native(denom) => {
+            message_factories::wasm_execute_with_funds(
+                &config.terraswap_router,
+                vec![coin(amount.u128(), denom)],
+                &terraswap_msg,
+            )
+        }
+        Denom::Token(address) => {
+            message_factories::wasm_execute(
+                &deps.api.addr_validate(&address)?,
+                &Cw20ExecuteMsg::Send {
+                    contract: config.terraswap_router.to_string(),
+                    msg: to_binary(&terraswap_msg)?,
+                    amount,
+                },
+            )
+        }
+    };
+
+    response = response.add_message(swap_msg);
+
+    Ok(response)
+}
+
+fn pair_to_terraswap_operation(pair: &[Denom]) -> SwapOperation {
+    let left = pair[0].clone();
+    let right = pair[1].clone();
+
+    if let Denom::Native(left_denom) = left.clone() {
+        if let Denom::Native(right_denom) = right.clone() {
+            return SwapOperation::NativeSwap {
+                offer_denom: left_denom,
+                ask_denom: right_denom,
+            };
+        }
+    }
+
+    SwapOperation::TerraSwap {
+        offer_asset_info: denom_to_asset_info(left),
+        ask_asset_info: denom_to_asset_info(right),
+    }
+}
+
+fn denom_to_asset_info(denom: Denom) -> AssetInfo {
+    match denom {
+        Denom::Native(denom) => AssetInfo::NativeToken {
+            denom,
+        },
+        Denom::Token(address) => AssetInfo::Token {
+            contract_addr: address,
+        },
+    }
 }

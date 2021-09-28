@@ -9,8 +9,7 @@ use valkyrie::test_utils::expect_generic_err;
 use crate::executions::participate;
 use crate::states::{CampaignState, Actor};
 use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT};
-use valkyrie::test_constants::{default_sender, DEFAULT_SENDER};
-use valkyrie::test_constants::campaign_manager::REFERRAL_REWARD_TOKEN;
+use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TOKEN};
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
 use valkyrie::governance::query_msgs::StakerStateResponse;
@@ -117,7 +116,7 @@ fn succeed_with_referrer() {
     assert_eq!(campaign_state.last_active_height, Some(env.block.height));
     assert_eq!(campaign_state.locked_balances, vec![
         (cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()), PARTICIPATION_REWARD_AMOUNT.checked_mul(Uint128::new(2)).unwrap()),
-        (cw20::Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN)), REFERRAL_REWARD_AMOUNTS[0]),
+        (cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN)), REFERRAL_REWARD_AMOUNTS[0]),
     ]);
 
     let participation = Actor::load(&deps.storage, &participator).unwrap();
@@ -250,7 +249,7 @@ fn overflow_referral_reward() {
     assert_eq!(referrer.referral_reward_amount, Uint128::new(10)); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();
-    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(85));
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(85));
 
 
 
@@ -269,7 +268,7 @@ fn overflow_referral_reward() {
     assert_eq!(referrer.referral_reward_amount, Uint128::new(14)); //reach limit. overflow amount = 1
 
     let state = CampaignState::load(&deps.storage).unwrap();
-    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(81));
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(81));
 
 
     deps.querier.with_gov_staker_state(
@@ -291,7 +290,7 @@ fn overflow_referral_reward() {
 
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: REFERRAL_REWARD_TOKEN.to_string(),
+            contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "Recipient".to_string(),
@@ -304,5 +303,5 @@ fn overflow_referral_reward() {
     assert_eq!(referrer.referral_reward_amount, Uint128::new(16)); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();
-    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(REFERRAL_REWARD_TOKEN))).available(), Uint128::new(76));
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(76));
 }

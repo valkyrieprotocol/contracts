@@ -19,7 +19,6 @@ const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign_config");
 pub struct CampaignConfig {
     pub governance: Addr,
     pub campaign_manager: Addr,
-    pub fund_manager: Addr,
     pub title: String,
     pub description: String,
     pub url: String,

@@ -66,8 +66,6 @@ pub mod fund_manager {
     pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
-    pub const CAMPAIGN_ADD_POOL_FEE_BURN_RATIO_PERCENT: u64 = 50;
-    pub const CAMPAIGN_ADD_POOL_FEE_RECIPIENT: &str = GOVERNANCE;
 
     pub fn fund_manager_env() -> Env {
         mock_env_contract(FUND_MANAGER)
@@ -82,18 +80,19 @@ pub mod campaign_manager {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
-    use crate::test_constants::VALKYRIE_TOKEN;
     use crate::test_utils::mock_env_contract;
+    use crate::test_constants::governance::GOVERNANCE;
 
     pub const CAMPAIGN_MANAGER: &str = "CampaignManager";
 
     pub const CAMPAIGN_CODE_ID: u64 = 1;
     pub const ADD_POOL_FEE_RATE_PERCENT: u64 = 0;
+    pub const ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT: u64 = 20;
     pub const REMOVE_POOL_FEE_RATE_PERCENT: u64 = 10;
+    pub const FEE_BURN_RATIO_PERCENT: u64 = 50;
+    pub const FEE_RECIPIENT: &str = GOVERNANCE;
     pub const CAMPAIGN_DEACTIVATE_PERIOD: u64 = 403290;
     pub const KEY_DENOM_NATIVE: &str = "uusd";
-    pub const REFERRAL_REWARD_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT: u64 = 20;
     pub const REFERRAL_REWARD_LIMIT_BASE_COUNT: u8 = 5;
     pub const REFERRAL_REWARD_LIMIT_STAKING_PERCENT: u16 = 50;
 

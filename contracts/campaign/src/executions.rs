@@ -10,7 +10,6 @@ use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
-use valkyrie::fund_manager::execute_msgs::Cw20HookMsg;
 use valkyrie::message_factories;
 use valkyrie::utils::{calc_ratio_amount, make_response};
 use valkyrie_qualifier::{QualificationMsg, QualificationResult};
@@ -58,7 +57,6 @@ pub fn instantiate(
     CampaignConfig {
         governance: deps.api.addr_validate(&msg.governance)?,
         campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
-        fund_manager: deps.api.addr_validate(&msg.fund_manager)?,
         title: campaign_config.title,
         description: campaign_config.description,
         url: campaign_config.url,
@@ -327,7 +325,7 @@ pub fn add_reward_pool(
     )?;
 
     // Execute
-    let mut response = make_response("deposit");
+    let mut response = make_response("add_reward_pool");
     response = response.add_attribute("participation_reward_amount", participation_reward_amount.to_string());
     response = response.add_attribute("key_denom", Denom::from_cw20(key_denom).to_string());
     response = response.add_attribute("referral_reward_pool_ratio", referral_reward_pool_ratio.to_string());
@@ -382,10 +380,9 @@ pub fn add_reward_pool(
     if !add_pool_fee_amount.is_zero() {
         response = response.add_message(message_factories::wasm_execute(
             &reward_config.referral_reward_token,
-            &Cw20ExecuteMsg::Send {
-                contract: global_campaign_config.fund_manager.to_string(),
+            &Cw20ExecuteMsg::Transfer {
+                recipient: campaign_config.campaign_manager.to_string(),
                 amount: add_pool_fee_amount,
-                msg: to_binary(&Cw20HookMsg::CampaignAddPoolFee {})?,
             },
         ));
     }
@@ -575,7 +572,7 @@ pub fn remove_reward_pool(
             &deps.querier,
             denom_cw20.clone(),
             remove_pool_fee_amount,
-            &Addr::unchecked(global_campaign_config.remove_pool_fee_recipient),
+            &campaign_config.campaign_manager,
         )?);
     }
 
