@@ -17,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "balance"
+        "state"
       ],
       "properties": {
-        "balance": {
+        "state": {
           "type": "object"
         }
       },
@@ -29,69 +29,22 @@
     {
       "type": "object",
       "required": [
-        "allowance"
+        "staker_info"
       ],
       "properties": {
-        "allowance": {
+        "staker_info": {
           "type": "object",
           "required": [
-            "address"
+            "staker_addr"
           ],
           "properties": {
-            "address": {
+            "staker_addr": {
               "type": "string"
             }
           }
         }
       },
       "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "allowances"
-      ],
-      "properties": {
-        "allowances": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "order_by": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/OrderBy"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      },
-      "additionalProperties": false
     }
-  ],
-  "definitions": {
-    "OrderBy": {
-      "type": "string",
-      "enum": [
-        "asc",
-        "desc"
-      ]
-    }
-  }
+  ]
 }

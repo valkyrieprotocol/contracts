@@ -1,25 +1,21 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BalanceResponse",
+  "title": "StakerInfoResponse",
   "type": "object",
   "required": [
-    "allowance_amount",
-    "campaign_add_pool_fee_amount",
-    "free_balance",
-    "total_balance"
+    "bond_amount",
+    "pending_reward",
+    "staker_addr"
   ],
   "properties": {
-    "allowance_amount": {
+    "bond_amount": {
       "$ref": "#/definitions/Uint128"
     },
-    "campaign_add_pool_fee_amount": {
+    "pending_reward": {
       "$ref": "#/definitions/Uint128"
     },
-    "free_balance": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "total_balance": {
-      "$ref": "#/definitions/Uint128"
+    "staker_addr": {
+      "type": "string"
     }
   },
   "definitions": {
