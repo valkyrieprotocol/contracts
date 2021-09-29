@@ -45,6 +45,7 @@ pub struct ContractConfigResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct StakingStateResponse {
     pub total_share: Uint128,
+    pub total_balance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
