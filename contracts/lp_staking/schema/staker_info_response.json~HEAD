@@ -1,23 +1,25 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "StateResponse",
+  "title": "StakerInfoResponse",
   "type": "object",
   "required": [
-    "global_reward_index",
-    "last_distributed",
-    "total_bond_amount"
+    "bond_amount",
+    "pending_reward",
+    "reward_index",
+    "staker"
   ],
   "properties": {
-    "global_reward_index": {
+    "bond_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "pending_reward": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "reward_index": {
       "$ref": "#/definitions/Decimal"
     },
-    "last_distributed": {
-      "type": "integer",
-      "format": "uint64",
-      "minimum": 0.0
-    },
-    "total_bond_amount": {
-      "$ref": "#/definitions/Uint128"
+    "staker": {
+      "type": "string"
     }
   },
   "definitions": {

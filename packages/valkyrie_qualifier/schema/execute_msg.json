@@ -35,7 +35,6 @@
       "additionalProperties": false
     },
     {
-      "description": "Withdraw pending rewards",
       "type": "object",
       "required": [
         "withdraw"
@@ -56,9 +55,12 @@
         "auto_stake": {
           "type": "object",
           "required": [
-            "token_amount"
+            "amount"
           ],
           "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
             "slippage_tolerance": {
               "anyOf": [
                 {
@@ -68,9 +70,6 @@
                   "type": "null"
                 }
               ]
-            },
-            "token_amount": {
-              "$ref": "#/definitions/Uint128"
             }
           }
         }
@@ -86,11 +85,11 @@
         "auto_stake_hook": {
           "type": "object",
           "required": [
-            "already_staked_amount",
+            "prev_staking_token_amount",
             "staker_addr"
           ],
           "properties": {
-            "already_staked_amount": {
+            "prev_staking_token_amount": {
               "$ref": "#/definitions/Uint128"
             },
             "staker_addr": {
