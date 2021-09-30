@@ -76,6 +76,28 @@ pub mod community {
     }
 }
 
+pub mod distributor {
+    use cosmwasm_std::{Env, MessageInfo};
+    use cosmwasm_std::testing::mock_info;
+
+    use crate::test_constants::governance::GOVERNANCE;
+    use crate::test_constants::VALKYRIE_TOKEN;
+    use crate::test_utils::mock_env_contract;
+
+    pub const DISTRIBUTOR: &str = "Distributor";
+
+    pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
+    pub const ADMINS: [&str; 1] = [GOVERNANCE];
+
+    pub fn distributor_env() -> Env {
+        mock_env_contract(DISTRIBUTOR)
+    }
+
+    pub fn distributor_sender() -> MessageInfo {
+        mock_info(DISTRIBUTOR, &[])
+    }
+}
+
 pub mod campaign_manager {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;

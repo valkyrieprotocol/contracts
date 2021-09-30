@@ -689,6 +689,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "valkyrie-distributor"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw20",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "valkyrie",
+]
+
+[[package]]
 name = "valkyrie-governance"
 version = "0.1.0"
 dependencies = [

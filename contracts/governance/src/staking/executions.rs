@@ -10,24 +10,17 @@ use crate::common::states::{ContractConfig, load_available_balance};
 use super::states::{StakerState, StakingState};
 use valkyrie::utils::make_response;
 use valkyrie::message_factories;
-use crate::staking::states::DistributionConfig;
-use valkyrie::governance::execute_msgs::DistributionConfigMsg;
 
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: DistributionConfigMsg,
 ) -> ContractResult<Response> {
     // Execute
     let response = make_response("instantiate");
 
     StakingState {
         total_share: Uint128::zero(),
-    }.save(deps.storage)?;
-
-    DistributionConfig {
-        plan: msg.plan,
     }.save(deps.storage)?;
 
     Ok(response)

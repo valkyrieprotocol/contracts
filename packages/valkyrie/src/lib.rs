@@ -5,6 +5,7 @@ pub mod campaign;
 pub mod community;
 pub mod campaign_manager;
 pub mod lp_staking;
+pub mod distributor;
 
 pub mod cw20;
 pub mod terra;

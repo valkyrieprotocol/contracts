@@ -1,21 +1,23 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BalanceResponse",
+  "title": "ReferralReward",
   "type": "object",
   "required": [
-    "allowance_amount",
-    "free_balance",
-    "total_balance"
+    "address",
+    "amount",
+    "distance"
   ],
   "properties": {
-    "allowance_amount": {
+    "address": {
+      "type": "string"
+    },
+    "amount": {
       "$ref": "#/definitions/Uint128"
     },
-    "free_balance": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "total_balance": {
-      "$ref": "#/definitions/Uint128"
+    "distance": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     }
   },
   "definitions": {
