@@ -1089,6 +1089,8 @@ pub fn deposit(
         if *send_denom != deposit_denom {
             return Err(ContractError::Std(StdError::generic_err("Missing deposit denom")));
         }
+    } else {
+        return Err(ContractError::Std(StdError::generic_err("Missing deposit denom")));
     }
 
     let mut campaign_state = CampaignState::load(deps.storage)?;
