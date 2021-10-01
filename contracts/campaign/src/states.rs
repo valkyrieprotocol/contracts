@@ -48,7 +48,7 @@ impl CampaignConfig {
     }
 
     pub fn require_deposit(&self) -> bool {
-        self.deposit_denom.is_some() && !self.deposit_amount.is_zero()
+        self.deposit_denom.is_some()
     }
 }
 
