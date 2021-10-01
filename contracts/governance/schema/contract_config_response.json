@@ -3,17 +3,10 @@
   "title": "ContractConfigResponse",
   "type": "object",
   "required": [
-    "admins",
-    "managing_token"
+    "governance_token"
   ],
   "properties": {
-    "admins": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "managing_token": {
+    "governance_token": {
       "type": "string"
     }
   }

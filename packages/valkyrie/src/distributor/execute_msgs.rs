@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Binary};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -20,12 +20,17 @@ pub enum ExecuteMsg {
         end_height: u64,
         recipient: String,
         amount: Uint128,
+        message: Option<Binary>,
     },
     UpdateDistribution {
         id: u64,
         start_height: Option<u64>,
         end_height: Option<u64>,
         amount: Option<Uint128>,
+        message: Option<Binary>,
+    },
+    RemoveDistributionMessage {
+        id: u64,
     },
     Distribute {
         id: Option<u64>,

@@ -7,6 +7,7 @@ use crate::states::{Distribution, ContractState};
 use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
 use valkyrie::test_constants::governance::governance_sender;
 use cw20::Cw20ExecuteMsg;
+use valkyrie::lp_staking::execute_msgs::Cw20HookMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -57,6 +58,7 @@ fn succeed() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
     super::register_distribution::will_success(
         &mut deps,
@@ -64,6 +66,7 @@ fn succeed() {
         30000,
         "Recipient2".to_string(),
         Uint128::new(5000),
+        Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
     );
 
     let (_, _, response) = will_success(&mut deps, 20001, None);
@@ -91,9 +94,10 @@ fn succeed() {
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: MANAGING_TOKEN.to_string(),
             funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "Recipient2".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                contract: "Recipient2".to_string(),
                 amount: Uint128::new(1),
+                msg: to_binary(&Cw20HookMsg::DepositReward {}).unwrap(),
             }).unwrap(),
         })),
     ]);
@@ -125,6 +129,7 @@ fn validate_released_amount() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
     super::register_distribution::will_success(
         &mut deps,
@@ -132,6 +137,7 @@ fn validate_released_amount() {
         30000,
         "Recipient2".to_string(),
         Uint128::new(5000),
+        None,
     );
 
     let distribution = Distribution::may_load(&deps.storage, 1).unwrap().unwrap();

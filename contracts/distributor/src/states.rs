@@ -1,5 +1,5 @@
 use cw_storage_plus::{Item, Map};
-use cosmwasm_std::{Addr, Storage, StdResult, Uint128, Order, StdError};
+use cosmwasm_std::{Addr, Storage, StdResult, Uint128, Order, StdError, Binary};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -71,6 +71,7 @@ pub struct Distribution {
     pub recipient: Addr,
     pub amount: Uint128,
     pub distributed_amount: Uint128,
+    pub message: Option<Binary>,
 }
 
 impl Distribution {

@@ -56,6 +56,7 @@ fn succeed() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
 
     let (_, _, response) = will_success(
@@ -108,6 +109,7 @@ fn failed_insufficient_free_balance() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
 
     let result = exec(

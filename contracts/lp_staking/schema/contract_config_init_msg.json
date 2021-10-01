@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContractConfigInitMsg",
+  "type": "object",
+  "required": [
+    "governance_token"
+  ],
+  "properties": {
+    "governance_token": {
+      "type": "string"
+    }
+  }
+}

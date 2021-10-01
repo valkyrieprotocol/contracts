@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128, Addr, StdResult, attr, SubMsg};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128, Addr, StdResult, attr, SubMsg, Binary};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::ContractResult;
@@ -67,6 +67,7 @@ pub fn register_distribution(
     end_height: u64,
     recipient: String,
     amount: Uint128,
+    message: Option<Binary>,
 ) -> ContractResult<Response> {
     // Validate
     let config = ContractConfig::load(deps.storage)?;
@@ -87,6 +88,7 @@ pub fn register_distribution(
         recipient: deps.api.addr_validate(recipient.as_str())?,
         amount,
         distributed_amount: Uint128::zero(),
+        message,
     };
     response.attributes.push(attr("distribution_id", distribution.id.to_string()));
 
@@ -112,6 +114,7 @@ pub fn update_distribution(
     start_height: Option<u64>,
     end_height: Option<u64>,
     amount: Option<Uint128>,
+    message: Option<Binary>,
 ) -> ContractResult<Response> {
     // Validate
     let config = ContractConfig::load(deps.storage)?;
@@ -159,6 +162,37 @@ pub fn update_distribution(
         response = response.add_attribute("is_updated_amount", "true");
     }
 
+    if let Some(message) = message {
+        distribution.message = Some(message);
+        response = response.add_attribute("is_updated_message", "true");
+    }
+
+    distribution.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn remove_distribution_message(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    id: u64,
+) -> ContractResult<Response> {
+    // Validate
+    let config = ContractConfig::load(deps.storage)?;
+    if !config.is_admin(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("update_distribution");
+
+    let mut distribution = Distribution::may_load(deps.storage, id)?
+        .ok_or(StdError::not_found("Distribution"))?;
+
+    distribution.message = None;
+    response = response.add_attribute("is_updated_message", "true");
+
     distribution.save(deps.storage)?;
 
     Ok(response)
@@ -194,11 +228,24 @@ pub fn distribute(
                 continue;
             }
 
-            response.messages.push(SubMsg::new(message_factories::cw20_transfer(
-                &config.managing_token,
-                &distribution.recipient,
-                amount,
-            )));
+            let send_msg = if let Some(message) = distribution.message.as_ref() {
+                message_factories::wasm_execute(
+                    &config.managing_token,
+                    &Cw20ExecuteMsg::Send {
+                        contract: distribution.recipient.to_string(),
+                        amount,
+                        msg: message.clone(),
+                    }
+                )
+            } else {
+                message_factories::cw20_transfer(
+                    &config.managing_token,
+                    &distribution.recipient,
+                    amount,
+                )
+            };
+
+            response.messages.push(SubMsg::new(send_msg));
 
             state.unlock(amount)?;
             state.distributed_amount += amount;

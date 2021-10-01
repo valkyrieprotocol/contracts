@@ -1,5 +1,5 @@
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
-use cosmwasm_std::{Env, MessageInfo, Response, Addr, Uint128};
+use cosmwasm_std::{Env, MessageInfo, Response, Addr, Uint128, Binary, to_binary};
 use valkyrie::common::ContractResult;
 use crate::executions::update_distribution;
 use valkyrie::test_utils::{expect_unauthorized_err, expect_overflow_err, set_height, expect_generic_err};
@@ -7,6 +7,7 @@ use crate::states::{Distribution, ContractState};
 use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
 use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_constants::default_sender;
+use valkyrie::lp_staking::execute_msgs::Cw20HookMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -16,6 +17,7 @@ pub fn exec(
     start_height: Option<u64>,
     end_height: Option<u64>,
     amount: Option<Uint128>,
+    message: Option<Binary>,
 ) -> ContractResult<Response> {
     update_distribution(
         deps.as_mut(),
@@ -25,6 +27,7 @@ pub fn exec(
         start_height,
         end_height,
         amount,
+        message,
     )
 }
 
@@ -34,6 +37,7 @@ pub fn will_success(
     start_height: Option<u64>,
     end_height: Option<u64>,
     amount: Option<Uint128>,
+    message: Option<Binary>,
 ) -> (Env, MessageInfo, Response) {
     let env = distributor_env();
     let info = governance_sender();
@@ -46,6 +50,7 @@ pub fn will_success(
         start_height,
         end_height,
         amount,
+        message,
     ).unwrap();
 
     (env, info, response)
@@ -66,6 +71,7 @@ fn succeed() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
     );
 
     will_success(
@@ -74,6 +80,7 @@ fn succeed() {
         Some(20001),
         Some(31000),
         Some(Uint128::new(20000)),
+        Some(to_binary(&Cw20HookMsg::Bond {}).unwrap())
     );
 
     let state = ContractState::load(&deps.storage).unwrap();
@@ -88,6 +95,7 @@ fn succeed() {
         recipient: Addr::unchecked("Recipient"),
         amount: Uint128::new(20000),
         distributed_amount: Uint128::zero(),
+        message: Some(to_binary(&Cw20HookMsg::Bond {}).unwrap())
     });
 }
 
@@ -106,6 +114,7 @@ fn failed_invalid_permission() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
 
     let result = exec(
@@ -113,6 +122,7 @@ fn failed_invalid_permission() {
         distributor_env(),
         default_sender(),
         1,
+        None,
         None,
         None,
         None,
@@ -135,6 +145,7 @@ fn failed_overflow() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
 
     let result = exec(
@@ -145,6 +156,7 @@ fn failed_overflow() {
         None,
         None,
         Some(Uint128::new(15001)),
+        None,
     );
     expect_overflow_err(&result)
 }
@@ -164,6 +176,7 @@ fn failed_less_than_released_amount() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
+        None,
     );
 
     let mut env = distributor_env();
@@ -177,6 +190,7 @@ fn failed_less_than_released_amount() {
         None,
         None,
         Some(Uint128::new(4999)),
+        None,
     );
     expect_generic_err(&result, "amount must be less than released_amount");
 }
