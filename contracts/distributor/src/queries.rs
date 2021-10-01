@@ -1,10 +1,9 @@
 use cosmwasm_std::{Deps, Env, Uint128};
 
 use valkyrie::common::ContractResult;
-use valkyrie::community::query_msgs::ContractConfigResponse;
 
 use crate::states::{ContractConfig, ContractState, Distribution};
-use valkyrie::distributor::query_msgs::{StateResponse, DistributionsResponse, DistributionResponse};
+use valkyrie::distributor::query_msgs::{StateResponse, DistributionsResponse, DistributionResponse, ContractConfigResponse};
 use valkyrie::cw20::query_cw20_balance;
 
 pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigResponse> {

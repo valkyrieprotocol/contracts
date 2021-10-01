@@ -12,7 +12,7 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfigResponse {
-    pub governance: String,
+    pub admins: Vec<String>,
     pub managing_token: String,
 }
 
