@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::campaign::enumerations::Referrer;
-use crate::common::{Denom, ExecutionMsg, OrderBy};
+use crate::common::{Denom, OrderBy};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -46,7 +46,6 @@ pub struct CampaignConfigResponse {
     pub deposit_lock_period: u64,
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
-    pub executions: Vec<ExecutionMsg>,
     pub admin: String,
     pub creator: String,
     pub created_at: Timestamp,

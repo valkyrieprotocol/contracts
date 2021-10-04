@@ -2,7 +2,7 @@ use cosmwasm_std::{Deps, Env};
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::campaign::query_msgs::*;
-use valkyrie::common::{ContractResult, Denom, ExecutionMsg, OrderBy};
+use valkyrie::common::{ContractResult, Denom, OrderBy};
 use valkyrie::utils::{compress_addr, put_query_parameter};
 
 use crate::states::*;
@@ -23,9 +23,6 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
         deposit_lock_period: campaign_config.deposit_lock_period,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
         qualification_description: campaign_config.qualification_description,
-        executions: campaign_config.executions.iter()
-            .map(|v| ExecutionMsg::from(v))
-            .collect(),
         admin: campaign_config.admin.to_string(),
         creator: campaign_config.creator.to_string(),
         created_at: campaign_config.created_at,

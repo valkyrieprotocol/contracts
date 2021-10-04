@@ -2,7 +2,7 @@ use crate::campaign::enumerations::Referrer;
 use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::common::{Denom, ExecutionMsg};
+use crate::common::Denom;
 use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -29,7 +29,6 @@ pub enum ExecuteMsg {
         deposit_lock_period: Option<u64>,
         qualifier: Option<String>,
         qualification_description: Option<String>,
-        executions: Option<Vec<ExecutionMsg>>,
         admin: Option<String>,
     },
     UpdateRewardConfig {

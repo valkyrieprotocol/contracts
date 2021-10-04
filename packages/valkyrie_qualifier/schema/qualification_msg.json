@@ -1,20 +1,26 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "QualificationMsg",
   "type": "object",
   "required": [
-    "lp_token",
-    "pair",
-    "token"
+    "actor",
+    "campaign",
+    "sender"
   ],
   "properties": {
-    "lp_token": {
+    "actor": {
       "type": "string"
     },
-    "pair": {
+    "campaign": {
       "type": "string"
     },
-    "token": {
+    "referrer": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sender": {
       "type": "string"
     }
   }

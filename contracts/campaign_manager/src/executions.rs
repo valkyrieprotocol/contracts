@@ -1,7 +1,7 @@
 use cosmwasm_std::{Binary, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, SubMsg, to_binary, Uint128, coin};
 
 use valkyrie::campaign_manager::execute_msgs::{CampaignInstantiateMsg, InstantiateMsg};
-use valkyrie::common::{ContractResult, ExecutionMsg, Denom};
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::{find, make_response};
@@ -206,7 +206,6 @@ pub fn create_campaign(
     deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
-    executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     // Validate
     let config = Config::load(deps.storage)?;
@@ -233,7 +232,6 @@ pub fn create_campaign(
             deposit_lock_period: deposit_lock_period.unwrap_or_default(),
             qualifier,
             qualification_description,
-            executions,
             referral_reward_token: config.valkyrie_token.to_string(),
         })?,
     );

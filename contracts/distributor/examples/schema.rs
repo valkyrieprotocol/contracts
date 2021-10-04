@@ -3,8 +3,8 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use valkyrie::community::execute_msgs::*;
-use valkyrie::community::query_msgs::*;
+use valkyrie::distributor::execute_msgs::*;
+use valkyrie::distributor::query_msgs::*;
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -18,7 +18,7 @@ fn main() {
 
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(ContractConfigResponse), &out_dir);
-    export_schema(&schema_for!(BalanceResponse), &out_dir);
-    export_schema(&schema_for!(AllowanceResponse), &out_dir);
-    export_schema(&schema_for!(AllowancesResponse), &out_dir);
+    export_schema(&schema_for!(StateResponse), &out_dir);
+    export_schema(&schema_for!(DistributionsResponse), &out_dir);
+    export_schema(&schema_for!(DistributionResponse), &out_dir);
 }

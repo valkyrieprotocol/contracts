@@ -4,7 +4,7 @@ use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use valkyrie::common::{Execution, OrderBy};
+use valkyrie::common::OrderBy;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::campaign::query_msgs::ReferralRewardLimitAmount;
 use valkyrie::governance::query_msgs::StakerStateResponse;
@@ -28,7 +28,6 @@ pub struct CampaignConfig {
     pub deposit_lock_period: u64,
     pub qualifier: Option<Addr>,
     pub qualification_description: Option<String>,
-    pub executions: Vec<Execution>,
     pub admin: Addr,
     pub creator: Addr,
     pub created_at: Timestamp,

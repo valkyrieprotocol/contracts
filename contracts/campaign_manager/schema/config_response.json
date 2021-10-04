@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "ConfigResponse",
   "type": "object",
   "required": [
     "add_pool_fee_rate",
@@ -11,7 +11,6 @@
     "fee_recipient",
     "governance",
     "key_denom",
-    "referral_reward_limit_option",
     "remove_pool_fee_rate",
     "terraswap_router",
     "valkyrie_token"
@@ -44,9 +43,6 @@
     },
     "key_denom": {
       "$ref": "#/definitions/Denom"
-    },
-    "referral_reward_limit_option": {
-      "$ref": "#/definitions/ReferralRewardLimitOptionMsg"
     },
     "remove_pool_fee_rate": {
       "$ref": "#/definitions/Decimal"
@@ -90,31 +86,6 @@
           "additionalProperties": false
         }
       ]
-    },
-    "ReferralRewardLimitOptionMsg": {
-      "type": "object",
-      "required": [
-        "base_count",
-        "percent_for_governance_staking"
-      ],
-      "properties": {
-        "base_count": {
-          "type": "integer",
-          "format": "uint8",
-          "minimum": 0.0
-        },
-        "overflow_amount_recipient": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "percent_for_governance_staking": {
-          "type": "integer",
-          "format": "uint16",
-          "minimum": 0.0
-        }
-      }
     }
   }
 }

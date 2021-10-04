@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Decimal, Uint128, Binary};
-use crate::common::{Denom, ExecutionMsg};
+use crate::common::Denom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -56,7 +56,6 @@ pub enum ExecuteMsg {
         deposit_lock_period: Option<u64>,
         qualifier: Option<String>,
         qualification_description: Option<String>,
-        executions: Vec<ExecutionMsg>,
     },
     SpendFee {
         amount: Option<Uint128>,
@@ -83,6 +82,5 @@ pub struct CampaignInstantiateMsg {
     pub deposit_lock_period: u64,
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
-    pub executions: Vec<ExecutionMsg>,
     pub referral_reward_token: String,
 }

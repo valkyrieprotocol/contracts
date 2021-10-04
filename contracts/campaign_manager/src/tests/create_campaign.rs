@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Binary, CosmosMsg, Env, MessageInfo, ReplyOn, Response,
 
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
-use valkyrie::common::{ContractResult, Denom, ExecutionMsg};
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD};
@@ -22,7 +22,6 @@ pub fn exec(
     deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
-    executions: Vec<ExecutionMsg>,
 ) -> ContractResult<Response> {
     create_campaign(
         deps.as_mut(),
@@ -34,7 +33,6 @@ pub fn exec(
         deposit_lock_period,
         qualifier,
         qualification_description,
-        executions,
     )
 }
 
@@ -62,7 +60,6 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         Some(DEPOSIT_LOCK_PERIOD),
         None,
         None,
-        vec![],
     ).unwrap();
 
     (env, info, response)
@@ -101,7 +98,6 @@ fn succeed() {
                     deposit_lock_period: DEPOSIT_LOCK_PERIOD,
                     qualifier: None,
                     qualification_description: None,
-                    executions: vec![],
                     referral_reward_token: VALKYRIE_TOKEN.to_string(),
                 }).unwrap(),
                 funds: vec![],

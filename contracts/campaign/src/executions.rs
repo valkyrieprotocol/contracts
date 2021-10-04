@@ -8,7 +8,7 @@ use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, MigrateMsg, ReferralReward};
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
-use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
 use valkyrie::utils::{calc_ratio_amount, make_response};
@@ -48,12 +48,6 @@ pub fn instantiate(
     // Execute
     let response = make_response("instantiate");
 
-    let mut executions: Vec<Execution> = msg.executions.iter()
-        .map(|e| Execution::from(deps.api, e))
-        .collect::<StdResult<Vec<Execution>>>()?;
-
-    executions.sort_by_key(|e| e.order);
-
     CampaignConfig {
         governance: deps.api.addr_validate(&msg.governance)?,
         campaign_manager: deps.api.addr_validate(&msg.campaign_manager)?,
@@ -66,7 +60,6 @@ pub fn instantiate(
         deposit_lock_period: msg.deposit_lock_period,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str())).transpose()?,
         qualification_description: msg.qualification_description,
-        executions,
         admin: deps.api.addr_validate(&msg.admin)?,
         creator: deps.api.addr_validate(&msg.creator)?,
         created_at: env.block.time,
@@ -114,7 +107,6 @@ pub fn update_campaign_config(
     deposit_lock_period: Option<u64>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
-    mut executions: Option<Vec<ExecutionMsg>>,
     admin: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
@@ -183,14 +175,6 @@ pub fn update_campaign_config(
         validate_qualification_description(&qualification_description)?;
         campaign_config.qualification_description = Some(qualification_description);
         response = response.add_attribute("is_updated_qualification_description", "true");
-    }
-
-    if let Some(executions) = executions.as_mut() {
-        executions.sort_by_key(|e| e.order);
-        campaign_config.executions = executions.iter()
-            .map(|e| Execution::from(deps.api, e))
-            .collect::<StdResult<Vec<Execution>>>()?;
-        response = response.add_attribute("is_updated_executions", "true");
     }
 
     if let Some(admin) = admin.as_ref() {
@@ -763,13 +747,6 @@ pub fn participate(
             actor,
             referrer_address,
         )?;
-
-        for execution in campaign_config.executions.iter() {
-            response = response.add_message(message_factories::wasm_execute_bin(
-                &execution.contract,
-                execution.msg.clone(),
-            ));
-        }
     }
 
     Ok(response)
@@ -811,17 +788,6 @@ pub fn participate_qualify_result(
             context.actor,
             context.referrer,
         )?;
-    }
-
-    if continue_option.can_execute() {
-        let campaign_config = CampaignConfig::load(deps.storage)?;
-
-        for execution in campaign_config.executions.iter() {
-            response = response.add_message(message_factories::wasm_execute_bin(
-                &execution.contract,
-                execution.msg.clone(),
-            ));
-        }
     }
 
     QualifyParticipationContext::clear(deps.storage);

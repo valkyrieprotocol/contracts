@@ -5,10 +5,10 @@
     {
       "type": "object",
       "required": [
-        "contract_config"
+        "campaign_config"
       ],
       "properties": {
-        "contract_config": {
+        "campaign_config": {
           "type": "object"
         }
       },
@@ -17,10 +17,10 @@
     {
       "type": "object",
       "required": [
-        "poll_config"
+        "reward_config"
       ],
       "properties": {
-        "poll_config": {
+        "reward_config": {
           "type": "object"
         }
       },
@@ -29,10 +29,10 @@
     {
       "type": "object",
       "required": [
-        "poll_state"
+        "campaign_state"
       ],
       "properties": {
-        "poll_state": {
+        "campaign_state": {
           "type": "object"
         }
       },
@@ -41,140 +41,10 @@
     {
       "type": "object",
       "required": [
-        "poll"
+        "share_url"
       ],
       "properties": {
-        "poll": {
-          "type": "object",
-          "required": [
-            "poll_id"
-          ],
-          "properties": {
-            "poll_id": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "polls"
-      ],
-      "properties": {
-        "polls": {
-          "type": "object",
-          "properties": {
-            "filter": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/PollStatus"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "order_by": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/OrderBy"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "start_after": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "voters"
-      ],
-      "properties": {
-        "voters": {
-          "type": "object",
-          "required": [
-            "poll_id"
-          ],
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "order_by": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/OrderBy"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "poll_id": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "staking_state"
-      ],
-      "properties": {
-        "staking_state": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "staker_state"
-      ],
-      "properties": {
-        "staker_state": {
+        "share_url": {
           "type": "object",
           "required": [
             "address"
@@ -191,10 +61,108 @@
     {
       "type": "object",
       "required": [
-        "voting_power"
+        "get_address_from_referrer"
       ],
       "properties": {
-        "voting_power": {
+        "get_address_from_referrer": {
+          "type": "object",
+          "required": [
+            "referrer"
+          ],
+          "properties": {
+            "referrer": {
+              "$ref": "#/definitions/Referrer"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "referral_reward_limit_amount"
+      ],
+      "properties": {
+        "referral_reward_limit_amount": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "actor"
+      ],
+      "properties": {
+        "actor": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "actors"
+      ],
+      "properties": {
+        "actors": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "order_by": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/OrderBy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "deposit"
+      ],
+      "properties": {
+        "deposit": {
           "type": "object",
           "required": [
             "address"
@@ -217,14 +185,32 @@
         "desc"
       ]
     },
-    "PollStatus": {
-      "type": "string",
-      "enum": [
-        "in_progress",
-        "passed",
-        "rejected",
-        "executed",
-        "failed"
+    "Referrer": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "compressed"
+          ],
+          "properties": {
+            "compressed": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     }
   }

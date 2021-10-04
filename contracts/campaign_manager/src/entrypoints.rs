@@ -76,7 +76,6 @@ pub fn execute(
             deposit_lock_period,
             qualifier,
             qualification_description,
-            executions,
         } => executions::create_campaign(
             deps,
             env,
@@ -87,7 +86,6 @@ pub fn execute(
             deposit_lock_period,
             qualifier,
             qualification_description,
-            executions,
         ),
         ExecuteMsg::SpendFee {
             amount,

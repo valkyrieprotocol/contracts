@@ -42,7 +42,6 @@ pub fn execute(
             deposit_lock_period,
             qualifier,
             qualification_description,
-            executions,
             admin,
         } => crate::executions::update_campaign_config(
             deps,
@@ -56,7 +55,6 @@ pub fn execute(
             deposit_lock_period,
             qualifier,
             qualification_description,
-            executions,
             admin,
         ),
         ExecuteMsg::UpdateRewardConfig {

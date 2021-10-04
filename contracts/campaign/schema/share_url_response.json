@@ -1,20 +1,20 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "ShareUrlResponse",
   "type": "object",
   "required": [
-    "lp_token",
-    "pair",
-    "token"
+    "address",
+    "compressed",
+    "url"
   ],
   "properties": {
-    "lp_token": {
+    "address": {
       "type": "string"
     },
-    "pair": {
+    "compressed": {
       "type": "string"
     },
-    "token": {
+    "url": {
       "type": "string"
     }
   }

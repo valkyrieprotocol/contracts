@@ -38,7 +38,6 @@ fn succeed() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         Some("Qualifier".to_string()),
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
