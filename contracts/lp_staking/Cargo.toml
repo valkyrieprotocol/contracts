@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie-lp-staking"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "A Staking contract for Valkyrie Protocol - distribute rewards to stakers"
@@ -40,7 +40,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 cosmwasm-std = { version = "0.16.0" }
 cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
 cw20 = { version = "0.8.1" }
-valkyrie = { version = "0.1.0", path = "../../packages/valkyrie" }
+valkyrie = { version = "1.0.0", path = "../../packages/valkyrie" }
 schemars = "0.8.3"
 terraswap = "2.4.0"
 terra-cosmwasm = { version = "2.2.0" }
