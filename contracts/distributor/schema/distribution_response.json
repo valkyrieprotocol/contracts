@@ -1,20 +1,44 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ReferralReward",
+  "title": "DistributionResponse",
   "type": "object",
   "required": [
-    "address",
     "amount",
-    "distance"
+    "distributable_amount",
+    "distributed_amount",
+    "end_height",
+    "id",
+    "recipient",
+    "released_amount",
+    "start_height"
   ],
   "properties": {
-    "address": {
-      "type": "string"
-    },
     "amount": {
       "$ref": "#/definitions/Uint128"
     },
-    "distance": {
+    "distributable_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "distributed_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "end_height": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "id": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "recipient": {
+      "type": "string"
+    },
+    "released_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "start_height": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

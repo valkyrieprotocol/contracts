@@ -8,5 +8,4 @@ use crate::QualificationMsg;
 pub enum QueryMsg {
     Qualify(QualificationMsg),
     Requirement {},
-    Executions {},
 }

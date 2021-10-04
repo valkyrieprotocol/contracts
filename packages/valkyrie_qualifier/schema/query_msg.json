@@ -5,11 +5,11 @@
     {
       "type": "object",
       "required": [
-        "config"
+        "qualify"
       ],
       "properties": {
-        "config": {
-          "type": "object"
+        "qualify": {
+          "$ref": "#/definitions/QualificationMsg"
         }
       },
       "additionalProperties": false
@@ -17,34 +17,41 @@
     {
       "type": "object",
       "required": [
-        "state"
+        "requirement"
       ],
       "properties": {
-        "state": {
+        "requirement": {
           "type": "object"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "staker_info"
-      ],
-      "properties": {
-        "staker_info": {
-          "type": "object",
-          "required": [
-            "staker_addr"
-          ],
-          "properties": {
-            "staker_addr": {
-              "type": "string"
-            }
-          }
         }
       },
       "additionalProperties": false
     }
-  ]
+  ],
+  "definitions": {
+    "QualificationMsg": {
+      "type": "object",
+      "required": [
+        "actor",
+        "campaign",
+        "sender"
+      ],
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "campaign": {
+          "type": "string"
+        },
+        "referrer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sender": {
+          "type": "string"
+        }
+      }
+    }
+  }
 }
