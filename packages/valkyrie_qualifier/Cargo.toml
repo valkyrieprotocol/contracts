@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie-qualifier"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "Definition and types for the Valkyrie Qualifier"
