@@ -55,6 +55,10 @@ fn succeed() {
         campaign_state.locked_balance(&cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string())),
         Uint128::zero(),
     );
+    assert_eq!(
+        campaign_state.balance(&cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string())).total,
+        Uint128::new(995),
+    );
 }
 
 #[test]

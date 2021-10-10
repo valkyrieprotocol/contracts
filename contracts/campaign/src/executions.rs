@@ -596,6 +596,7 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
 
     participation.participation_reward_amount = Uint128::zero();
     campaign_state.unlock_balance(&reward_config.participation_reward_denom, &reward_amount)?;
+    campaign_state.withdraw(&reward_config.participation_reward_denom, &reward_amount)?;
 
     participation.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
@@ -637,6 +638,10 @@ pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Con
 
     participation.referral_reward_amount = Uint128::zero();
     campaign_state.unlock_balance(
+        &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
+        &reward_amount,
+    )?;
+    campaign_state.withdraw(
         &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
         &reward_amount,
     )?;

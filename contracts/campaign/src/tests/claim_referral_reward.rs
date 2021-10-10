@@ -58,6 +58,10 @@ fn succeed() {
         campaign_state.locked_balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))),
         Uint128::zero(),
     );
+    assert_eq!(
+        campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).total,
+        Uint128::new(1000).checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap(),
+    );
 }
 
 #[test]
