@@ -577,43 +577,6 @@ pub fn remove_reward_pool(
     Ok(response)
 }
 
-pub fn remove_irregular_reward_pool(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    denom: Denom,
-) -> ContractResult<Response> {
-    // Validate
-    if !is_admin(deps.storage, &info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let campaign_state = CampaignState::load(deps.storage)?;
-    let denom_cw20 = denom.to_cw20(deps.api);
-
-    let contract_balance = denom.load_balance(&deps.querier, deps.api, env.contract.address)?;
-    let expect_balance = campaign_state.balance(&denom_cw20).total
-        .checked_sub(campaign_state.deposit_amount)?;
-
-    if contract_balance == expect_balance {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    // Execute
-    let mut response = make_response("remove_irregular_reward_pool");
-
-    let diff = contract_balance.checked_sub(expect_balance)?;
-
-    response = response.add_message(make_send_msg(
-        &deps.querier,
-        denom_cw20,
-        diff,
-        &info.sender,
-    )?);
-
-    Ok(response)
-}
-
 pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
     let mut participation = Actor::may_load(deps.storage, &info.sender)?

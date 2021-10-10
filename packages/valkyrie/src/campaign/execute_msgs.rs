@@ -47,9 +47,6 @@ pub enum ExecuteMsg {
         denom: Denom,
         amount: Option<Uint128>,
     },
-    RemoveIrregularRewardPool {
-        denom: Denom,
-    },
     ClaimParticipationReward {},
     ClaimReferralReward {},
     Participate {

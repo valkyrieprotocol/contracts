@@ -88,9 +88,6 @@ pub fn execute(
         ExecuteMsg::RemoveRewardPool { denom, amount } => {
             crate::executions::remove_reward_pool(deps, env, info, denom, amount)
         }
-        ExecuteMsg::RemoveIrregularRewardPool {
-            denom,
-        } => crate::executions::remove_irregular_reward_pool(deps, env, info, denom),
         ExecuteMsg::ClaimParticipationReward {} => crate::executions::claim_participation_reward(deps, env, info),
         ExecuteMsg::ClaimReferralReward {} => crate::executions::claim_referral_reward(deps, env, info),
         ExecuteMsg::Participate { actor, referrer } => {
