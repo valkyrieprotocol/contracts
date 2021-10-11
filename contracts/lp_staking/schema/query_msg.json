@@ -21,7 +21,17 @@
       ],
       "properties": {
         "state": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "block_height": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
         }
       },
       "additionalProperties": false
@@ -35,10 +45,10 @@
         "staker_info": {
           "type": "object",
           "required": [
-            "staker_addr"
+            "staker"
           ],
           "properties": {
-            "staker_addr": {
+            "staker": {
               "type": "string"
             }
           }

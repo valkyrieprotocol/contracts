@@ -6,3 +6,6 @@ mod states;
 
 #[cfg(test)]
 mod testing;
+
+#[cfg(test)]
+mod mock_querier;
