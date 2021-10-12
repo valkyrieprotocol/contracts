@@ -58,6 +58,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
         balances: state.balances.iter()
             .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), amount.clone()))
             .collect(),
+        deposit_amount: state.deposit_amount,
         is_active: state.is_active(& campaign_config, &deps.querier, &env.block)?,
         is_pending: state.is_pending(),
     })

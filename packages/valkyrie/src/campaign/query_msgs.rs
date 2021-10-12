@@ -67,6 +67,7 @@ pub struct CampaignStateResponse {
     pub cumulative_referral_reward_amount: Uint128,
     pub locked_balances: Vec<(Denom, Uint128)>,
     pub balances: Vec<(Denom, Uint128)>,
+    pub deposit_amount: Uint128,
     pub is_active: bool,
     pub is_pending: bool,
 }

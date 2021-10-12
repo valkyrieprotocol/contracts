@@ -340,7 +340,7 @@ pub fn add_reward_pool(
 
     campaign_state.save(deps.storage)?;
 
-    // If participation reward denom is native, It will be send with this execute_msg.
+    // If participation reward denom is cw20, It will be send with this execute_msg.
     if let cw20::Denom::Cw20(token) = &reward_config.participation_reward_denom {
         response = response.add_message(message_factories::wasm_execute(
             token,
@@ -959,6 +959,10 @@ fn distribute_referral_reward(
 
     let referral_reward_denom = cw20::Denom::Cw20(reward_config.referral_reward_token.clone());
     for (distance, (actor, reward_amount)) in referrer_reward_pairs {
+        if participation.address == actor.address {
+            return Err(StdError::generic_err("Actor must not contain on referrer chain"));
+        }
+
         let reward_limit = calc_referral_reward_limit(
             &referral_limit_option,
             &campaign_config,
