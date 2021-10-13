@@ -28,6 +28,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
+    StakingConfig {},
     StakingState {},
     StakerState {
         address: String,

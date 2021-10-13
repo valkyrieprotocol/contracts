@@ -66,7 +66,7 @@ fn succeed() {
         30000,
         "Recipient2".to_string(),
         Uint128::new(5000),
-        Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
+        Some(to_binary(&Cw20HookMsg::Bond {}).unwrap()),
     );
 
     let (_, _, response) = will_success(&mut deps, 20001, None);
@@ -97,7 +97,7 @@ fn succeed() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "Recipient2".to_string(),
                 amount: Uint128::new(1),
-                msg: to_binary(&Cw20HookMsg::DepositReward {}).unwrap(),
+                msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
             }).unwrap(),
         })),
     ]);

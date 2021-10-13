@@ -6,7 +6,7 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN};
 use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
-use crate::staking::executions::stake_governance_token;
+use crate::staking::executions::stake_governance_token_hook;
 use crate::staking::states::{StakerState, StakingState};
 use crate::tests::init_default;
 
@@ -22,12 +22,12 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, sender: Addr, am
         &[(GOVERNANCE, &amount)],
     )]);
 
-    stake_governance_token(deps.as_mut(), env, info, sender, amount)
+    stake_governance_token_hook(deps.as_mut(), env, info, sender.to_string(), amount)
 }
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Uint128) -> (Env, MessageInfo, Response) {
     let env = governance_env();
-    let info = mock_info(GOVERNANCE_TOKEN, &[]);
+    let info = mock_info(GOVERNANCE, &[]);
 
     let response = exec(
         deps,
@@ -64,7 +64,7 @@ fn failed_insufficient_funds() {
     let result = exec(
         &mut deps,
         governance_env(),
-        mock_info(GOVERNANCE_TOKEN, &[]),
+        mock_info(GOVERNANCE, &[]),
         Addr::unchecked(STAKER1),
         Uint128::zero(),
     );

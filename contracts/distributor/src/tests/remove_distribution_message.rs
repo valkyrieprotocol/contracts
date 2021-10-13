@@ -55,7 +55,7 @@ fn succeed() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
-        Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
+        Some(to_binary(&Cw20HookMsg::Bond {}).unwrap()),
     );
 
     will_success(&mut deps, 1);

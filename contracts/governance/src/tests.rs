@@ -1,6 +1,6 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo};
 
-use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg};
+use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg, StakingConfigInitMsg};
 use valkyrie::test_constants::contract_creator;
 use valkyrie::test_constants::governance::*;
 
@@ -22,6 +22,10 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
             proposal_deposit: POLL_PROPOSAL_DEPOSIT,
             snapshot_period: POLL_SNAPSHOT_PERIOD,
         },
+        staking_config: StakingConfigInitMsg {
+            distributor: None,
+            distribution_id: None,
+        }
     };
 
     entrypoints::instantiate(deps, env.clone(), info.clone(), msg).unwrap();

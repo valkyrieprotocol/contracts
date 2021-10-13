@@ -53,9 +53,9 @@ fn succeed_passed() {
     let staker3_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -90,9 +90,9 @@ fn succeed_rejected_threshold_not_reached() {
     let staker3_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -133,9 +133,9 @@ fn succeed_rejected_quorum_not_reached() {
     let staker3_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -165,9 +165,9 @@ fn succeed_rejected_zero_quorum() {
     let staker3_staked_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, staker1_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, staker2_staked_amount);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER3, staker3_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, staker1_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER2, staker2_staked_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER3, staker3_staked_amount);
 
     let poll_id = 1u64;
 
@@ -239,13 +239,13 @@ fn failed_quorum_inflation_without_snapshot_poll() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 
     super::cast_vote::will_success(&mut deps, VOTER1, poll_id, VoteOption::Yes, Uint128::new(100));
 
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER2, Uint128::new(1000));
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER2, Uint128::new(1000));
 
     let poll = Poll::load(&deps.storage, &poll_id).unwrap();
     let env = governance_env_height(poll.end_height - POLL_SNAPSHOT_PERIOD + 1);

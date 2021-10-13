@@ -6,17 +6,23 @@ use valkyrie::common::ContractResult;
 use valkyrie::message_matchers;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::default_sender;
-use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN};
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN, governance_sender};
 use valkyrie::test_utils::expect_generic_err;
 use valkyrie::utils::parse_uint128;
 
-use crate::staking::executions::unstake_governance_token;
+use crate::staking::executions::unstake_governance_token_hook;
 use crate::staking::states::{StakerState, StakingState};
-use crate::staking::tests::stake_governance_token::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
+use crate::staking::tests::stake_governance_token_hook::{STAKER1, STAKER1_STAKE_AMOUNT, STAKER2, STAKER2_STAKE_AMOUNT};
 use crate::tests::init_default;
 
-pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, amount: Option<Uint128>) -> ContractResult<Response> {
-    let response = unstake_governance_token(deps.as_mut(), env, info, amount)?;
+pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, staker: String, amount: Option<Uint128>) -> ContractResult<Response> {
+    let response = unstake_governance_token_hook(
+        deps.as_mut(),
+        env,
+        info,
+        staker,
+        amount,
+    )?;
 
     for msg in message_matchers::cw20_transfer(&response.messages) {
         deps.querier.minus_token_balances(&[(
@@ -34,12 +40,13 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, amount: Option<U
 
 pub fn will_success(deps: &mut CustomDeps, staker: &str, amount: Option<Uint128>) -> (Env, MessageInfo, Response) {
     let env = governance_env();
-    let info = mock_info(staker, &[]);
+    let info = mock_info(GOVERNANCE, &[]);
 
     let response = exec(
         deps,
         env.clone(),
         info.clone(),
+        staker.to_string(),
         amount,
     ).unwrap();
 
@@ -52,8 +59,8 @@ fn succeed() {
 
     init_default(deps.as_mut());
 
-    super::stake_governance_token::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
-    super::stake_governance_token::will_success(&mut deps, STAKER2, STAKER2_STAKE_AMOUNT);
+    super::stake_governance_token_hook::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
+    super::stake_governance_token_hook::will_success(&mut deps, STAKER2, STAKER2_STAKE_AMOUNT);
 
     let increased_balance = (STAKER1_STAKE_AMOUNT + STAKER2_STAKE_AMOUNT)
         .checked_mul(Uint128::new(2))
@@ -113,12 +120,13 @@ fn failed_overflow() {
 
     init_default(deps.as_mut());
 
-    super::stake_governance_token::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
+    super::stake_governance_token_hook::will_success(&mut deps, STAKER1, STAKER1_STAKE_AMOUNT);
 
     let result = exec(
         &mut deps,
         governance_env(),
-        mock_info(STAKER1, &[]),
+        governance_sender(),
+        STAKER1.to_string(),
         Some(STAKER1_STAKE_AMOUNT + Uint128::new(1)),
     );
 
@@ -134,7 +142,8 @@ fn failed_no_staked() {
     let result = exec(
         &mut deps,
         governance_env(),
-        default_sender(),
+        governance_sender(),
+        default_sender().sender.to_string(),
         None,
     );
 

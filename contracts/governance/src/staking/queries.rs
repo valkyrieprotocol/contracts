@@ -7,7 +7,12 @@ use valkyrie::governance::query_msgs::{StakerStateResponse, StakingStateResponse
 use crate::common::states::load_available_balance;
 
 use super::states::{StakerState, StakingState};
+use crate::staking::states::StakingConfig;
 
+
+pub fn get_staking_config(deps: Deps, _env: Env) -> ContractResult<StakingConfig> {
+    Ok(StakingConfig::load(deps.storage)?)
+}
 
 pub fn get_staking_state(deps: Deps, env: Env) -> ContractResult<StakingStateResponse> {
     let staking_state = StakingState::load(deps.storage)?;

@@ -63,7 +63,7 @@ fn succeed() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let voter_addr = Addr::unchecked(VOTER1);
     let poll_id = 1u64;
@@ -97,7 +97,7 @@ fn failed_cast_vote_not_enough_staked() {
     let stake_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, stake_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, stake_amount);
 
     let result = exec(
         &mut deps,
@@ -120,7 +120,7 @@ fn failed_cast_vote_without_poll() {
     let stake_amount = Uint128::new(100);
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, stake_amount);
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, stake_amount);
 
     let result = exec(
         &mut deps,
@@ -141,7 +141,7 @@ fn failed_cast_vote_twice() {
     init_default(deps.as_mut());
 
     super::create_poll::default(&mut deps);
-    crate::staking::tests::stake_governance_token::will_success(&mut deps, VOTER1, Uint128::new(100));
+    crate::staking::tests::stake_governance_token_hook::will_success(&mut deps, VOTER1, Uint128::new(100));
 
     let poll_id = 1u64;
 

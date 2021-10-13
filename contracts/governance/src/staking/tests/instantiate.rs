@@ -7,13 +7,21 @@ use valkyrie::test_constants::governance::governance_env;
 
 use crate::staking::executions::instantiate;
 use crate::staking::states::StakingState;
+use valkyrie::governance::execute_msgs::StakingConfigInitMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
+    distributor: Option<String>,
+    distribution_id: Option<u64>,
 ) -> ContractResult<Response> {
-    instantiate(deps.as_mut(), env, info)
+    let msg = StakingConfigInitMsg {
+        distributor,
+        distribution_id,
+    };
+
+    instantiate(deps.as_mut(), env, info, msg)
 }
 
 pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
@@ -24,6 +32,8 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         deps,
         env.clone(),
         info.clone(),
+        None,
+        None,
     ).unwrap();
 
     (env, info, response)

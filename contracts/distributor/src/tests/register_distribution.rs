@@ -7,7 +7,7 @@ use crate::states::{Distribution, ContractState};
 use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
 use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_constants::default_sender;
-use valkyrie::lp_staking::execute_msgs::Cw20HookMsg;
+use valkyrie::governance::execute_msgs::Cw20HookMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -72,7 +72,7 @@ fn succeed() {
         30000,
         "Recipient".to_string(),
         Uint128::new(10000),
-        Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
+        Some(to_binary(&Cw20HookMsg::StakeGovernanceToken {}).unwrap()),
     );
 
     let state = ContractState::load(&deps.storage).unwrap();
@@ -87,7 +87,7 @@ fn succeed() {
         recipient: Addr::unchecked("Recipient"),
         amount: Uint128::new(10000),
         distributed_amount: Uint128::zero(),
-        message: Some(to_binary(&Cw20HookMsg::DepositReward {}).unwrap()),
+        message: Some(to_binary(&Cw20HookMsg::StakeGovernanceToken {}).unwrap()),
     });
 }
 

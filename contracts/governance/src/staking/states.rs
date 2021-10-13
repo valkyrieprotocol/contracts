@@ -8,6 +8,23 @@ use valkyrie::governance::enumerations::PollStatus;
 use crate::poll::states::{Poll, VoteInfo};
 
 
+const STAKING_CONFIG: Item<StakingConfig> = Item::new("staking-config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct StakingConfig {
+    pub distributor: Option<Addr>,
+}
+
+impl StakingConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        STAKING_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<StakingConfig> {
+        STAKING_CONFIG.load(storage)
+    }
+}
+
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
