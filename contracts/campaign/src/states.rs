@@ -152,10 +152,10 @@ impl CampaignState {
     }
 
     pub fn validate_balance(&self) -> StdResult<()> {
-        for (denom, balance) in self.balances.iter() {
-            let locked_balance = self.locked_balance(denom);
+        for (denom, locked_balance) in self.locked_balances.iter() {
+            let balance = self.total_balance(denom);
 
-            if *balance < locked_balance {
+            if balance < *locked_balance {
                 return Err(StdError::generic_err("locked balance can't greater than balance"));
             }
         }
@@ -165,6 +165,16 @@ impl CampaignState {
 
     pub fn locked_balance(&self, denom: &Denom) -> Uint128 {
         for (locked_denom, locked_amount) in self.locked_balances.iter() {
+            if *locked_denom == *denom {
+                return locked_amount.clone();
+            }
+        }
+
+        Uint128::zero()
+    }
+
+    fn total_balance(&self, denom: &Denom) -> Uint128 {
+        for (locked_denom, locked_amount) in self.balances.iter() {
             if *locked_denom == *denom {
                 return locked_amount.clone();
             }
