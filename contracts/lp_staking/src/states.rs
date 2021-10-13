@@ -6,7 +6,26 @@ use cw_storage_plus::{Item, Map};
 
 pub const UST: &str = "uusd";
 
-const CONFIG: Item<Config> = Item::new("config");
+const OLD_CONFIG: Item<OldConfig> = Item::new("config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct OldConfig {
+    pub token: Addr,
+    pub lp_token: Addr,
+    pub pair: Addr,
+}
+
+impl OldConfig {
+    pub fn load(storage: &dyn Storage) -> StdResult<OldConfig> {
+        OLD_CONFIG.load(storage)
+    }
+
+    pub fn delete(storage: &mut dyn Storage) {
+        OLD_CONFIG.remove(storage)
+    }
+}
+
+const CONFIG: Item<Config> = Item::new("config_v2");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -26,7 +45,26 @@ impl Config {
     }
 }
 
-const STATE: Item<State> = Item::new("state");
+const OLD_STATE: Item<OldState> = Item::new("state");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct OldState {
+    pub pending_reward: Uint128,
+    pub total_bond_amount: Uint128,
+    pub global_reward_index: Decimal,
+}
+
+impl OldState {
+    pub fn load(storage: &dyn Storage) -> StdResult<OldState> {
+        OLD_STATE.load(storage)
+    }
+
+    pub fn delete(storage: &mut dyn Storage) {
+        OLD_STATE.remove(storage)
+    }
+}
+
+const STATE: Item<State> = Item::new("state_v2");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {

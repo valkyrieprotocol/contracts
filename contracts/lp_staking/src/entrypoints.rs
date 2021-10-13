@@ -1,9 +1,12 @@
 use crate::executions::{auto_stake, auto_stake_hook, bond, unbond, withdraw};
 use crate::queries::{query_config, query_staker_info, query_state};
-use crate::states::{Config, State};
+use crate::states::{Config, OldConfig, OldState, State};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, Uint128,
+};
 use cw20::Cw20ReceiveMsg;
 use valkyrie::lp_staking::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::lp_staking::query_msgs::QueryMsg;
@@ -23,13 +26,15 @@ pub fn instantiate(
         pair: deps.api.addr_validate(&msg.pair.as_str())?,
         lp_token: deps.api.addr_validate(&msg.lp_token.as_str())?,
         distribution_schedule: msg.distribution_schedule,
-    }.save(deps.storage)?;
+    }
+    .save(deps.storage)?;
 
     State {
         last_distributed: env.block.height,
         total_bond_amount: Uint128::zero(),
         global_reward_index: Decimal::zero(),
-    }.save(deps.storage)?;
+    }
+    .save(deps.storage)?;
 
     Ok(response)
 }
@@ -71,7 +76,34 @@ pub fn receive_cw20(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> StdResult<Response> {
+    if let Ok(old) = OldConfig::load(deps.storage) {
+        Config {
+            token: old.token,
+            pair: old.pair,
+            lp_token: old.lp_token,
+            distribution_schedule: msg.distribution_schedule,
+        }
+        .save(deps.storage)?;
+
+        OldConfig::delete(deps.storage)
+    }
+
+    if let Ok(old) = OldState::load(deps.storage) {
+        State {
+            last_distributed: 0,
+            total_bond_amount: old.total_bond_amount,
+            global_reward_index: old.global_reward_index,
+        }
+        .save(deps.storage)?;
+
+        OldState::delete(deps.storage)
+    }
+
+    let config: Config = Config::load(deps.storage)?;
+    let mut state: State = State::load(deps.storage)?;
+    state.compute_reward(&config, env.block.height);
+    state.save(deps.storage)?;
     Ok(Response::default())
 }
 
