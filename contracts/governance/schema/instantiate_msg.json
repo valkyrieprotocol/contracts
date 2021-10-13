@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "contract_config",
-    "poll_config"
+    "poll_config",
+    "staking_config"
   ],
   "properties": {
     "contract_config": {
@@ -12,6 +13,9 @@
     },
     "poll_config": {
       "$ref": "#/definitions/PollConfigInitMsg"
+    },
+    "staking_config": {
+      "$ref": "#/definitions/StakingConfigInitMsg"
     }
   },
   "definitions": {
@@ -64,6 +68,17 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        }
+      }
+    },
+    "StakingConfigInitMsg": {
+      "type": "object",
+      "properties": {
+        "distributor": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

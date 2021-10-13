@@ -1,26 +1,20 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "QualificationMsg",
+  "title": "ShareUrlResponse",
   "type": "object",
   "required": [
-    "actor",
-    "campaign",
-    "sender"
+    "address",
+    "compressed",
+    "url"
   ],
   "properties": {
-    "actor": {
+    "address": {
       "type": "string"
     },
-    "campaign": {
+    "compressed": {
       "type": "string"
     },
-    "referrer": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "sender": {
+    "url": {
       "type": "string"
     }
   }

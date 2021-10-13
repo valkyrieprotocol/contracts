@@ -159,6 +159,18 @@
     {
       "type": "object",
       "required": [
+        "staking_config"
+      ],
+      "properties": {
+        "staking_config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "staking_state"
       ],
       "properties": {

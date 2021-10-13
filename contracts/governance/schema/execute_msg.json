@@ -17,6 +17,26 @@
     {
       "type": "object",
       "required": [
+        "update_staking_config"
+      ],
+      "properties": {
+        "update_staking_config": {
+          "type": "object",
+          "properties": {
+            "distributor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "update_poll_config"
       ],
       "properties": {
@@ -85,6 +105,30 @@
     {
       "type": "object",
       "required": [
+        "stake_governance_token_hook"
+      ],
+      "properties": {
+        "stake_governance_token_hook": {
+          "type": "object",
+          "required": [
+            "amount",
+            "staker"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "staker": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "unstake_governance_token"
       ],
       "properties": {
@@ -100,6 +144,36 @@
                   "type": "null"
                 }
               ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "unstake_governance_token_hook"
+      ],
+      "properties": {
+        "unstake_governance_token_hook": {
+          "type": "object",
+          "required": [
+            "staker"
+          ],
+          "properties": {
+            "amount": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "staker": {
+              "type": "string"
             }
           }
         }

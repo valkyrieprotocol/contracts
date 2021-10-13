@@ -1,21 +1,23 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "StakerInfoResponse",
+  "title": "ReferralReward",
   "type": "object",
   "required": [
-    "bond_amount",
-    "pending_reward",
-    "staker_addr"
+    "address",
+    "amount",
+    "distance"
   ],
   "properties": {
-    "bond_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "pending_reward": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "staker_addr": {
+    "address": {
       "type": "string"
+    },
+    "amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "distance": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     }
   },
   "definitions": {
