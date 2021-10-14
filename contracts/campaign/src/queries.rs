@@ -2,7 +2,7 @@ use cosmwasm_std::{Deps, Env};
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::campaign::query_msgs::*;
-use valkyrie::common::{ContractResult, Denom, ExecutionMsg, OrderBy};
+use valkyrie::common::{ContractResult, Denom, OrderBy};
 use valkyrie::utils::{compress_addr, put_query_parameter};
 
 use crate::states::*;
@@ -14,19 +14,15 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
     Ok(CampaignConfigResponse {
         governance: campaign_config.governance.to_string(),
         campaign_manager: campaign_config.campaign_manager.to_string(),
-        fund_manager: campaign_config.fund_manager.to_string(),
         title: campaign_config.title,
         description: campaign_config.description,
         url: campaign_config.url,
         parameter_key: campaign_config.parameter_key,
-        collateral_denom: campaign_config.collateral_denom.map(|d| Denom::from_cw20(d)),
-        collateral_amount: campaign_config.collateral_amount,
-        collateral_lock_period: campaign_config.collateral_lock_period,
+        deposit_denom: campaign_config.deposit_denom.map(|d| Denom::from_cw20(d)),
+        deposit_amount: campaign_config.deposit_amount,
+        deposit_lock_period: campaign_config.deposit_lock_period,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
         qualification_description: campaign_config.qualification_description,
-        executions: campaign_config.executions.iter()
-            .map(|v| ExecutionMsg::from(v))
-            .collect(),
         admin: campaign_config.admin.to_string(),
         creator: campaign_config.creator.to_string(),
         created_at: campaign_config.created_at,
@@ -62,6 +58,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
         balances: state.balances.iter()
             .map(|(denom, amount)| (Denom::from_cw20(denom.clone()), amount.clone()))
             .collect(),
+        deposit_amount: state.deposit_amount,
         is_active: state.is_active(& campaign_config, &deps.querier, &env.block)?,
         is_pending: state.is_pending(),
     })
@@ -169,6 +166,6 @@ pub fn query_actors(
     Ok(ActorsResponse { actors: participations })
 }
 
-pub fn collateral(deps: Deps, _env: Env, address: String) -> ContractResult<Collateral> {
-    Ok(Collateral::load_or_new(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
+pub fn deposit(deps: Deps, _env: Env, address: String) -> ContractResult<Deposit> {
+    Ok(Deposit::load_or_new(deps.storage, &deps.api.addr_validate(address.as_str())?)?)
 }

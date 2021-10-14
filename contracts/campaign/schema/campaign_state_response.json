@@ -7,6 +7,7 @@
     "balances",
     "cumulative_participation_reward_amount",
     "cumulative_referral_reward_amount",
+    "deposit_amount",
     "is_active",
     "is_pending",
     "locked_balances",
@@ -38,6 +39,9 @@
       "$ref": "#/definitions/Uint128"
     },
     "cumulative_referral_reward_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "deposit_amount": {
       "$ref": "#/definitions/Uint128"
     },
     "is_active": {

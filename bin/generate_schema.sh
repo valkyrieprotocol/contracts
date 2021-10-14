@@ -1,10 +1,15 @@
 #!/bin/sh
 
-SCRIPT_PATH=$(dirname "$0")
+PROJECT_PATH="$(dirname "$0")/.."
 
-cd "$SCRIPT_PATH/../contracts/campaign" && cargo schema
-cd "$SCRIPT_PATH/../contracts/campaign_manager" && cargo schema
-cd "$SCRIPT_PATH/../contracts/fund_manager" && cargo schema
-cd "$SCRIPT_PATH/../contracts/governance" && cargo schema
-cd "$SCRIPT_PATH/../contracts/lp_staking" && cargo schema
-cd "$SCRIPT_PATH/../packages/valkyrie_qualifier" && cargo schema
+run () {
+  cd "$PROJECT_PATH/$1" && cargo schema
+  rm "$PROJECT_PATH/target/debug/examples/schema"
+}
+
+run "contracts/campaign"
+run "contracts/community"
+run "contracts/distributor"
+run "contracts/governance"
+run "contracts/lp_staking"
+run "packages/valkyrie_qualifier"

@@ -29,7 +29,7 @@
                 "null"
               ]
             },
-            "collateral_amount": {
+            "deposit_amount": {
               "anyOf": [
                 {
                   "$ref": "#/definitions/Uint128"
@@ -39,7 +39,7 @@
                 }
               ]
             },
-            "collateral_lock_period": {
+            "deposit_lock_period": {
               "type": [
                 "integer",
                 "null"
@@ -52,15 +52,6 @@
                 "string",
                 "null"
               ]
-            },
-            "executions": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "$ref": "#/definitions/ExecutionMsg"
-              }
             },
             "parameter_key": {
               "type": [
@@ -165,10 +156,10 @@
     {
       "type": "object",
       "required": [
-        "deposit"
+        "add_reward_pool"
       ],
       "properties": {
-        "deposit": {
+        "add_reward_pool": {
           "type": "object",
           "required": [
             "participation_reward_amount",
@@ -189,10 +180,10 @@
     {
       "type": "object",
       "required": [
-        "withdraw"
+        "remove_reward_pool"
       ],
       "properties": {
-        "withdraw": {
+        "remove_reward_pool": {
           "type": "object",
           "required": [
             "denom"
@@ -208,26 +199,6 @@
                 }
               ]
             },
-            "denom": {
-              "$ref": "#/definitions/Denom"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "withdraw_irregular"
-      ],
-      "properties": {
-        "withdraw_irregular": {
-          "type": "object",
-          "required": [
-            "denom"
-          ],
-          "properties": {
             "denom": {
               "$ref": "#/definitions/Denom"
             }
@@ -293,10 +264,10 @@
     {
       "type": "object",
       "required": [
-        "deposit_collateral"
+        "deposit"
       ],
       "properties": {
-        "deposit_collateral": {
+        "deposit": {
           "type": "object"
         }
       },
@@ -305,10 +276,10 @@
     {
       "type": "object",
       "required": [
-        "withdraw_collateral"
+        "withdraw"
       ],
       "properties": {
-        "withdraw_collateral": {
+        "withdraw": {
           "type": "object",
           "required": [
             "amount"
@@ -375,27 +346,6 @@
           "additionalProperties": false
         }
       ]
-    },
-    "ExecutionMsg": {
-      "type": "object",
-      "required": [
-        "contract",
-        "msg",
-        "order"
-      ],
-      "properties": {
-        "contract": {
-          "type": "string"
-        },
-        "msg": {
-          "$ref": "#/definitions/Binary"
-        },
-        "order": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        }
-      }
     },
     "Referrer": {
       "anyOf": [

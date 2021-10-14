@@ -5,13 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use super::enumerations::VoteOption;
 use crate::common::ExecutionMsg;
-use crate::governance::models::DistributionPlan;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
-    pub distribution_config: DistributionConfigMsg,
+    pub staking_config: StakingConfigInitMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -30,14 +29,17 @@ pub struct PollConfigInitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct DistributionConfigMsg {
-    pub plan: Vec<DistributionPlan>,
+pub struct StakingConfigInitMsg {
+    pub distributor: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
+    UpdateStakingConfig {
+        distributor: Option<String>,
+    },
     UpdatePollConfig {
         quorum: Option<Decimal>,
         threshold: Option<Decimal>,
@@ -46,7 +48,15 @@ pub enum ExecuteMsg {
         proposal_deposit: Option<Uint128>,
         snapshot_period: Option<u64>,
     },
+    StakeGovernanceTokenHook {
+        staker: String,
+        amount: Uint128,
+    },
     UnstakeGovernanceToken { amount: Option<Uint128> },
+    UnstakeGovernanceTokenHook {
+        staker: String,
+        amount: Option<Uint128>,
+    },
     CastVote {
         poll_id: u64,
         vote: VoteOption,
@@ -71,4 +81,6 @@ pub enum Cw20HookMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub staking_config: StakingConfigInitMsg,
+}

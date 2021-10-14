@@ -6,8 +6,24 @@ use serde::{Deserialize, Serialize};
 use valkyrie::governance::enumerations::PollStatus;
 
 use crate::poll::states::{Poll, VoteInfo};
-use valkyrie::governance::models::DistributionPlan;
 
+
+const STAKING_CONFIG: Item<StakingConfig> = Item::new("staking-config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct StakingConfig {
+    pub distributor: Option<Addr>,
+}
+
+impl StakingConfig {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        STAKING_CONFIG.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<StakingConfig> {
+        STAKING_CONFIG.load(storage)
+    }
+}
 
 const STAKING_STATE: Item<StakingState> = Item::new("staking-state");
 
@@ -70,13 +86,6 @@ impl StakerState {
         });
     }
 
-    // quorum 을 넘기지 못해 total_deposit 만 차감되어 contract balance 가 실제 staking 수량보다 많을 수 있다.
-    // 이를 스테이커들에게 분배하기 위해 스테이커들의 실제 잔고를 계산할 때는
-    // 전체 스테이킹 수량 중 자신이 스테이킹한 수량이 어느정도의 비중을 차지하는지를 따져서
-    // 해당 비중만큼을 스테이커의 잔고로 취급한다.
-    // TODO: 근데 이러면 언스테이킹 했다가 다시 스테이킹을 해야 실제로 이득이 되는 것 아닌가?
-    // TODO: 실제로 지급한것이 아니고 contract balance - staking amount 만큼을 그냥 스테이커들이 비중만큼 공유하고 있기 때문에
-    // TODO: unstaking 하고 다시 staking 해야 실제적인 이득으로 돌아올 것 같은데.. 확인이 필요하다.
     pub fn load_balance(&self, storage: &dyn Storage, contract_available_balance: Uint128) -> StdResult<Uint128> {
         let staking_state = StakingState::load(storage)?;
 
@@ -109,35 +118,5 @@ impl StakerState {
 
     pub fn vote(&mut self, poll_id: u64, vote: VoteInfo) {
         self.votes.push((poll_id, vote));
-    }
-}
-
-
-const DISTRIBUTION_CONFIG: Item<DistributionConfig> = Item::new("distribution-config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct DistributionConfig {
-    pub plan: Vec<DistributionPlan>,
-}
-
-impl DistributionConfig {
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        DISTRIBUTION_CONFIG.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<DistributionConfig> {
-        DISTRIBUTION_CONFIG.load(storage)
-    }
-
-    pub fn locked_amount(&self, height: u64) -> StdResult<Uint128> {
-        let mut total_amount = Uint128::zero();
-        let mut release_amount = Uint128::zero();
-
-        for plan in self.plan.iter() {
-            total_amount += plan.amount;
-            release_amount += plan.release_amount(height);
-        }
-
-        Ok(total_amount.checked_sub(release_amount)?)
     }
 }

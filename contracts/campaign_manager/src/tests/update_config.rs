@@ -15,48 +15,48 @@ pub fn exec(
     env: Env,
     info: MessageInfo,
     governance: Option<String>,
-    fund_manager: Option<String>,
+    valkyrie_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
-    deposit_fee_rate: Option<Decimal>,
-    withdraw_fee_rate: Option<Decimal>,
-    withdraw_fee_recipient: Option<String>,
+    add_pool_fee_rate: Option<Decimal>,
+    add_pool_min_referral_reward_rate: Option<Decimal>,
+    remove_pool_fee_rate: Option<Decimal>,
+    fee_burn_ratio: Option<Decimal>,
+    fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
-    referral_reward_token: Option<String>,
-    min_referral_reward_deposit_rate: Option<Decimal>,
 ) -> ContractResult<Response> {
     update_config(
         deps.as_mut(),
         env,
         info,
         governance,
-        fund_manager,
+        valkyrie_token,
         terraswap_router,
         code_id,
-        deposit_fee_rate,
-        withdraw_fee_rate,
-        withdraw_fee_recipient,
+        add_pool_fee_rate,
+        add_pool_min_referral_reward_rate,
+        remove_pool_fee_rate,
+        fee_burn_ratio,
+        fee_recipient,
         deactivate_period,
         key_denom,
-        referral_reward_token,
-        min_referral_reward_deposit_rate,
     )
 }
 
 pub fn will_success(
     deps: &mut CustomDeps,
     governance: Option<String>,
-    fund_manager: Option<String>,
+    valkyrie_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
-    deposit_fee_rate: Option<Decimal>,
-    withdraw_fee_rate: Option<Decimal>,
-    withdraw_fee_recipient: Option<String>,
+    add_pool_fee_rate: Option<Decimal>,
+    add_pool_min_referral_reward_rate: Option<Decimal>,
+    remove_pool_fee_rate: Option<Decimal>,
+    fee_burn_ratio: Option<Decimal>,
+    fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
-    referral_reward_token: Option<String>,
-    min_referral_reward_deposit_rate: Option<Decimal>,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_manager_env();
     let info = governance_sender();
@@ -66,16 +66,16 @@ pub fn will_success(
         env.clone(),
         info.clone(),
         governance,
-        fund_manager,
+        valkyrie_token,
         terraswap_router,
         code_id,
-        deposit_fee_rate,
-        withdraw_fee_rate,
-        withdraw_fee_recipient,
+        add_pool_fee_rate,
+        add_pool_min_referral_reward_rate,
+        remove_pool_fee_rate,
+        fee_burn_ratio,
+        fee_recipient,
         deactivate_period,
         key_denom,
-        referral_reward_token,
-        min_referral_reward_deposit_rate,
     ).unwrap();
 
     (env, info, response)
@@ -88,45 +88,45 @@ fn succeed() {
     super::instantiate::default(&mut deps);
 
     let governance = "ChangedGovernance";
-    let fund_manager = "ChangedFundManager";
+    let valkyrie_token = "ChangedVkrToken";
     let terraswap_router = "ChangedTerraswapRouter";
     let code_id = 100u64;
-    let deposit_fee_rate = Decimal::percent(9);
-    let withdraw_fee_rate = Decimal::percent(99);
-    let withdraw_fee_recipient = "ChangedFeeRecipient";
+    let add_pool_fee_rate = Decimal::percent(9);
+    let add_pool_min_referral_reward_rate = Decimal::percent(20);
+    let remove_pool_fee_rate = Decimal::percent(99);
+    let fee_burn_ratio = Decimal::percent(90);
+    let fee_recipient = "ChangedFeeRecipient";
     let deactivate_period = 99u64;
     let key_denom = Denom::Native("ukrw".to_string());
-    let referral_reward_token = "ChangedRefRewardToken";
-    let min_referral_reward_deposit_rate = Decimal::percent(20);
 
     will_success(
         &mut deps,
         Some(governance.to_string()),
-        Some(fund_manager.to_string()),
+        Some(valkyrie_token.to_string()),
         Some(terraswap_router.to_string()),
         Some(code_id),
-        Some(deposit_fee_rate),
-        Some(withdraw_fee_rate),
-        Some(withdraw_fee_recipient.to_string()),
+        Some(add_pool_fee_rate),
+        Some(add_pool_min_referral_reward_rate),
+        Some(remove_pool_fee_rate),
+        Some(fee_burn_ratio),
+        Some(fee_recipient.to_string()),
         Some(deactivate_period),
         Some(key_denom.clone()),
-        Some(referral_reward_token.to_string()),
-        Some(min_referral_reward_deposit_rate),
     );
 
     let config = Config::load(&deps.storage).unwrap();
     assert_eq!(config, Config {
         governance: Addr::unchecked(governance),
-        fund_manager: Addr::unchecked(fund_manager),
+        valkyrie_token: Addr::unchecked(valkyrie_token),
         terraswap_router: Addr::unchecked(terraswap_router),
         code_id: code_id.clone(),
-        deposit_fee_rate: deposit_fee_rate.clone(),
-        withdraw_fee_rate: withdraw_fee_rate.clone(),
-        withdraw_fee_recipient: Addr::unchecked(withdraw_fee_recipient),
+        add_pool_fee_rate: add_pool_fee_rate.clone(),
+        add_pool_min_referral_reward_rate: add_pool_min_referral_reward_rate.clone(),
+        remove_pool_fee_rate: remove_pool_fee_rate.clone(),
+        fee_burn_ratio: fee_burn_ratio.clone(),
+        fee_recipient: Addr::unchecked(fee_recipient),
         deactivate_period: deactivate_period.clone(),
         key_denom: key_denom.to_cw20(&deps.api),
-        referral_reward_token: Addr::unchecked(referral_reward_token),
-        min_referral_reward_deposit_rate: min_referral_reward_deposit_rate.clone(),
     });
 }
 

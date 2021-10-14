@@ -4,7 +4,7 @@ use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use valkyrie::common::{Execution, OrderBy};
+use valkyrie::common::OrderBy;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::campaign::query_msgs::ReferralRewardLimitAmount;
 use valkyrie::governance::query_msgs::StakerStateResponse;
@@ -19,17 +19,15 @@ const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign_config");
 pub struct CampaignConfig {
     pub governance: Addr,
     pub campaign_manager: Addr,
-    pub fund_manager: Addr,
     pub title: String,
     pub description: String,
     pub url: String,
     pub parameter_key: String,
-    pub collateral_denom: Option<Denom>,
-    pub collateral_amount: Uint128,
-    pub collateral_lock_period: u64,
+    pub deposit_denom: Option<Denom>,
+    pub deposit_amount: Uint128,
+    pub deposit_lock_period: u64,
     pub qualifier: Option<Addr>,
     pub qualification_description: Option<String>,
-    pub executions: Vec<Execution>,
     pub admin: Addr,
     pub creator: Addr,
     pub created_at: Timestamp,
@@ -48,8 +46,8 @@ impl CampaignConfig {
         self.admin == *address
     }
 
-    pub fn require_collateral(&self) -> bool {
-        self.collateral_denom.is_some() && !self.collateral_amount.is_zero()
+    pub fn require_deposit(&self) -> bool {
+        self.deposit_denom.is_some()
     }
 }
 
@@ -68,7 +66,7 @@ pub struct CampaignState {
     pub cumulative_referral_reward_amount: Uint128,
     pub balances: Vec<(Denom, Uint128)>,
     pub locked_balances: Vec<(Denom, Uint128)>,
-    pub collateral_amount: Uint128,
+    pub deposit_amount: Uint128,
     pub active_flag: bool,
     pub last_active_height: Option<u64>,
     pub chain_id: String,
@@ -83,7 +81,7 @@ impl CampaignState {
             cumulative_referral_reward_amount: Uint128::zero(),
             balances: vec![],
             locked_balances: vec![],
-            collateral_amount: Uint128::zero(),
+            deposit_amount: Uint128::zero(),
             active_flag: false,
             last_active_height: None,
             chain_id,
@@ -154,10 +152,10 @@ impl CampaignState {
     }
 
     pub fn validate_balance(&self) -> StdResult<()> {
-        for (denom, balance) in self.balances.iter() {
-            let locked_balance = self.locked_balance(denom);
+        for (denom, locked_balance) in self.locked_balances.iter() {
+            let balance = self.total_balance(denom);
 
-            if *balance < locked_balance {
+            if balance < *locked_balance {
                 return Err(StdError::generic_err("locked balance can't greater than balance"));
             }
         }
@@ -167,6 +165,16 @@ impl CampaignState {
 
     pub fn locked_balance(&self, denom: &Denom) -> Uint128 {
         for (locked_denom, locked_amount) in self.locked_balances.iter() {
+            if *locked_denom == *denom {
+                return locked_amount.clone();
+            }
+        }
+
+        Uint128::zero()
+    }
+
+    fn total_balance(&self, denom: &Denom) -> Uint128 {
+        for (locked_denom, locked_amount) in self.balances.iter() {
             if *locked_denom == *denom {
                 return locked_amount.clone();
             }
@@ -338,18 +346,18 @@ impl Actor {
 }
 
 
-const COLLATERALS: Map<&Addr, Collateral> = Map::new("collateral");
+const DEPOSITS: Map<&Addr, Deposit> = Map::new("deposit");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Collateral {
+pub struct Deposit {
     pub owner: Addr,
     pub deposit_amount: Uint128,
     pub locked_amounts: Vec<(Uint128, u64)>,
 }
 
-impl Collateral {
-    pub fn new(owner: Addr) -> Collateral {
-        Collateral {
+impl Deposit {
+    pub fn new(owner: Addr) -> Deposit {
+        Deposit {
             owner,
             deposit_amount: Uint128::zero(),
             locked_amounts: vec![],
@@ -357,15 +365,15 @@ impl Collateral {
     }
 
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        COLLATERALS.save(storage, &self.owner, self)
+        DEPOSITS.save(storage, &self.owner, self)
     }
 
-    pub fn load(storage: &dyn Storage, owner: &Addr) -> StdResult<Collateral> {
-        COLLATERALS.load(storage, owner)
+    pub fn load(storage: &dyn Storage, owner: &Addr) -> StdResult<Deposit> {
+        DEPOSITS.load(storage, owner)
     }
 
-    pub fn load_or_new(storage: &dyn Storage, owner: &Addr) -> StdResult<Collateral> {
-        Ok(COLLATERALS.may_load(storage, owner)
+    pub fn load_or_new(storage: &dyn Storage, owner: &Addr) -> StdResult<Deposit> {
+        Ok(DEPOSITS.may_load(storage, owner)
             ?.unwrap_or_else(|| Self::new(owner.clone())))
     }
 

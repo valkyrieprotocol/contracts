@@ -44,9 +44,9 @@ pub fn set_height(env: &mut Env, height: u64) {
     let diff = height as i128 - env.block.height as i128;
 
     if diff.is_positive() {
-        plus_height(env, diff as u64);
+        plus_height(env, diff.abs() as u64);
     } else {
-        minus_height(env, diff as u64);
+        minus_height(env, diff.abs() as u64);
     }
 }
 
@@ -104,6 +104,16 @@ pub fn expect_invalid_zero_amount_err(result: &ContractResult<Response>) {
         Err(ContractError::InvalidZeroAmount {}) => {
             // do nothing
         }
+        Err(e) => panic!("Unexpected error: {:?}", e),
+    }
+}
+
+pub fn expect_overflow_err(result: &ContractResult<Response>) {
+    match result {
+        Ok(_) => panic!("Must return error"),
+        Err(ContractError::Std(StdError::Overflow { .. })) => {
+            // do nothing
+        },
         Err(e) => panic!("Unexpected error: {:?}", e),
     }
 }

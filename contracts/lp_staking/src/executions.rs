@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    Addr, Coin, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper,
-    Response, StdError, StdResult, Uint128,
+    Addr, Coin, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult,
+    Uint128,
 };
 
 use crate::states::{Config, StakerInfo, State, UST};
@@ -11,8 +11,8 @@ use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
 use valkyrie::lp_staking::execute_msgs::ExecuteMsg;
-use valkyrie::utils::make_response;
 use valkyrie::message_factories;
+use valkyrie::utils::make_response;
 
 pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
     let mut response = make_response("bond");
@@ -24,7 +24,7 @@ pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> St
     let mut staker_info: StakerInfo = StakerInfo::load_or_default(deps.storage, &sender_addr_raw)?;
 
     // Compute global reward & staker reward
-    state.compute_reward(&config,  env.block.height);
+    state.compute_reward(&config, env.block.height);
     staker_info.compute_staker_reward(&state)?;
 
     // Increase bond_amount
@@ -92,7 +92,10 @@ pub fn auto_stake(
     // 3. Provide liquidity
     response = response.add_message(message_factories::wasm_execute_with_funds(
         &config.pair,
-        vec![Coin {denom: UST.to_string(),amount: uusd_amount.checked_sub(tax_amount)?}],
+        vec![Coin {
+            denom: UST.to_string(),
+            amount: uusd_amount.checked_sub(tax_amount)?,
+        }],
         &PairExecuteMsg::ProvideLiquidity {
             assets: [
                 Asset {

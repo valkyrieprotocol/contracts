@@ -159,10 +159,10 @@
     {
       "type": "object",
       "required": [
-        "collateral"
+        "deposit"
       ],
       "properties": {
-        "collateral": {
+        "deposit": {
           "type": "object",
           "required": [
             "address"

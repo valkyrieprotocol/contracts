@@ -10,6 +10,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::governance::query_msgs::QueryMsg;
+use crate::staking::states::StakingConfig;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -28,7 +29,7 @@ pub fn instantiate(
         deps.branch(),
         env.clone(),
         info.clone(),
-        msg.distribution_config,
+        msg.staking_config,
     )?;
     crate::poll::executions::instantiate(
         deps.branch(),
@@ -49,9 +50,14 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::UnstakeGovernanceToken {
-            amount,
-        } => crate::staking::executions::unstake_governance_token(deps, env, info, amount),
+        ExecuteMsg::UpdateStakingConfig {
+            distributor,
+        } => crate::staking::executions::update_staking_config(
+            deps,
+            env,
+            info,
+            distributor,
+        ),
         ExecuteMsg::UpdatePollConfig {
             quorum,
             threshold,
@@ -69,6 +75,21 @@ pub fn execute(
             execution_delay_period,
             proposal_deposit,
             snapshot_period,
+        ),
+        ExecuteMsg::StakeGovernanceTokenHook {
+            staker,
+            amount,
+        } => crate::staking::executions::stake_governance_token_hook(
+            deps, env, info, staker, amount,
+        ),
+        ExecuteMsg::UnstakeGovernanceToken {
+            amount,
+        } => crate::staking::executions::unstake_governance_token(deps, env, info, amount),
+        ExecuteMsg::UnstakeGovernanceTokenHook {
+            staker,
+            amount,
+        } => crate::staking::executions::unstake_governance_token_hook(
+            deps, env, info, staker, amount,
         ),
         ExecuteMsg::CastVote {
             poll_id,
@@ -134,7 +155,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    StakingConfig {
+        distributor: msg.staking_config.distributor
+            .map(|d| deps.api.addr_validate(d.as_str())).transpose()?,
+    }.save(deps.storage)?;
+
     Ok(Response::default())
 }
 
@@ -175,6 +201,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             limit,
             order_by,
         )?),
+        QueryMsg::StakingConfig {} => {
+            to_binary(&crate::staking::queries::get_staking_config(deps, env)?)
+        },
         QueryMsg::StakingState {} => {
             to_binary(&crate::staking::queries::get_staking_state(deps, env)?)
         }

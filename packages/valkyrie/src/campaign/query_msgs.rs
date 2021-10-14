@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::campaign::enumerations::Referrer;
-use crate::common::{Denom, ExecutionMsg, OrderBy};
+use crate::common::{Denom, OrderBy};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -28,7 +28,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
         order_by: Option<OrderBy>,
     },
-    Collateral {
+    Deposit {
         address: String,
     },
 }
@@ -37,17 +37,15 @@ pub enum QueryMsg {
 pub struct CampaignConfigResponse {
     pub governance: String,
     pub campaign_manager: String,
-    pub fund_manager: String,
     pub title: String,
     pub description: String,
     pub url: String,
     pub parameter_key: String,
-    pub collateral_denom: Option<Denom>,
-    pub collateral_amount: Uint128,
-    pub collateral_lock_period: u64,
+    pub deposit_denom: Option<Denom>,
+    pub deposit_amount: Uint128,
+    pub deposit_lock_period: u64,
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
-    pub executions: Vec<ExecutionMsg>,
     pub admin: String,
     pub creator: String,
     pub created_at: Timestamp,
@@ -69,6 +67,7 @@ pub struct CampaignStateResponse {
     pub cumulative_referral_reward_amount: Uint128,
     pub locked_balances: Vec<(Denom, Uint128)>,
     pub balances: Vec<(Denom, Uint128)>,
+    pub deposit_amount: Uint128,
     pub is_active: bool,
     pub is_pending: bool,
 }

@@ -7,17 +7,18 @@ use valkyrie::test_constants::governance::governance_env;
 
 use crate::staking::executions::instantiate;
 use crate::staking::states::StakingState;
-use valkyrie::governance::models::DistributionPlan;
-use valkyrie::governance::execute_msgs::DistributionConfigMsg;
+use valkyrie::governance::execute_msgs::StakingConfigInitMsg;
 
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
-    plan: Vec<DistributionPlan>,
+    distributor: Option<String>,
+    distribution_id: Option<u64>,
 ) -> ContractResult<Response> {
-    let msg = DistributionConfigMsg {
-        plan,
+    let msg = StakingConfigInitMsg {
+        distributor,
+        distribution_id,
     };
 
     instantiate(deps.as_mut(), env, info, msg)
@@ -31,7 +32,8 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         deps,
         env.clone(),
         info.clone(),
-        vec![],
+        None,
+        None,
     ).unwrap();
 
     (env, info, response)

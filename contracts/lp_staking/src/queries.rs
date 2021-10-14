@@ -1,7 +1,7 @@
 use cosmwasm_std::{Deps, Env, StdResult};
 
 use crate::states::{Config, StakerInfo, State};
-use valkyrie::lp_staking::query_msgs::{ConfigResponse, StateResponse, StakerInfoResponse};
+use valkyrie::lp_staking::query_msgs::{ConfigResponse, StakerInfoResponse, StateResponse};
 
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config: Config = Config::load(deps.storage)?;

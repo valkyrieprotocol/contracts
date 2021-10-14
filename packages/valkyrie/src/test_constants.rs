@@ -51,7 +51,7 @@ pub mod governance {
     }
 }
 
-pub mod fund_manager {
+pub mod community {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
@@ -60,21 +60,41 @@ pub mod fund_manager {
     use crate::test_constants::VALKYRIE_TOKEN;
     use crate::test_utils::mock_env_contract;
 
-    pub const FUND_MANAGER: &str = "FundManager";
+    pub const COMMUNITY: &str = "Community";
 
     pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
     pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
-    pub const CAMPAIGN_DEPOSIT_FEE_BURN_RATIO_PERCENT: u64 = 50;
-    pub const CAMPAIGN_DEPOSIT_FEE_RECIPIENT: &str = GOVERNANCE;
 
-    pub fn fund_manager_env() -> Env {
-        mock_env_contract(FUND_MANAGER)
+    pub fn community_env() -> Env {
+        mock_env_contract(COMMUNITY)
     }
 
-    pub fn fund_manager_sender() -> MessageInfo {
-        mock_info(FUND_MANAGER, &[])
+    pub fn community_sender() -> MessageInfo {
+        mock_info(COMMUNITY, &[])
+    }
+}
+
+pub mod distributor {
+    use cosmwasm_std::{Env, MessageInfo};
+    use cosmwasm_std::testing::mock_info;
+
+    use crate::test_constants::governance::GOVERNANCE;
+    use crate::test_constants::VALKYRIE_TOKEN;
+    use crate::test_utils::mock_env_contract;
+
+    pub const DISTRIBUTOR: &str = "Distributor";
+
+    pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
+    pub const ADMINS: [&str; 1] = [GOVERNANCE];
+
+    pub fn distributor_env() -> Env {
+        mock_env_contract(DISTRIBUTOR)
+    }
+
+    pub fn distributor_sender() -> MessageInfo {
+        mock_info(DISTRIBUTOR, &[])
     }
 }
 
@@ -82,18 +102,19 @@ pub mod campaign_manager {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
-    use crate::test_constants::VALKYRIE_TOKEN;
     use crate::test_utils::mock_env_contract;
+    use crate::test_constants::governance::GOVERNANCE;
 
     pub const CAMPAIGN_MANAGER: &str = "CampaignManager";
 
     pub const CAMPAIGN_CODE_ID: u64 = 1;
-    pub const DEPOSIT_FEE_RATE_PERCENT: u64 = 0;
-    pub const WITHDRAW_FEE_RATE_PERCENT: u64 = 10;
+    pub const ADD_POOL_FEE_RATE_PERCENT: u64 = 0;
+    pub const ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT: u64 = 20;
+    pub const REMOVE_POOL_FEE_RATE_PERCENT: u64 = 10;
+    pub const FEE_BURN_RATIO_PERCENT: u64 = 50;
+    pub const FEE_RECIPIENT: &str = GOVERNANCE;
     pub const CAMPAIGN_DEACTIVATE_PERIOD: u64 = 403290;
     pub const KEY_DENOM_NATIVE: &str = "uusd";
-    pub const REFERRAL_REWARD_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const MIN_REFERRAL_REWARD_DEPOSIT_RATE_PERCENT: u64 = 20;
     pub const REFERRAL_REWARD_LIMIT_BASE_COUNT: u8 = 5;
     pub const REFERRAL_REWARD_LIMIT_STAKING_PERCENT: u16 = 50;
 
@@ -122,9 +143,9 @@ pub mod campaign {
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(5);
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
     pub const QUALIFIER: &str = "Qualifier";
-    pub const COLLATERAL_DENOM_NATIVE: &str = "uusd";
-    pub const COLLATERAL_AMOUNT: Uint128 = Uint128::new(100);
-    pub const COLLATERAL_LOCK_PERIOD: u64 = 10000;
+    pub const DEPOSIT_DENOM_NATIVE: &str = "uusd";
+    pub const DEPOSIT_AMOUNT: Uint128 = Uint128::new(100);
+    pub const DEPOSIT_LOCK_PERIOD: u64 = 10000;
 
     pub fn campaign_env() -> Env {
         mock_env_contract(CAMPAIGN)

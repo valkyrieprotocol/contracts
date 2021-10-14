@@ -1,8 +1,8 @@
 pub mod entrypoints;
 
-mod states;
-mod queries;
 mod executions;
+mod queries;
+mod states;
 
 #[cfg(test)]
 mod testing;

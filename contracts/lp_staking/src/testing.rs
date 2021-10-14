@@ -1,15 +1,16 @@
 use crate::entrypoints::{execute, instantiate, query};
 use crate::mock_querier::mock_dependencies_with_querier;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, Uint128, WasmMsg, SubMsg};
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128, WasmMsg,
+};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
+use valkyrie::lp_staking::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg};
 use valkyrie::lp_staking::query_msgs::{
-    ConfigResponse, QueryMsg, StakerInfoResponse,
-    StateResponse,
+    ConfigResponse, QueryMsg, StakerInfoResponse, StateResponse,
 };
-use valkyrie::lp_staking::execute_msgs::{InstantiateMsg, ExecuteMsg, Cw20HookMsg};
 
 #[test]
 fn proper_initialization() {
@@ -244,7 +245,7 @@ fn test_unbond() {
                 recipient: Addr::unchecked("addr0000").to_string(),
                 amount: Uint128::new(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))]
     );
@@ -409,7 +410,7 @@ fn test_withdraw() {
                 recipient: Addr::unchecked("addr0000").to_string(),
                 amount: Uint128::new(1000000u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))]
     );
@@ -509,7 +510,7 @@ fn test_auto_stake() {
                     recipient: Addr::unchecked(MOCK_CONTRACT_ADDR).to_string(),
                     amount: Uint128::new(1u128),
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
             })),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -519,7 +520,7 @@ fn test_auto_stake() {
                     amount: Uint128::new(1),
                     expires: None,
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
             })),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -542,7 +543,7 @@ fn test_auto_stake() {
                     slippage_tolerance: None,
                     receiver: None,
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![Coin {
                     denom: "uusd".to_string(),
                     amount: Uint128::new(99u128), // 1% tax
@@ -554,7 +555,7 @@ fn test_auto_stake() {
                     staker_addr: Addr::unchecked("addr0000").to_string(),
                     already_staked_amount: Uint128::new(0),
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
             })),
         ]

@@ -4,7 +4,7 @@ use valkyrie::mock_querier::custom_deps;
 use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN};
 
 use crate::staking::queries::get_staker_state;
-use crate::staking::tests::stake_governance_token::STAKER1;
+use crate::staking::tests::stake_governance_token_hook::STAKER1;
 use crate::tests::init_default;
 
 #[test]
@@ -13,14 +13,14 @@ fn share_calculation() {
 
     init_default(deps.as_mut());
 
-    super::stake_governance_token::will_success(&mut deps, STAKER1, Uint128::new(100));
+    super::stake_governance_token_hook::will_success(&mut deps, STAKER1, Uint128::new(100));
 
     deps.querier.plus_token_balances(&[(
         GOVERNANCE_TOKEN,
         &[(GOVERNANCE, &Uint128::new(100))],
     )]);
 
-    let (_, _, response) = super::stake_governance_token::will_success(
+    let (_, _, response) = super::stake_governance_token_hook::will_success(
         &mut deps,
         STAKER1,
         Uint128::new(100),
@@ -33,7 +33,7 @@ fn share_calculation() {
         attr("amount", "100"),
     ]);
 
-    let (_, _, response) = super::unstake_governance_token::will_success(
+    let (_, _, response) = super::unstake_governance_token_hook::will_success(
         &mut deps,
         STAKER1,
         Some(Uint128::new(100)),

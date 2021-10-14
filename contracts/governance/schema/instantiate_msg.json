@@ -4,18 +4,18 @@
   "type": "object",
   "required": [
     "contract_config",
-    "distribution_config",
-    "poll_config"
+    "poll_config",
+    "staking_config"
   ],
   "properties": {
     "contract_config": {
       "$ref": "#/definitions/ContractConfigInitMsg"
     },
-    "distribution_config": {
-      "$ref": "#/definitions/DistributionConfigMsg"
-    },
     "poll_config": {
       "$ref": "#/definitions/PollConfigInitMsg"
+    },
+    "staking_config": {
+      "$ref": "#/definitions/StakingConfigInitMsg"
     }
   },
   "definitions": {
@@ -33,43 +33,6 @@
     "Decimal": {
       "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
       "type": "string"
-    },
-    "DistributionConfigMsg": {
-      "type": "object",
-      "required": [
-        "plan"
-      ],
-      "properties": {
-        "plan": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/DistributionPlan"
-          }
-        }
-      }
-    },
-    "DistributionPlan": {
-      "type": "object",
-      "required": [
-        "amount",
-        "end_height",
-        "start_height"
-      ],
-      "properties": {
-        "amount": {
-          "$ref": "#/definitions/Uint128"
-        },
-        "end_height": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        },
-        "start_height": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        }
-      }
     },
     "PollConfigInitMsg": {
       "type": "object",
@@ -105,6 +68,17 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        }
+      }
+    },
+    "StakingConfigInitMsg": {
+      "type": "object",
+      "properties": {
+        "distributor": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

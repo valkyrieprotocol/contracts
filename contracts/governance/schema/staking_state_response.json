@@ -3,9 +3,13 @@
   "title": "StakingStateResponse",
   "type": "object",
   "required": [
+    "total_balance",
     "total_share"
   ],
   "properties": {
+    "total_balance": {
+      "$ref": "#/definitions/Uint128"
+    },
     "total_share": {
       "$ref": "#/definitions/Uint128"
     }

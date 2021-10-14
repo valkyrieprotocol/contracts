@@ -3,16 +3,16 @@ use cosmwasm_std::testing::mock_env;
 
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
-use valkyrie::common::{ContractResult, Denom, Execution, ExecutionMsg};
+use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign::*;
-use valkyrie::test_constants::campaign_manager::{CAMPAIGN_MANAGER, campaign_manager_sender, REFERRAL_REWARD_TOKEN};
-use valkyrie::test_constants::fund_manager::FUND_MANAGER;
+use valkyrie::test_constants::campaign_manager::{CAMPAIGN_MANAGER, campaign_manager_sender};
 use valkyrie::test_constants::governance::GOVERNANCE;
 use valkyrie::test_utils::expect_generic_err;
 
-use crate::executions::{instantiate, MAX_DESC_LENGTH, MAX_PARAM_KEY_LENGTH, MAX_TITLE_LENGTH, MAX_URL_LENGTH, MIN_DESC_LENGTH, MIN_PARAM_KEY_LENGTH, MIN_TITLE_LENGTH, MIN_URL_LENGTH};
+use crate::executions::*;
 use crate::states::{CampaignConfig, CampaignState, RewardConfig};
+use valkyrie::test_constants::VALKYRIE_TOKEN;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -24,7 +24,6 @@ pub fn exec(
     parameter_key: String,
     qualifier: Option<String>,
     qualification_description: Option<String>,
-    executions: Vec<ExecutionMsg>,
     participation_reward_denom: Denom,
     participation_reward_amount: Uint128,
     referral_reward_amounts: Vec<Uint128>,
@@ -42,16 +41,14 @@ pub fn exec(
     let msg = CampaignInstantiateMsg {
         governance: GOVERNANCE.to_string(),
         campaign_manager: CAMPAIGN_MANAGER.to_string(),
-        fund_manager: FUND_MANAGER.to_string(),
-        collateral_denom: Some(Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-        collateral_amount: COLLATERAL_AMOUNT,
-        collateral_lock_period: COLLATERAL_LOCK_PERIOD,
+        deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+        deposit_amount: DEPOSIT_AMOUNT,
+        deposit_lock_period: DEPOSIT_LOCK_PERIOD,
         qualifier,
         qualification_description,
-        executions,
         admin: CAMPAIGN_ADMIN.to_string(),
         creator: CAMPAIGN_ADMIN.to_string(),
-        referral_reward_token: REFERRAL_REWARD_TOKEN.to_string(),
+        referral_reward_token: VALKYRIE_TOKEN.to_string(),
         config_msg: to_binary(&config_msg)?,
     };
 
@@ -66,7 +63,6 @@ pub fn will_success(
     parameter_key: String,
     qualifier: Option<String>,
     qualification_description: Option<String>,
-    executions: Vec<ExecutionMsg>,
     participation_reward_denom: Denom,
     participation_reward_amount: Uint128,
     referral_reward_amounts: Vec<Uint128>,
@@ -84,7 +80,6 @@ pub fn will_success(
         parameter_key,
         qualifier,
         qualification_description,
-        executions,
         participation_reward_denom,
         participation_reward_amount,
         referral_reward_amounts,
@@ -102,7 +97,6 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -119,17 +113,15 @@ fn succeed() {
     assert_eq!(campaign_info, CampaignConfig {
         governance: Addr::unchecked(GOVERNANCE),
         campaign_manager: Addr::unchecked(CAMPAIGN_MANAGER),
-        fund_manager: Addr::unchecked(FUND_MANAGER),
         title: CAMPAIGN_TITLE.to_string(),
         description: CAMPAIGN_DESCRIPTION.to_string(),
         url: CAMPAIGN_URL.to_string(),
         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
-        collateral_denom: Some(cw20::Denom::Native(COLLATERAL_DENOM_NATIVE.to_string())),
-        collateral_amount: COLLATERAL_AMOUNT,
-        collateral_lock_period: COLLATERAL_LOCK_PERIOD,
+        deposit_denom: Some(cw20::Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
+        deposit_amount: DEPOSIT_AMOUNT,
+        deposit_lock_period: DEPOSIT_LOCK_PERIOD,
         qualifier: None,
         qualification_description: None,
-        executions: vec![],
         admin: Addr::unchecked(CAMPAIGN_ADMIN),
         creator: Addr::unchecked(CAMPAIGN_ADMIN),
         created_at: env.block.time,
@@ -143,7 +135,7 @@ fn succeed() {
         cumulative_referral_reward_amount: Uint128::zero(),
         locked_balances: vec![],
         balances: vec![],
-        collateral_amount: Uint128::zero(),
+        deposit_amount: Uint128::zero(),
         active_flag: false,
         last_active_height: None,
         chain_id: env.block.chain_id,
@@ -153,7 +145,7 @@ fn succeed() {
     assert_eq!(distribution_config, RewardConfig {
         participation_reward_denom: cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
-        referral_reward_token: Addr::unchecked(REFERRAL_REWARD_TOKEN),
+        referral_reward_token: Addr::unchecked(VALKYRIE_TOKEN),
         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
     });
 }
@@ -172,7 +164,6 @@ fn failed_invalid_title() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -189,7 +180,6 @@ fn failed_invalid_title() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -211,7 +201,6 @@ fn failed_invalid_description() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -228,7 +217,6 @@ fn failed_invalid_description() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -250,7 +238,6 @@ fn failed_invalid_url() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -267,7 +254,6 @@ fn failed_invalid_url() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -289,7 +275,6 @@ fn failed_invalid_parameter_key() {
         std::iter::repeat('a').take(MIN_PARAM_KEY_LENGTH - 1).collect(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
@@ -306,68 +291,11 @@ fn failed_invalid_parameter_key() {
         std::iter::repeat('a').take(MAX_PARAM_KEY_LENGTH + 1).collect(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
     );
     expect_generic_err(&result, "ParameterKey too long");
-}
-
-#[test]
-fn test_execution_order() {
-    let mut deps = custom_deps();
-
-    let executions = vec![
-        ExecutionMsg {
-            order: 2,
-            contract: "Contract1".to_string(),
-            msg: to_binary("").unwrap(),
-        },
-        ExecutionMsg {
-            order: 1,
-            contract: "Contract1".to_string(),
-            msg: to_binary("").unwrap(),
-        },
-        ExecutionMsg {
-            order: 3,
-            contract: "Contract1".to_string(),
-            msg: to_binary("").unwrap(),
-        },
-    ];
-
-    will_success(
-        &mut deps,
-        CAMPAIGN_TITLE.to_string(),
-        CAMPAIGN_DESCRIPTION.to_string(),
-        CAMPAIGN_URL.to_string(),
-        CAMPAIGN_PARAMETER_KEY.to_string(),
-        None,
-        None,
-        executions,
-        Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
-        PARTICIPATION_REWARD_AMOUNT,
-        REFERRAL_REWARD_AMOUNTS.to_vec(),
-    );
-
-    let campaign = CampaignConfig::load(&deps.storage).unwrap();
-    assert_eq!(campaign.executions, vec![
-        Execution {
-            order: 1,
-            contract: Addr::unchecked("Contract1"),
-            msg: to_binary("").unwrap(),
-        },
-        Execution {
-            order: 2,
-            contract: Addr::unchecked("Contract1"),
-            msg: to_binary("").unwrap(),
-        },
-        Execution {
-            order: 3,
-            contract: Addr::unchecked("Contract1"),
-            msg: to_binary("").unwrap(),
-        },
-    ]);
 }
 
 #[test]
@@ -384,7 +312,6 @@ fn failed_invalid_amounts() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         vec![Uint128::zero(), Uint128::new(100)],
@@ -398,7 +325,6 @@ fn failed_invalid_amounts() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         Uint128::zero(),
         vec![Uint128::zero(), Uint128::new(100)],
@@ -414,7 +340,6 @@ fn failed_invalid_amounts() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         vec![],
@@ -431,7 +356,6 @@ fn failed_invalid_amounts() {
         CAMPAIGN_PARAMETER_KEY.to_string(),
         None,
         None,
-        vec![],
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
         vec![Uint128::zero(), Uint128::zero()],

@@ -1,12 +1,31 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, StdResult, Uint128, Storage};
+use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 
 pub const UST: &str = "uusd";
 
-const CONFIG: Item<Config> = Item::new("config");
+const OLD_CONFIG: Item<OldConfig> = Item::new("config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct OldConfig {
+    pub token: Addr,
+    pub lp_token: Addr,
+    pub pair: Addr,
+}
+
+impl OldConfig {
+    pub fn load(storage: &dyn Storage) -> StdResult<OldConfig> {
+        OLD_CONFIG.load(storage)
+    }
+
+    pub fn delete(storage: &mut dyn Storage) {
+        OLD_CONFIG.remove(storage)
+    }
+}
+
+const CONFIG: Item<Config> = Item::new("config_v2");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -26,8 +45,26 @@ impl Config {
     }
 }
 
+const OLD_STATE: Item<OldState> = Item::new("state");
 
-const STATE: Item<State> = Item::new("state");
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct OldState {
+    pub pending_reward: Uint128,
+    pub total_bond_amount: Uint128,
+    pub global_reward_index: Decimal,
+}
+
+impl OldState {
+    pub fn load(storage: &dyn Storage) -> StdResult<OldState> {
+        OLD_STATE.load(storage)
+    }
+
+    pub fn delete(storage: &mut dyn Storage) {
+        OLD_STATE.remove(storage)
+    }
+}
+
+const STATE: Item<State> = Item::new("state_v2");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
@@ -67,7 +104,8 @@ impl State {
             let num_blocks = s.1 - s.0;
             let distribution_amount_per_block: Decimal = Decimal::from_ratio(s.2, num_blocks);
             // distribution_amount_per_block = distribution amount of this schedule / blocks count of this schedule.
-            distributed_amount += distribution_amount_per_block * Uint128::new(passed_blocks as u128);
+            distributed_amount +=
+                distribution_amount_per_block * Uint128::new(passed_blocks as u128);
         }
 
         self.last_distributed = block_height;
@@ -76,7 +114,6 @@ impl State {
         // state.global_reward_index = state.global_reward_index + (distributed_amount / state.total_bond_amount)
     }
 }
-
 
 const STAKER_INFO: Map<&str, StakerInfo> = Map::new("reward");
 
@@ -103,7 +140,8 @@ impl StakerInfo {
     }
 
     pub fn load_or_default(storage: &dyn Storage, owner: &Addr) -> StdResult<StakerInfo> {
-        Ok(STAKER_INFO.may_load(storage, owner.as_str())?
+        Ok(STAKER_INFO
+            .may_load(storage, owner.as_str())?
             .unwrap_or_else(|| StakerInfo::default(owner.clone())))
     }
 
