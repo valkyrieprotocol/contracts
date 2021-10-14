@@ -1,0 +1,3 @@
+# Valkyrie Campaign
+The Campaign Contract manages campaign information, reward information, and participation history. In addition, participation in the campaign and payment of rewards are also made in the Campaign Contract. Rewards are divided into participation rewards and referral rewards, and VKR is used for referral rewards by default.
+To set participation conditions except deposit, you must use qualifier. For the implementation of Qualifier, refer to [document](https://docs.valkyrieprotocol.com/creator-guide/qualifier-contract-quide).
