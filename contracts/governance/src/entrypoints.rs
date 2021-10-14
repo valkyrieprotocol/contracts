@@ -10,6 +10,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::governance::query_msgs::QueryMsg;
+use crate::staking::states::StakingConfig;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -154,7 +155,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    StakingConfig {
+        distributor: msg.staking_config.distributor
+            .map(|d| deps.api.addr_validate(d.as_str())).transpose()?,
+    }.save(deps.storage)?;
+
     Ok(Response::default())
 }
 
