@@ -7,7 +7,9 @@
     "parameter_key",
     "participation_reward_amount",
     "participation_reward_denom",
+    "participation_reward_lock_period",
     "referral_reward_amounts",
+    "referral_reward_lock_period",
     "title",
     "url"
   ],
@@ -24,11 +26,21 @@
     "participation_reward_denom": {
       "$ref": "#/definitions/Denom"
     },
+    "participation_reward_lock_period": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
     "referral_reward_amounts": {
       "type": "array",
       "items": {
         "$ref": "#/definitions/Uint128"
       }
+    },
+    "referral_reward_lock_period": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     },
     "title": {
       "type": "string"

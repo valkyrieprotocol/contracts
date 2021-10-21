@@ -10,7 +10,9 @@
     "participation_count",
     "participation_reward_amount",
     "referral_count",
-    "referral_reward_amount"
+    "referral_reward_amount",
+    "unlocked_participation_reward_amount",
+    "unlocked_referral_reward_amount"
   ],
   "properties": {
     "address": {
@@ -46,6 +48,12 @@
         "string",
         "null"
       ]
+    },
+    "unlocked_participation_reward_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "unlocked_referral_reward_amount": {
+      "$ref": "#/definitions/Uint128"
     }
   },
   "definitions": {
