@@ -26,7 +26,9 @@ pub fn exec(
     qualification_description: Option<String>,
     participation_reward_denom: Denom,
     participation_reward_amount: Uint128,
+    participation_reward_lock_period: u64,
     referral_reward_amounts: Vec<Uint128>,
+    referral_reward_lock_period: u64,
 ) -> ContractResult<Response> {
     let config_msg = CampaignConfigMsg {
         title,
@@ -35,7 +37,9 @@ pub fn exec(
         parameter_key,
         participation_reward_denom,
         participation_reward_amount,
+        participation_reward_lock_period,
         referral_reward_amounts,
+        referral_reward_lock_period,
     };
 
     let msg = CampaignInstantiateMsg {
@@ -65,7 +69,9 @@ pub fn will_success(
     qualification_description: Option<String>,
     participation_reward_denom: Denom,
     participation_reward_amount: Uint128,
+    participation_reward_lock_period: u64,
     referral_reward_amounts: Vec<Uint128>,
+    referral_reward_lock_period: u64,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
     let info = campaign_manager_sender();
@@ -82,7 +88,9 @@ pub fn will_success(
         qualification_description,
         participation_reward_denom,
         participation_reward_amount,
+        participation_reward_lock_period,
         referral_reward_amounts,
+        referral_reward_lock_period,
     ).unwrap();
 
     (env, info, response)
@@ -99,7 +107,9 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     )
 }
 
@@ -145,8 +155,10 @@ fn succeed() {
     assert_eq!(distribution_config, RewardConfig {
         participation_reward_denom: cw20::Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+        participation_reward_lock_period: PARTICIPATION_REWARD_LOCK_PERIOD,
         referral_reward_token: Addr::unchecked(VALKYRIE_TOKEN),
         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
+        referral_reward_lock_period: REFERRAL_REWARD_LOCK_PERIOD,
     });
 }
 
@@ -166,7 +178,9 @@ fn failed_invalid_title() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Title too short");
 
@@ -182,7 +196,9 @@ fn failed_invalid_title() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Title too long");
 }
@@ -203,7 +219,9 @@ fn failed_invalid_description() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Description too short");
 
@@ -219,7 +237,9 @@ fn failed_invalid_description() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Description too long");
 }
@@ -240,7 +260,9 @@ fn failed_invalid_url() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Url too short");
 
@@ -256,7 +278,9 @@ fn failed_invalid_url() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Url too long");
 }
@@ -277,7 +301,9 @@ fn failed_invalid_parameter_key() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "ParameterKey too short");
 
@@ -293,7 +319,9 @@ fn failed_invalid_parameter_key() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "ParameterKey too long");
 }
@@ -314,7 +342,9 @@ fn failed_invalid_amounts() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
-        vec![Uint128::zero(), Uint128::new(100)],
+        PARTICIPATION_REWARD_LOCK_PERIOD,
+        REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
 
     will_success(
@@ -327,7 +357,9 @@ fn failed_invalid_amounts() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         Uint128::zero(),
-        vec![Uint128::zero(), Uint128::new(100)],
+        PARTICIPATION_REWARD_LOCK_PERIOD,
+        REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
 
     let result = exec(
@@ -342,7 +374,9 @@ fn failed_invalid_amounts() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         vec![],
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Invalid reward scheme");
 
@@ -358,7 +392,9 @@ fn failed_invalid_amounts() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         vec![Uint128::zero(), Uint128::zero()],
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
     expect_generic_err(&result, "Invalid reward scheme");
 }

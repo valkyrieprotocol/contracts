@@ -59,13 +59,17 @@ pub fn execute(
         ),
         ExecuteMsg::UpdateRewardConfig {
             participation_reward_amount,
+            participation_reward_lock_period,
             referral_reward_amounts,
+            referral_reward_lock_period,
         } => crate::executions::update_reward_config(
             deps,
             env,
             info,
             participation_reward_amount,
+            participation_reward_lock_period,
             referral_reward_amounts,
+            referral_reward_lock_period,
         ),
         ExecuteMsg::SetNoQualification {} => crate::executions::set_no_qualification(
             deps,

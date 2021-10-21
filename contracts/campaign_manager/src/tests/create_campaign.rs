@@ -5,7 +5,7 @@ use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TOKEN};
-use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD};
+use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD, PARTICIPATION_REWARD_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
@@ -47,7 +47,9 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
         participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+        participation_reward_lock_period: PARTICIPATION_REWARD_LOCK_PERIOD,
         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
+        referral_reward_lock_period: REFERRAL_REWARD_LOCK_PERIOD,
     };
 
     let response = exec(
@@ -91,7 +93,9 @@ fn succeed() {
                         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
                         participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
                         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+                        participation_reward_lock_period: PARTICIPATION_REWARD_LOCK_PERIOD,
                         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
+                        referral_reward_lock_period: REFERRAL_REWARD_LOCK_PERIOD,
                     }).unwrap(),
                     deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
                     deposit_amount: DEPOSIT_AMOUNT,

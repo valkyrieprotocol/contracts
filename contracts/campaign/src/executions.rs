@@ -70,8 +70,10 @@ pub fn instantiate(
     RewardConfig {
         participation_reward_denom: campaign_config.participation_reward_denom.to_cw20(deps.api),
         participation_reward_amount: campaign_config.participation_reward_amount,
+        participation_reward_lock_period: campaign_config.participation_reward_lock_period,
         referral_reward_token: deps.api.addr_validate(msg.referral_reward_token.as_str())?,
         referral_reward_amounts: campaign_config.referral_reward_amounts,
+        referral_reward_lock_period: campaign_config.referral_reward_lock_period,
     }.save(deps.storage)?;
 
     Ok(response)
@@ -192,7 +194,9 @@ pub fn update_reward_config(
     _env: Env,
     info: MessageInfo,
     participation_reward_amount: Option<Uint128>,
+    participation_reward_lock_period: Option<u64>,
     referral_reward_amounts: Option<Vec<Uint128>>,
+    referral_reward_lock_period: Option<u64>,
 ) -> ContractResult<Response> {
     // Validate
     if !is_admin(deps.storage, &info.sender)? {
@@ -215,9 +219,19 @@ pub fn update_reward_config(
         response = response.add_attribute("is_updated_participation_reward_amount", "true");
     }
 
+    if let Some(participation_reward_lock_period) = participation_reward_lock_period {
+        reward_config.participation_reward_lock_period = participation_reward_lock_period;
+        response = response.add_attribute("is_updated_participation_reward_lock_period", "true");
+    }
+
     if let Some(referral_reward_amounts) = referral_reward_amounts {
         reward_config.referral_reward_amounts = referral_reward_amounts;
         response = response.add_attribute("is_updated_referral_reward_amounts", "true");
+    }
+
+    if let Some(referral_reward_lock_period) = referral_reward_lock_period {
+        reward_config.referral_reward_lock_period = referral_reward_lock_period;
+        response = response.add_attribute("is_updated_referral_reward_lock_period", "true");
     }
 
     reward_config.save(deps.storage)?;
@@ -577,13 +591,15 @@ pub fn remove_reward_pool(
     Ok(response)
 }
 
-pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
+pub fn claim_participation_reward(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let mut participation = Actor::may_load(deps.storage, &info.sender)?
+    let mut actor = Actor::may_load(deps.storage, &info.sender)?
         .ok_or(ContractError::NotFound {})?;
 
-    if !participation.has_participation_reward() {
-        return Err(ContractError::Std(StdError::generic_err("Not exist participation reward")));
+    let reward_amount = actor.claim_participation_reward_amount(env.block.height);
+
+    if reward_amount.is_zero() {
+        return Err(ContractError::Std(StdError::generic_err("Not exist claimable participation reward")));
     }
 
     // Execute
@@ -592,20 +608,17 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
     let reward_config = RewardConfig::load(deps.storage)?;
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    let reward_amount = participation.participation_reward_amount;
-
-    participation.participation_reward_amount = Uint128::zero();
     campaign_state.unlock_balance(&reward_config.participation_reward_denom, &reward_amount)?;
     campaign_state.withdraw(&reward_config.participation_reward_denom, &reward_amount)?;
 
-    participation.save(deps.storage)?;
+    actor.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
 
     response = response.add_message(make_send_msg(
         &deps.querier,
         reward_config.participation_reward_denom.clone(),
         reward_amount,
-        &participation.address,
+        &actor.address,
     )?);
     response = response.add_attribute(
         "amount",
@@ -619,13 +632,15 @@ pub fn claim_participation_reward(deps: DepsMut, _env: Env, info: MessageInfo) -
     Ok(response)
 }
 
-pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> ContractResult<Response> {
+pub fn claim_referral_reward(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let mut participation = Actor::may_load(deps.storage, &info.sender)?
+    let mut actor = Actor::may_load(deps.storage, &info.sender)?
         .ok_or(ContractError::NotFound {})?;
 
-    if !participation.has_referral_reward() {
-        return Err(ContractError::Std(StdError::generic_err("Not exist referral reward")));
+    let reward_amount = actor.claim_referral_reward_amount(env.block.height);
+
+    if reward_amount.is_zero() {
+        return Err(ContractError::Std(StdError::generic_err("Not exist claimable referral reward")));
     }
 
     // Execute
@@ -634,9 +649,6 @@ pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Con
     let reward_config = RewardConfig::load(deps.storage)?;
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
-    let reward_amount = participation.referral_reward_amount;
-
-    participation.referral_reward_amount = Uint128::zero();
     campaign_state.unlock_balance(
         &cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
         &reward_amount,
@@ -646,14 +658,14 @@ pub fn claim_referral_reward(deps: DepsMut, _env: Env, info: MessageInfo) -> Con
         &reward_amount,
     )?;
 
-    participation.save(deps.storage)?;
+    actor.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
 
     response = response.add_message(make_send_msg(
         &deps.querier,
         cw20::Denom::Cw20(reward_config.referral_reward_token),
         reward_amount,
-        &participation.address,
+        &actor.address,
     )?);
     response = response.add_attribute("amount", reward_amount);
 
@@ -806,6 +818,7 @@ fn _participate(
         &mut my_participation,
         &mut campaign_state,
         &reward_config,
+        env,
     )?;
 
     let (
@@ -817,6 +830,7 @@ fn _participate(
         &mut campaign_state,
         &campaign_config,
         &reward_config,
+        env,
         &referral_reward_limit_option,
         storage,
         querier,
@@ -913,13 +927,17 @@ fn _participate(
 }
 
 fn distribute_participation_reward(
-    participation: &mut Actor,
+    actor: &mut Actor,
     campaign_state: &mut CampaignState,
     reward_config: &RewardConfig,
+    env: &Env,
 ) -> StdResult<Uint128> {
-    participation.participation_count += 1;
-    participation.participation_reward_amount += reward_config.participation_reward_amount;
-    participation.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
+    actor.participation_count += 1;
+    actor.add_participation_reward(
+        reward_config.participation_reward_amount,
+        reward_config.participation_reward_lock_period + env.block.height,
+    );
+    actor.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
     campaign_state.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
     campaign_state.lock_balance(
         &reward_config.participation_reward_denom,
@@ -930,21 +948,22 @@ fn distribute_participation_reward(
 }
 
 fn distribute_referral_reward(
-    participation: &mut Actor,
+    actor: &mut Actor,
     campaign_state: &mut CampaignState,
     campaign_config: &CampaignConfig,
     reward_config: &RewardConfig,
+    env: &Env,
     referral_limit_option: &ReferralRewardLimitOptionResponse,
     storage: &mut dyn Storage,
     querier: &QuerierWrapper,
 ) -> StdResult<(Uint128, Vec<ReferralReward>, Uint128)> {
-    let mut referrers = participation.load_referrers(
+    let mut referrers = actor.load_referrers(
         storage,
         reward_config.referral_reward_amounts.len(),
     )?;
 
     if referrers.is_empty() {
-        participation.referrer = None;
+        actor.referrer = None;
 
         return Ok((Uint128::zero(), vec![], Uint128::zero()));
     }
@@ -958,8 +977,8 @@ fn distribute_referral_reward(
         .enumerate();
 
     let referral_reward_denom = cw20::Denom::Cw20(reward_config.referral_reward_token.clone());
-    for (distance, (actor, reward_amount)) in referrer_reward_pairs {
-        if participation.address == actor.address {
+    for (distance, (referrer_actor, reward_amount)) in referrer_reward_pairs {
+        if actor.address == referrer_actor.address {
             return Err(StdError::generic_err("Actor must not contain on referrer chain"));
         }
 
@@ -968,29 +987,31 @@ fn distribute_referral_reward(
             &campaign_config,
             &reward_config,
             querier,
-            &actor.address,
+            &referrer_actor.address,
         )?.limit_amount;
         let mut actor_receive_amount = *reward_amount;
         let mut actor_overflow_amount = Uint128::zero();
-        let mut actor_reward_amount = actor.cumulative_referral_reward_amount + *reward_amount;
+        let actor_reward_amount = referrer_actor.cumulative_referral_reward_amount + *reward_amount;
         if reward_limit < actor_reward_amount {
             actor_overflow_amount = actor_reward_amount.checked_sub(reward_limit)?;
             actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)?;
-            actor_reward_amount = reward_limit;
         }
 
-        actor.referral_count += 1;
-        actor.referral_reward_amount = actor_reward_amount;
-        actor.cumulative_referral_reward_amount += actor_receive_amount;
+        referrer_actor.referral_count += 1;
+        referrer_actor.add_referral_reward(
+            actor_receive_amount,
+            reward_config.referral_reward_lock_period + env.block.height,
+        );
+        referrer_actor.cumulative_referral_reward_amount += actor_receive_amount;
         campaign_state.cumulative_referral_reward_amount += *reward_amount;
         campaign_state.lock_balance(&referral_reward_denom, &actor_receive_amount);
         distributed_amount += *reward_amount;
         overflow_amount += actor_overflow_amount;
 
-        actor.save(storage)?;
+        referrer_actor.save(storage)?;
 
         referral_rewards.push(ReferralReward {
-            address: actor.address.to_string(),
+            address: referrer_actor.address.to_string(),
             distance: (distance + 1) as u64,
             amount: actor_receive_amount,
         });

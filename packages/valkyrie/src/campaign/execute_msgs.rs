@@ -13,7 +13,9 @@ pub struct CampaignConfigMsg {
     pub parameter_key: String,
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
+    pub participation_reward_lock_period: u64,
     pub referral_reward_amounts: Vec<Uint128>,
+    pub referral_reward_lock_period: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -33,7 +35,9 @@ pub enum ExecuteMsg {
     },
     UpdateRewardConfig {
         participation_reward_amount: Option<Uint128>,
+        participation_reward_lock_period: Option<u64>,
         referral_reward_amounts: Option<Vec<Uint128>>,
+        referral_reward_lock_period: Option<u64>,
     },
     UpdateActivation {
         active: bool,

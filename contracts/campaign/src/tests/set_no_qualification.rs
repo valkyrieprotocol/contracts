@@ -40,7 +40,9 @@ fn succeed() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
+        PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
+        REFERRAL_REWARD_LOCK_PERIOD,
     );
 
     let config = CampaignConfig::load(&deps.storage).unwrap();

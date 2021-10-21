@@ -141,7 +141,9 @@ pub mod campaign {
     pub const CAMPAIGN_ADMIN: &str = "CampaignAdmin";
     pub const PARTICIPATION_REWARD_DENOM_NATIVE: &str = "uusd";
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(5);
+    pub const PARTICIPATION_REWARD_LOCK_PERIOD: u64 = 10;
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(5), Uint128::new(3), Uint128::new(2)];
+    pub const REFERRAL_REWARD_LOCK_PERIOD: u64 = 100;
     pub const QUALIFIER: &str = "Qualifier";
     pub const DEPOSIT_DENOM_NATIVE: &str = "uusd";
     pub const DEPOSIT_AMOUNT: Uint128 = Uint128::new(100);

@@ -3,7 +3,7 @@ use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::campaign::{campaign_env, REFERRAL_REWARD_AMOUNTS};
+use valkyrie::test_constants::campaign::{campaign_env, campaign_env_height, REFERRAL_REWARD_AMOUNTS, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::claim_referral_reward;
@@ -16,8 +16,8 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResul
     claim_referral_reward(deps.as_mut(), env, info)
 }
 
-pub fn will_success(deps: &mut CustomDeps, sender: &str) -> (Env, MessageInfo, Response) {
-    let env = campaign_env();
+pub fn will_success(deps: &mut CustomDeps, height: u64, sender: &str) -> (Env, MessageInfo, Response) {
+    let env = campaign_env_height(height);
     let info = mock_info(sender, &[]);
 
     let response = exec(deps, env.clone(), info.clone()).unwrap();
@@ -35,9 +35,17 @@ fn succeed() {
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);
-    super::participate::will_success(&mut deps, "Participator", Some(Referrer::Address(referrer.to_string())));
+    let (env, _, _) = super::participate::will_success(
+        &mut deps,
+        "Participator",
+        Some(Referrer::Address(referrer.to_string())),
+    );
 
-    let (_, info, response) = will_success(&mut deps, referrer.as_str());
+    let (_, info, response) = will_success(
+        &mut deps,
+        env.block.height + REFERRAL_REWARD_LOCK_PERIOD,
+        referrer.as_str(),
+    );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: VALKYRIE_TOKEN.to_string(),
@@ -50,7 +58,7 @@ fn succeed() {
     ]);
 
     let participation = Actor::load(&deps.storage, &referrer).unwrap();
-    assert_eq!(participation.referral_reward_amount, Uint128::zero());
+    assert_eq!(participation.referral_reward_amounts, vec![]);
     assert_eq!(participation.cumulative_referral_reward_amount, REFERRAL_REWARD_AMOUNTS[0]);
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
@@ -74,14 +82,18 @@ fn failed_no_reward() {
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);
-    super::participate::will_success(&mut deps, "Participator", Some(Referrer::Address(referrer.to_string())));
+    let (env, _, _) = super::participate::will_success(
+        &mut deps,
+        "Participator",
+        Some(Referrer::Address(referrer.to_string())),
+    );
 
-    will_success(&mut deps, referrer.as_str());
+    will_success(&mut deps, env.block.height + REFERRAL_REWARD_LOCK_PERIOD, referrer.as_str());
 
     let result = exec(
         &mut deps,
         campaign_env(),
         mock_info(referrer.as_str(), &[]),
     );
-    expect_generic_err(&result, "Not exist referral reward");
+    expect_generic_err(&result, "Not exist claimable referral reward");
 }
