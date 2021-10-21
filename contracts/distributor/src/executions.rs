@@ -185,7 +185,7 @@ pub fn remove_distribution_message(
     }
 
     // Execute
-    let mut response = make_response("update_distribution");
+    let mut response = make_response("remove_distribution_message");
 
     let mut distribution = Distribution::may_load(deps.storage, id)?
         .ok_or(StdError::not_found("Distribution"))?;

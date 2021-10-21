@@ -35,10 +35,15 @@ pub fn instantiate(
 
 pub fn update_staking_config(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
+    env: Env,
+    info: MessageInfo,
     distributor: Option<String>,
 ) -> ContractResult<Response> {
+    // Validate
+    if env.contract.address != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
     // Execute
     let mut response = make_response("update_staking_config");
 
@@ -48,6 +53,8 @@ pub fn update_staking_config(
         config.distributor = Some(deps.api.addr_validate(distributor.as_str())?);
         response = response.add_attribute("is_updated_distributor", "true");
     }
+
+    config.save(deps.storage)?;
 
     Ok(response)
 }
