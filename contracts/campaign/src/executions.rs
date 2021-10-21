@@ -1003,7 +1003,7 @@ fn distribute_referral_reward(
             reward_config.referral_reward_lock_period + env.block.height,
         );
         referrer_actor.cumulative_referral_reward_amount += actor_receive_amount;
-        campaign_state.cumulative_referral_reward_amount += *reward_amount;
+        campaign_state.cumulative_referral_reward_amount += actor_receive_amount;
         campaign_state.lock_balance(&referral_reward_denom, &actor_receive_amount);
         distributed_amount += *reward_amount;
         overflow_amount += actor_overflow_amount;
