@@ -972,7 +972,7 @@ fn distribute_referral_reward(
         )?.limit_amount;
         let mut actor_receive_amount = *reward_amount;
         let mut actor_overflow_amount = Uint128::zero();
-        let mut actor_reward_amount = actor.referral_reward_amount + *reward_amount;
+        let mut actor_reward_amount = actor.cumulative_referral_reward_amount + *reward_amount;
         if reward_limit < actor_reward_amount {
             actor_overflow_amount = actor_reward_amount.checked_sub(reward_limit)?;
             actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)?;
