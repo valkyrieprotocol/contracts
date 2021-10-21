@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
+use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -76,6 +76,16 @@ impl StakerState {
 
     pub fn load_safe(storage: &dyn Storage, address: &Addr) -> StdResult<StakerState> {
         Ok(STAKER_STATES.may_load(storage, address)?.unwrap_or(StakerState::default(address)))
+    }
+
+    pub fn load_all(storage: &dyn Storage, start_after: Option<String>, limit: Option<u32>) -> StdResult<Vec<StakerState>> {
+        let limit = limit.unwrap_or(10).min(100) as usize;
+        let start = start_after.map(Bound::exclusive);
+
+        STAKER_STATES.range(storage, start, None, Order::Ascending)
+            .map(|d| Ok(d?.1))
+            .take(limit)
+            .collect::<StdResult<Vec<StakerState>>>()
     }
 
     pub fn clean_votes(&mut self, storage: &dyn Storage) -> () {

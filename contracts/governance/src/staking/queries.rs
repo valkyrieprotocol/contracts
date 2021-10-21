@@ -2,7 +2,7 @@ use cosmwasm_std::{Decimal, Deps, Env};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::models::VoteInfoMsg;
-use valkyrie::governance::query_msgs::{StakerStateResponse, StakingStateResponse, VotingPowerResponse};
+use valkyrie::governance::query_msgs::{AllStakersResponse, StakerInfoResponse, StakerStateResponse, StakingStateResponse, VotingPowerResponse};
 
 use crate::common::states::load_available_balance;
 
@@ -74,5 +74,21 @@ pub fn get_voting_power(
 
     Ok(VotingPowerResponse {
         voting_power: Decimal::from_ratio(staker_state.share, staking_state.total_share),
+    })
+}
+
+pub fn get_all_stakers(
+    deps: Deps,
+    _env: Env,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> ContractResult<AllStakersResponse> {
+    Ok(AllStakersResponse {
+        stakers: StakerState::load_all(deps.storage, start_after, limit)?.iter()
+            .map(|s| StakerInfoResponse {
+                address: s.address.to_string(),
+                share: s.share,
+            })
+            .collect(),
     })
 }

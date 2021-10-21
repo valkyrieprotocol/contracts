@@ -210,6 +210,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::StakerState { address } => to_binary(&crate::staking::queries::get_staker_state(
             deps, env, address,
         )?),
+        QueryMsg::AllStaker {
+            start_after,
+            limit,
+        } => to_binary(&crate::staking::queries::get_all_stakers(deps, env, start_after, limit)?),
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
