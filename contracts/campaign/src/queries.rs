@@ -38,8 +38,10 @@ pub fn get_reward_config(
     Ok(RewardConfigResponse {
         participation_reward_denom: Denom::from_cw20(reward_config.participation_reward_denom),
         participation_reward_amount: reward_config.participation_reward_amount,
+        participation_reward_lock_period: reward_config.participation_reward_lock_period,
         referral_reward_token: reward_config.referral_reward_token.to_string(),
         referral_reward_amounts: reward_config.referral_reward_amounts,
+        referral_reward_lock_period: reward_config.referral_reward_lock_period,
     })
 }
 
@@ -133,8 +135,8 @@ pub fn get_actor(
         referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
         participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
         referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
-        unlocked_participation_reward_amount: unlocked_participation_reward,
-        unlocked_referral_reward_amount: unlocked_referral_reward,
+        participation_reward_amounts: actor.participation_reward_amounts,
+        referral_reward_amounts: actor.referral_reward_amounts,
         cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
         cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
         participation_count: actor.participation_count,
@@ -162,8 +164,8 @@ pub fn query_actors(
                 referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
                 participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
                 referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
-                unlocked_participation_reward_amount: unlocked_participation_reward,
-                unlocked_referral_reward_amount: unlocked_referral_reward,
+                participation_reward_amounts: actor.participation_reward_amounts.clone(),
+                referral_reward_amounts: actor.referral_reward_amounts.clone(),
                 cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
                 cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
                 participation_count: actor.participation_count,
