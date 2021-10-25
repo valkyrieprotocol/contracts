@@ -24,7 +24,6 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
         },
         staking_config: StakingConfigInitMsg {
             distributor: None,
-            distribution_id: None,
         }
     };
 

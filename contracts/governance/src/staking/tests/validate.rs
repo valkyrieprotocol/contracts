@@ -27,7 +27,7 @@ fn share_calculation() {
     );
 
     assert_eq!(response.attributes, vec![
-        attr("action", "stake_governance_token"),
+        attr("action", "stake_governance_token_hook"),
         attr("sender", STAKER1),
         attr("share", "50"),
         attr("amount", "100"),
@@ -40,7 +40,7 @@ fn share_calculation() {
     );
 
     assert_eq!(response.attributes, vec![
-        attr("action", "unstake_governance_token"),
+        attr("action", "unstake_governance_token_hook"),
         attr("unstake_amount", "100"),
         attr("unstake_share", "50")
     ]);

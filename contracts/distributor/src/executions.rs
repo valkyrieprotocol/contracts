@@ -128,6 +128,8 @@ pub fn update_distribution(
     let mut distribution = Distribution::may_load(deps.storage, id)?
         .ok_or(StdError::not_found("Distribution"))?;
 
+    let prev_released_amount = distribution.released_amount(env.block.height);
+
     if let Some(start_height) = start_height {
         distribution.start_height = start_height;
         response = response.add_attribute("is_updated_start_height", "true");
@@ -140,7 +142,7 @@ pub fn update_distribution(
 
     if let Some(amount) = amount {
         if distribution.released_amount(env.block.height) > amount {
-            return Err(ContractError::Std(StdError::generic_err("amount must be less than released_amount")));
+            return Err(ContractError::Std(StdError::generic_err("amount must be greater than released_amount")));
         }
 
         let mut state = ContractState::load(deps.storage)?;
@@ -167,6 +169,10 @@ pub fn update_distribution(
         response = response.add_attribute("is_updated_message", "true");
     }
 
+    if prev_released_amount > distribution.released_amount(env.block.height) {
+        return Err(ContractError::Std(StdError::generic_err("Can not decrease released_amount")));
+    }
+
     distribution.save(deps.storage)?;
 
     Ok(response)
@@ -185,7 +191,7 @@ pub fn remove_distribution_message(
     }
 
     // Execute
-    let mut response = make_response("update_distribution");
+    let mut response = make_response("remove_distribution_message");
 
     let mut distribution = Distribution::may_load(deps.storage, id)?
         .ok_or(StdError::not_found("Distribution"))?;

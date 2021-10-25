@@ -9,8 +9,10 @@
     "last_participated_at",
     "participation_count",
     "participation_reward_amount",
+    "participation_reward_amounts",
     "referral_count",
-    "referral_reward_amount"
+    "referral_reward_amount",
+    "referral_reward_amounts"
   ],
   "properties": {
     "address": {
@@ -33,6 +35,24 @@
     "participation_reward_amount": {
       "$ref": "#/definitions/Uint128"
     },
+    "participation_reward_amounts": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "$ref": "#/definitions/Uint128"
+          },
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      }
+    },
     "referral_count": {
       "type": "integer",
       "format": "uint64",
@@ -40,6 +60,24 @@
     },
     "referral_reward_amount": {
       "$ref": "#/definitions/Uint128"
+    },
+    "referral_reward_amounts": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "$ref": "#/definitions/Uint128"
+          },
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      }
     },
     "referrer_address": {
       "type": [

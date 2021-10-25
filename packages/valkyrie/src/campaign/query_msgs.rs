@@ -55,8 +55,10 @@ pub struct CampaignConfigResponse {
 pub struct RewardConfigResponse {
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
+    pub participation_reward_lock_period: u64,
     pub referral_reward_token: String,
     pub referral_reward_amounts: Vec<Uint128>,
+    pub referral_reward_lock_period: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -98,6 +100,8 @@ pub struct ActorResponse {
     pub referrer_address: Option<String>,
     pub participation_reward_amount: Uint128,
     pub referral_reward_amount: Uint128,
+    pub participation_reward_amounts: Vec<(Uint128, u64)>,
+    pub referral_reward_amounts: Vec<(Uint128, u64)>,
     pub cumulative_participation_reward_amount: Uint128,
     pub cumulative_referral_reward_amount: Uint128,
     pub participation_count: u64,
@@ -112,6 +116,8 @@ impl ActorResponse {
             referrer_address: referrer,
             participation_reward_amount: Uint128::zero(),
             referral_reward_amount: Uint128::zero(),
+            participation_reward_amounts: vec![],
+            referral_reward_amounts: vec![],
             cumulative_participation_reward_amount: Uint128::zero(),
             cumulative_referral_reward_amount: Uint128::zero(),
             participation_count: 0,

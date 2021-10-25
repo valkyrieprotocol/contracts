@@ -224,8 +224,10 @@ const REWARD_CONFIG: Item<RewardConfig> = Item::new("reward_config");
 pub struct RewardConfig {
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
+    pub participation_reward_lock_period: u64,
     pub referral_reward_token: Addr,
     pub referral_reward_amounts: Vec<Uint128>,
+    pub referral_reward_lock_period: u64,
 }
 
 impl RewardConfig {
@@ -255,8 +257,8 @@ const ACTORS: Map<&Addr, Actor> = Map::new("actor");
 pub struct Actor {
     pub address: Addr,
     pub referrer: Option<Addr>,
-    pub participation_reward_amount: Uint128,
-    pub referral_reward_amount: Uint128,
+    pub participation_reward_amounts: Vec<(Uint128, u64)>,
+    pub referral_reward_amounts: Vec<(Uint128, u64)>,
     pub cumulative_participation_reward_amount: Uint128,
     pub cumulative_referral_reward_amount: Uint128,
     pub participation_count: u64,
@@ -269,8 +271,8 @@ impl Actor {
         Actor {
             address,
             referrer,
-            participation_reward_amount: Uint128::zero(),
-            referral_reward_amount: Uint128::zero(),
+            participation_reward_amounts: vec![],
+            referral_reward_amounts: vec![],
             cumulative_participation_reward_amount: Uint128::zero(),
             cumulative_referral_reward_amount: Uint128::zero(),
             participation_count: 0,
@@ -336,12 +338,76 @@ impl Actor {
             .collect()
     }
 
-    pub fn has_participation_reward(&self) -> bool {
-        !self.participation_reward_amount.is_zero()
+    pub fn add_participation_reward(&mut self, amount: Uint128, unlock_height: u64) {
+        self.participation_reward_amounts.push((amount, unlock_height));
     }
 
-    pub fn has_referral_reward(&self) -> bool {
-        !self.referral_reward_amount.is_zero()
+    pub fn add_referral_reward(&mut self, amount: Uint128, unlock_height: u64) {
+        self.referral_reward_amounts.push((amount, unlock_height));
+    }
+
+    pub fn participation_reward_amount(&self, height: u64) -> (Uint128, Uint128) {
+        let mut unlocked_amount = Uint128::zero();
+        let mut locked_amount = Uint128::zero();
+
+        for (amount, unlock_height) in self.participation_reward_amounts.iter() {
+            if *unlock_height <= height {
+                unlocked_amount += *amount;
+            } else {
+                locked_amount += *amount;
+            }
+        }
+
+        (unlocked_amount, locked_amount)
+    }
+
+    pub fn referral_reward_amount(&self, height: u64) -> (Uint128, Uint128) {
+        let mut unlocked_amount = Uint128::zero();
+        let mut locked_amount = Uint128::zero();
+
+        for (amount, unlock_height) in self.referral_reward_amounts.iter() {
+            if *unlock_height <= height {
+                unlocked_amount += *amount;
+            } else {
+                locked_amount += *amount;
+            }
+        }
+
+        (unlocked_amount, locked_amount)
+    }
+
+    pub fn claim_participation_reward_amount(&mut self, height: u64) -> Uint128 {
+        let mut unlocked_amount = Uint128::zero();
+        let mut locked_amounts: Vec<(Uint128, u64)> = vec![];
+
+        for (amount, unlock_height) in self.participation_reward_amounts.iter() {
+            if *unlock_height <= height {
+                unlocked_amount += *amount;
+            } else {
+                locked_amounts.push((*amount, *unlock_height))
+            }
+        }
+
+        self.participation_reward_amounts = locked_amounts;
+
+        unlocked_amount
+    }
+
+    pub fn claim_referral_reward_amount(&mut self, height: u64) -> Uint128 {
+        let mut unlocked_amount = Uint128::zero();
+        let mut locked_amounts: Vec<(Uint128, u64)> = vec![];
+
+        for (amount, unlock_height) in self.referral_reward_amounts.iter() {
+            if *unlock_height <= height {
+                unlocked_amount += *amount;
+            } else {
+                locked_amounts.push((*amount, *unlock_height))
+            }
+        }
+
+        self.referral_reward_amounts = locked_amounts;
+
+        unlocked_amount
     }
 }
 

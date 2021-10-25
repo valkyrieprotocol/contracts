@@ -38,8 +38,10 @@ pub fn get_reward_config(
     Ok(RewardConfigResponse {
         participation_reward_denom: Denom::from_cw20(reward_config.participation_reward_denom),
         participation_reward_amount: reward_config.participation_reward_amount,
+        participation_reward_lock_period: reward_config.participation_reward_lock_period,
         referral_reward_token: reward_config.referral_reward_token.to_string(),
         referral_reward_amounts: reward_config.referral_reward_amounts,
+        referral_reward_lock_period: reward_config.referral_reward_lock_period,
     })
 }
 
@@ -118,18 +120,23 @@ pub fn get_referral_reward_limit_amount(
 
 pub fn get_actor(
     deps: Deps,
-    _env: Env,
+    env: Env,
     address: String,
 ) -> ContractResult<ActorResponse> {
     let address = deps.api.addr_validate(&address)?;
     let actor = Actor::may_load(deps.storage, &address)?
         .unwrap_or_else(|| Actor::new(address.clone(), None));
 
+    let (unlocked_participation_reward, locked_participation_reward) = actor.participation_reward_amount(env.block.height);
+    let (unlocked_referral_reward, locked_referral_reward) = actor.referral_reward_amount(env.block.height);
+
     Ok(ActorResponse {
         address: actor.address.to_string(),
         referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
-        participation_reward_amount: actor.participation_reward_amount,
-        referral_reward_amount: actor.referral_reward_amount,
+        participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
+        referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
+        participation_reward_amounts: actor.participation_reward_amounts,
+        referral_reward_amounts: actor.referral_reward_amounts,
         cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
         cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
         participation_count: actor.participation_count,
@@ -140,7 +147,7 @@ pub fn get_actor(
 
 pub fn query_actors(
     deps: Deps,
-    _env: Env,
+    env: Env,
     start_after: Option<String>,
     limit: Option<u32>,
     order_by: Option<OrderBy>,
@@ -149,11 +156,16 @@ pub fn query_actors(
     let participations = Actor::query(deps.storage, start_after, limit, order_by)?
         .iter()
         .map(|actor| {
+            let (unlocked_participation_reward, locked_participation_reward) = actor.participation_reward_amount(env.block.height);
+            let (unlocked_referral_reward, locked_referral_reward) = actor.referral_reward_amount(env.block.height);
+
             ActorResponse {
                 address: actor.address.to_string(),
                 referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
-                participation_reward_amount: actor.participation_reward_amount,
-                referral_reward_amount: actor.referral_reward_amount,
+                participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
+                referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
+                participation_reward_amounts: actor.participation_reward_amounts.clone(),
+                referral_reward_amounts: actor.referral_reward_amounts.clone(),
                 cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
                 cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
                 participation_count: actor.participation_count,

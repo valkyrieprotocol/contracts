@@ -192,5 +192,5 @@ fn failed_less_than_released_amount() {
         Some(Uint128::new(4999)),
         None,
     );
-    expect_generic_err(&result, "amount must be less than released_amount");
+    expect_generic_err(&result, "amount must be greater than released_amount");
 }

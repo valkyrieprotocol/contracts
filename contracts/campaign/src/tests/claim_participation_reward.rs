@@ -4,7 +4,7 @@ use cosmwasm_std::testing::mock_info;
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{DEFAULT_SENDER, default_sender};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_DENOM_NATIVE};
+use valkyrie::test_constants::campaign::{campaign_env_height, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_LOCK_PERIOD};
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::claim_participation_reward;
@@ -14,8 +14,8 @@ pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResul
     claim_participation_reward(deps.as_mut(), env, info)
 }
 
-pub fn will_success(deps: &mut CustomDeps, sender: &str) -> (Env, MessageInfo, Response) {
-    let env = campaign_env();
+pub fn will_success(deps: &mut CustomDeps, height: u64, sender: &str) -> (Env, MessageInfo, Response) {
+    let env = campaign_env_height(height);
     let info = mock_info(sender, &[]);
 
     let response = exec(deps, env.clone(), info.clone()).unwrap();
@@ -33,9 +33,17 @@ fn succeed() {
     super::add_reward_pool::will_success(&mut deps, 1000, 1000);
 
     let participator = Addr::unchecked("Participator");
-    super::participate::will_success(&mut deps, participator.as_str(), None);
+    let (env, _, _) = super::participate::will_success(
+        &mut deps,
+        participator.as_str(),
+        None,
+    );
 
-    let (_, _, response) = will_success(&mut deps, participator.as_str());
+    let (_, _, response) = will_success(
+        &mut deps,
+        env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD,
+        participator.as_str(),
+    );
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: participator.to_string(),
@@ -47,7 +55,7 @@ fn succeed() {
     ]);
 
     let participation = Actor::load(&deps.storage, &participator).unwrap();
-    assert_eq!(participation.participation_reward_amount, Uint128::zero());
+    assert_eq!(participation.participation_reward_amounts, vec![]);
     assert_eq!(participation.cumulative_participation_reward_amount, Uint128::new(5));
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
@@ -68,14 +76,18 @@ fn failed_no_reward() {
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 1000, 1000);
-    super::participate::will_success(&mut deps, DEFAULT_SENDER, None);
+    let (env, _, _) = super::participate::will_success(
+        &mut deps,
+        DEFAULT_SENDER,
+        None,
+    );
 
-    will_success(&mut deps, DEFAULT_SENDER);
+    will_success(&mut deps, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD, DEFAULT_SENDER);
 
     let result = exec(
         &mut deps,
-        campaign_env(),
+        campaign_env_height(env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
         default_sender(),
     );
-    expect_generic_err(&result, "Not exist participation reward");
+    expect_generic_err(&result, "Not exist claimable participation reward");
 }

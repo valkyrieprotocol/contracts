@@ -14,11 +14,9 @@ pub fn exec(
     env: Env,
     info: MessageInfo,
     distributor: Option<String>,
-    distribution_id: Option<u64>,
 ) -> ContractResult<Response> {
     let msg = StakingConfigInitMsg {
         distributor,
-        distribution_id,
     };
 
     instantiate(deps.as_mut(), env, info, msg)
@@ -32,7 +30,6 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         deps,
         env.clone(),
         info.clone(),
-        None,
         None,
     ).unwrap();
 

@@ -33,6 +33,10 @@ pub enum QueryMsg {
     StakerState {
         address: String,
     },
+    AllStaker {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
     VotingPower {
         address: String,
     },
@@ -64,6 +68,17 @@ impl Default for StakerStateResponse {
             votes: vec![],
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct AllStakersResponse {
+    pub stakers: Vec<StakerInfoResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct StakerInfoResponse {
+    pub address: String,
+    pub share: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

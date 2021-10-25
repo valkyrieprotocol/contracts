@@ -8,7 +8,7 @@ use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::participate;
 use crate::states::{CampaignState, Actor};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT};
+use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, PARTICIPATION_REWARD_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TOKEN};
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
@@ -73,8 +73,8 @@ fn succeed_without_referrer() {
     assert_eq!(participation, Actor {
         address: participator.clone(),
         referrer: None,
-        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
-        referral_reward_amount: Uint128::zero(),
+        participation_reward_amounts: vec![(PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD)],
+        referral_reward_amounts: vec![],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         cumulative_referral_reward_amount: Uint128::zero(),
         participation_count: 1,
@@ -123,8 +123,8 @@ fn succeed_with_referrer() {
     assert_eq!(participation, Actor {
         address: participator.clone(),
         referrer: Some(referrer.clone()),
-        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
-        referral_reward_amount: Uint128::zero(),
+        participation_reward_amounts: vec![(PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD)],
+        referral_reward_amounts: vec![],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         cumulative_referral_reward_amount: Uint128::zero(),
         participation_count: 1,
@@ -136,8 +136,8 @@ fn succeed_with_referrer() {
     assert_eq!(referrer_participation, Actor {
         address: referrer.clone(),
         referrer: None,
-        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
-        referral_reward_amount: REFERRAL_REWARD_AMOUNTS[0],
+        participation_reward_amounts: vec![(PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD)],
+        referral_reward_amounts: vec![(REFERRAL_REWARD_AMOUNTS[0], env.block.height + REFERRAL_REWARD_LOCK_PERIOD)],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         cumulative_referral_reward_amount: REFERRAL_REWARD_AMOUNTS[0],
         participation_count: 1,
@@ -163,8 +163,11 @@ fn succeed_twice() {
     assert_eq!(participation, Actor {
         address: participator.clone(),
         referrer: None,
-        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT.checked_mul(Uint128::new(2)).unwrap(),
-        referral_reward_amount: Uint128::zero(),
+        participation_reward_amounts: vec![
+            (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
+            (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
+        ],
+        referral_reward_amounts: vec![],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT.checked_mul(Uint128::new(2)).unwrap(),
         cumulative_referral_reward_amount: Uint128::zero(),
         participation_count: 2,
@@ -241,12 +244,16 @@ fn overflow_referral_reward() {
 
     will_success(&mut deps, "Referrer", None);
 
-    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    let (referrer_env, _, _) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
     will_success(&mut deps, "Participator2", Some(Referrer::Address("Participator".to_string())));
     will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
 
     let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
-    assert_eq!(referrer.referral_reward_amount, Uint128::new(10)); //reach limit. overflow amount = 3
+    assert_eq!(referrer.referral_reward_amounts, vec![
+        (Uint128::new(5), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+        (Uint128::new(3), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+        (Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+    ]); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(85));
@@ -262,10 +269,15 @@ fn overflow_referral_reward() {
         }
     );
 
-    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    let (referrer_env, _, _) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
 
     let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
-    assert_eq!(referrer.referral_reward_amount, Uint128::new(14)); //reach limit. overflow amount = 1
+    assert_eq!(referrer.referral_reward_amounts, vec![
+        (Uint128::new(5), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+        (Uint128::new(3), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+        (Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+        (Uint128::new(4), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+    ]); //reach limit. overflow amount = 1
 
     let state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(81));
@@ -286,7 +298,13 @@ fn overflow_referral_reward() {
         percent_for_governance_staking: 10,
     });
 
-    let (_, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    crate::tests::claim_referral_reward::will_success(
+        &mut deps,
+        referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD,
+        "Referrer",
+    );
+
+    let (referrer_env, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
 
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -300,7 +318,7 @@ fn overflow_referral_reward() {
     ]);
 
     let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
-    assert_eq!(referrer.referral_reward_amount, Uint128::new(16)); //reach limit. overflow amount = 3
+    assert_eq!(referrer.referral_reward_amounts, vec![(Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD)]); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(76));
