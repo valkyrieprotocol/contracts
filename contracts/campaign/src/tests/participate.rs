@@ -236,8 +236,8 @@ fn overflow_referral_reward() {
     deps.querier.with_gov_staker_state(
         "Referrer",
         StakerStateResponse {
-            balance: Uint128::new(80),
-            share: Uint128::new(80),
+            balance: Uint128::new(20),
+            share: Uint128::new(20),
             votes: vec![],
         }
     );
@@ -252,19 +252,19 @@ fn overflow_referral_reward() {
     assert_eq!(referrer.referral_reward_amounts, vec![
         (Uint128::new(5), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
         (Uint128::new(3), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
-        (Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
-    ]); //reach limit. overflow amount = 3
+        (Uint128::new(4), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+    ]); //reach limit. overflow amount = 1
 
     let state = CampaignState::load(&deps.storage).unwrap();
-    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(85));
+    assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(83));
 
 
 
     deps.querier.with_gov_staker_state(
         "Referrer",
         StakerStateResponse {
-            balance: Uint128::new(140),
-            share: Uint128::new(140),
+            balance: Uint128::new(40),
+            share: Uint128::new(40),
             votes: vec![],
         }
     );
@@ -275,9 +275,9 @@ fn overflow_referral_reward() {
     assert_eq!(referrer.referral_reward_amounts, vec![
         (Uint128::new(5), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
         (Uint128::new(3), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
-        (Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
         (Uint128::new(4), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
-    ]); //reach limit. overflow amount = 1
+        (Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
+    ]); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();
     assert_eq!(state.balance(&Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).available(), Uint128::new(81));
@@ -286,8 +286,8 @@ fn overflow_referral_reward() {
     deps.querier.with_gov_staker_state(
         "Referrer",
         StakerStateResponse {
-            balance: Uint128::new(160),
-            share: Uint128::new(160),
+            balance: Uint128::new(60),
+            share: Uint128::new(60),
             votes: vec![],
         }
     );

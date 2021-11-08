@@ -3,11 +3,12 @@
 PROJECT_PATH="$(dirname "$0")/.."
 
 run () {
-  cd "$PROJECT_PATH/$1" && cargo schema
   rm "$PROJECT_PATH/target/debug/examples/schema"
+  cd "$PROJECT_PATH/$1" && cargo schema
 }
 
 run "contracts/campaign"
+run "contracts/campaign_manager"
 run "contracts/community"
 run "contracts/distributor"
 run "contracts/governance"

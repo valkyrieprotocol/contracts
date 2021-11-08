@@ -18,6 +18,7 @@ pub struct InstantiateMsg {
     pub key_denom: Denom,
     pub valkyrie_token: String,
     pub referral_reward_limit_option: ReferralRewardLimitOptionMsg,
+    pub contract_admin: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -42,6 +43,7 @@ pub enum ExecuteMsg {
         fee_recipient: Option<String>,
         deactivate_period: Option<u64>,
         key_denom: Option<Denom>,
+        contract_admin: Option<String>,
     },
     UpdateReferralRewardLimitOption {
         overflow_amount_recipient: Option<String>,
@@ -68,7 +70,9 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub contract_admin: String,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CampaignInstantiateMsg {

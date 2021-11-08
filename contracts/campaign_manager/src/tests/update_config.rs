@@ -25,6 +25,7 @@ pub fn exec(
     fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
+    contract_admin: Option<String>,
 ) -> ContractResult<Response> {
     update_config(
         deps.as_mut(),
@@ -41,6 +42,7 @@ pub fn exec(
         fee_recipient,
         deactivate_period,
         key_denom,
+        contract_admin,
     )
 }
 
@@ -57,6 +59,7 @@ pub fn will_success(
     fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
+    contract_admin: Option<String>,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_manager_env();
     let info = governance_sender();
@@ -76,6 +79,7 @@ pub fn will_success(
         fee_recipient,
         deactivate_period,
         key_denom,
+        contract_admin,
     ).unwrap();
 
     (env, info, response)
@@ -98,6 +102,7 @@ fn succeed() {
     let fee_recipient = "ChangedFeeRecipient";
     let deactivate_period = 99u64;
     let key_denom = Denom::Native("ukrw".to_string());
+    let contract_admin = "ChangedContAdm";
 
     will_success(
         &mut deps,
@@ -112,6 +117,7 @@ fn succeed() {
         Some(fee_recipient.to_string()),
         Some(deactivate_period),
         Some(key_denom.clone()),
+        Some(contract_admin.to_string()),
     );
 
     let config = Config::load(&deps.storage).unwrap();
@@ -127,6 +133,7 @@ fn succeed() {
         fee_recipient: Addr::unchecked(fee_recipient),
         deactivate_period: deactivate_period.clone(),
         key_denom: key_denom.to_cw20(&deps.api),
+        contract_admin: Addr::unchecked(contract_admin),
     });
 }
 
@@ -140,6 +147,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_manager_env(),
         default_sender(),
+        None,
         None,
         None,
         None,

@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "add_pool_fee_rate",
+    "add_pool_min_referral_reward_rate",
+    "code_id",
+    "contract_admin",
+    "deactivate_period",
+    "fee_burn_ratio",
+    "fee_recipient",
+    "governance",
+    "key_denom",
+    "referral_reward_limit_option",
+    "remove_pool_fee_rate",
+    "terraswap_router",
+    "valkyrie_token"
+  ],
+  "properties": {
+    "add_pool_fee_rate": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "add_pool_min_referral_reward_rate": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "code_id": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "contract_admin": {
+      "type": "string"
+    },
+    "deactivate_period": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "fee_burn_ratio": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "fee_recipient": {
+      "type": "string"
+    },
+    "governance": {
+      "type": "string"
+    },
+    "key_denom": {
+      "$ref": "#/definitions/Denom"
+    },
+    "referral_reward_limit_option": {
+      "$ref": "#/definitions/ReferralRewardLimitOptionMsg"
+    },
+    "remove_pool_fee_rate": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "terraswap_router": {
+      "type": "string"
+    },
+    "valkyrie_token": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "Denom": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "native"
+          ],
+          "properties": {
+            "native": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ReferralRewardLimitOptionMsg": {
+      "type": "object",
+      "required": [
+        "base_count",
+        "percent_for_governance_staking"
+      ],
+      "properties": {
+        "base_count": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "overflow_amount_recipient": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "percent_for_governance_staking": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

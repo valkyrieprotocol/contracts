@@ -28,6 +28,7 @@ pub fn exec(
     overflow_amount_recipient: Option<String>,
     base_count: u8,
     percent_for_governance_staking: u16,
+    contract_admin: String,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
         governance,
@@ -45,7 +46,8 @@ pub fn exec(
             overflow_amount_recipient,
             base_count,
             percent_for_governance_staking,
-        }
+        },
+        contract_admin,
     };
 
     instantiate(
@@ -78,6 +80,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         None,
         REFERRAL_REWARD_LIMIT_BASE_COUNT,
         REFERRAL_REWARD_LIMIT_STAKING_PERCENT,
+        GOVERNANCE.to_string(),
     ).unwrap();
 
     (env, info, response)
@@ -102,6 +105,7 @@ fn succeed() {
         fee_recipient: Addr::unchecked(FEE_RECIPIENT),
         deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
         key_denom: cw20::Denom::Native(KEY_DENOM_NATIVE.to_string()),
+        contract_admin: Addr::unchecked(GOVERNANCE),
     });
 
     let referral_reward_limit_option = ReferralRewardLimitOption::load(&deps.storage).unwrap();

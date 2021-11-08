@@ -33,6 +33,7 @@ pub fn instantiate(
         fee_recipient: deps.api.addr_validate(msg.fee_recipient.as_str())?,
         deactivate_period: msg.deactivate_period,
         key_denom: msg.key_denom.to_cw20(deps.api),
+        contract_admin: deps.api.addr_validate(msg.contract_admin.as_str())?,
     }.save(deps.storage)?;
 
     ReferralRewardLimitOption {
@@ -60,28 +61,32 @@ pub fn update_config(
     fee_recipient: Option<String>,
     deactivate_period: Option<u64>,
     key_denom: Option<Denom>,
+    contract_admin: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = Config::load(deps.storage)?;
 
-    if !config.is_governance(&info.sender) {
+    if !config.is_governance(&info.sender) && !config.is_contract_admin(&info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
     // Execute
     let mut response = make_response("update_contract_config");
 
-    if let Some(governance) = governance.as_ref() {
-        config.governance = deps.api.addr_validate(governance)?;
-        response = response.add_attribute("is_updated_governance", "true");
-    }
-
     if let Some(valkyrie_token) = valkyrie_token.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.valkyrie_token = deps.api.addr_validate(valkyrie_token)?;
         response = response.add_attribute("is_updated_valkyrie_token", "true");
     }
 
     if let Some(terraswap_router) = terraswap_router.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.terraswap_router = deps.api.addr_validate(terraswap_router)?;
         response = response.add_attribute("is_updated_terraswap_router", "true");
     }
@@ -92,38 +97,80 @@ pub fn update_config(
     }
 
     if let Some(add_pool_fee_rate) = add_pool_fee_rate.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.add_pool_fee_rate = *add_pool_fee_rate;
         response = response.add_attribute("is_updated_add_pool_fee_rate", "true");
     }
 
     if let Some(add_pool_min_referral_reward_rate) = add_pool_min_referral_reward_rate.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.add_pool_min_referral_reward_rate = *add_pool_min_referral_reward_rate;
         response = response.add_attribute("is_updated_add_pool_min_referral_reward_rate", "true");
     }
 
     if let Some(remove_pool_fee_rate) = remove_pool_fee_rate.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.remove_pool_fee_rate = *remove_pool_fee_rate;
         response = response.add_attribute("is_updated_remove_pool_fee_rate", "true");
     }
 
     if let Some(fee_burn_ratio) = fee_burn_ratio.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.fee_burn_ratio = *fee_burn_ratio;
         response = response.add_attribute("is_updated_fee_burn_ratio", "true");
     }
 
     if let Some(fee_recipient) = fee_recipient.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.fee_recipient = deps.api.addr_validate(fee_recipient)?;
         response = response.add_attribute("is_updated_fee_recipient", "true");
     }
 
     if let Some(deactivate_period) = deactivate_period.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.deactivate_period = *deactivate_period;
         response = response.add_attribute("is_updated_deactivate_period", "true");
     }
 
     if let Some(key_denom) = key_denom.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         config.key_denom = key_denom.to_cw20(deps.api);
         response = response.add_attribute("is_updated_key_denom", "true");
+    }
+
+    if let Some(governance) = governance.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        config.governance = deps.api.addr_validate(governance)?;
+        response = response.add_attribute("is_updated_governance", "true");
+    }
+
+    if let Some(contract_admin) = contract_admin.as_ref() {
+        config.contract_admin = deps.api.addr_validate(contract_admin)?;
+        response = response.add_attribute("is_updated_contract_admin", "true");
     }
 
     config.save(deps.storage)?;
@@ -220,7 +267,7 @@ pub fn create_campaign(
 
     let create_campaign_msg = message_factories::wasm_instantiate(
         config.code_id,
-        Some(config.governance.clone()),
+        Some(config.contract_admin.clone()),
         to_binary(&CampaignInstantiateMsg {
             governance: config.governance.to_string(),
             campaign_manager: env.contract.address.to_string(),
