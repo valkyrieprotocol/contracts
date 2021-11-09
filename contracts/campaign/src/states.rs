@@ -537,7 +537,7 @@ pub fn calc_referral_reward_limit(
 
     let actor_limit_amount = gov_staking_amount * Decimal::percent(limit_option.percent_for_governance_staking as u64);
 
-    let limit_amount = std::cmp::max(base_limit_amount, actor_limit_amount);
+    let limit_amount = base_limit_amount + actor_limit_amount;
 
     Ok(ReferralRewardLimitAmount {
         address: address.to_string(),

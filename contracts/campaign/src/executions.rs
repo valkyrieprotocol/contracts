@@ -994,7 +994,8 @@ fn distribute_referral_reward(
         let actor_reward_amount = referrer_actor.cumulative_referral_reward_amount + *reward_amount;
         if reward_limit < actor_reward_amount {
             actor_overflow_amount = actor_reward_amount.checked_sub(reward_limit)?;
-            actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)?;
+            actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)
+                .unwrap_or(Uint128::zero());
         }
 
         referrer_actor.referral_count += 1;
