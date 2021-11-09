@@ -957,6 +957,14 @@ fn distribute_referral_reward(
     storage: &mut dyn Storage,
     querier: &QuerierWrapper,
 ) -> StdResult<(Uint128, Vec<ReferralReward>, Uint128)> {
+    let referral_reward_pool_balance = campaign_state
+        .balance(&cw20::Denom::Cw20(reward_config.referral_reward_token.clone()))
+        .available();
+
+    if reward_config.referral_reward_amounts.iter().sum::<Uint128>() > referral_reward_pool_balance {
+        return Ok((Uint128::zero(), vec![], Uint128::zero()));
+    }
+
     let mut referrers = actor.load_referrers(
         storage,
         reward_config.referral_reward_amounts.len(),
