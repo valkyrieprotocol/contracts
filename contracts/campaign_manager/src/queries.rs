@@ -20,6 +20,7 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
         fee_recipient: config.fee_recipient.to_string(),
         deactivate_period: config.deactivate_period,
         key_denom: Denom::from_cw20(config.key_denom),
+        contract_admin: config.contract_admin.to_string(),
     })
 }
 

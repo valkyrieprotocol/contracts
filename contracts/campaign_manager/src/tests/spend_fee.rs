@@ -70,6 +70,7 @@ fn succeed() {
         None,
         None,
         None,
+        None,
     );
 
     deps.querier.plus_token_balances(&[

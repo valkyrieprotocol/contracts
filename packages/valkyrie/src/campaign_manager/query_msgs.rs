@@ -37,6 +37,7 @@ pub struct ConfigResponse {
     pub fee_recipient: String,
     pub deactivate_period: u64,
     pub key_denom: Denom,
+    pub contract_admin: String,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -54,6 +55,7 @@ impl Default for ConfigResponse {
             fee_recipient: FEE_RECIPIENT.to_string(),
             deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
             key_denom: Denom::Native(KEY_DENOM_NATIVE.to_string()),
+            contract_admin: governance::GOVERNANCE.to_string(),
         }
     }
 }

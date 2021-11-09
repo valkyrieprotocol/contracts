@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MigrateMsg",
+  "type": "object",
+  "required": [
+    "contract_admin"
+  ],
+  "properties": {
+    "contract_admin": {
+      "type": "string"
+    }
+  }
+}

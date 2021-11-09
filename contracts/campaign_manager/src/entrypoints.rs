@@ -6,7 +6,7 @@ use valkyrie::campaign_manager::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 
-use crate::{executions, queries};
+use crate::{executions, migrations, queries};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -40,6 +40,7 @@ pub fn execute(
             fee_recipient,
             deactivate_period,
             key_denom,
+            contract_admin,
         } => executions::update_config(
             deps,
             env,
@@ -55,6 +56,7 @@ pub fn execute(
             fee_recipient,
             deactivate_period,
             key_denom,
+            contract_admin,
         ),
         ExecuteMsg::UpdateReferralRewardLimitOption {
             overflow_amount_recipient,
@@ -107,8 +109,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    Ok(Response::default())
+pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    migrations::v1_0_6(deps, env, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

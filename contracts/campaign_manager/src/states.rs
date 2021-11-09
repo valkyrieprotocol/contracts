@@ -23,6 +23,7 @@ pub struct Config {
     pub fee_recipient: Addr,
     pub deactivate_period: u64,
     pub key_denom: Denom,
+    pub contract_admin: Addr,
 }
 
 impl Config {
@@ -36,6 +37,10 @@ impl Config {
 
     pub fn is_governance(&self, address: &Addr) -> bool {
         self.governance == *address
+    }
+
+    pub fn is_contract_admin(&self, address: &Addr) -> bool {
+        self.contract_admin == *address
     }
 }
 
