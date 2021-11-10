@@ -174,9 +174,9 @@ impl CampaignState {
     }
 
     fn total_balance(&self, denom: &Denom) -> Uint128 {
-        for (locked_denom, locked_amount) in self.balances.iter() {
-            if *locked_denom == *denom {
-                return locked_amount.clone();
+        for (balance_denom, balance_amount) in self.balances.iter() {
+            if *balance_denom == *denom {
+                return balance_amount.clone();
             }
         }
 

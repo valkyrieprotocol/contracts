@@ -81,6 +81,4 @@ pub enum Cw20HookMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {
-    pub staking_config: StakingConfigInitMsg,
-}
+pub struct MigrateMsg {}

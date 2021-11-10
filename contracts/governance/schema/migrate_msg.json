@@ -1,26 +1,5 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "MigrateMsg",
-  "type": "object",
-  "required": [
-    "staking_config"
-  ],
-  "properties": {
-    "staking_config": {
-      "$ref": "#/definitions/StakingConfigInitMsg"
-    }
-  },
-  "definitions": {
-    "StakingConfigInitMsg": {
-      "type": "object",
-      "properties": {
-        "distributor": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      }
-    }
-  }
+  "type": "object"
 }
