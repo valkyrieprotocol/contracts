@@ -70,7 +70,7 @@ pub fn get_share_url(deps: Deps, _env: Env, address: String) -> ContractResult<S
     deps.api.addr_validate(&address)?;
 
     let campaign_info = CampaignConfig::load(deps.storage)?;
-    let compressed = compress_addr(&address);
+    let compressed = compress_addr(&address)?;
     let url = put_query_parameter(
         &campaign_info.url,
         &campaign_info.parameter_key,

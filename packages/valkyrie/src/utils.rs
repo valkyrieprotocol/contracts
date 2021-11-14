@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Decimal, Binary, Response};
+use cosmwasm_std::{Uint128, Decimal, Binary, Response, StdResult, StdError};
 use bigint::U256;
 use std::num::ParseIntError;
 
@@ -145,20 +145,21 @@ const TERRA_ADDRESS_HRP: &str = "terra1";
 const TERRA_ADDRESS_HRP_LENGTH: usize = 6;
 const TERRA_ADDRESS_LENGTH: usize = 44;
 const BECH32_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-pub fn compress_addr(address: &str) -> String {
+pub fn compress_addr(address: &str) -> StdResult<String> {
     let mut result = U256::zero();
     for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
-        let index = BECH32_CHARSET.find(c).unwrap();
+        let index = BECH32_CHARSET.find(c)
+            .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?;
         result = (result << 5) | U256::from(index);
     }
 
     let mut bytes = [0u8; 32];
     result.to_big_endian(&mut bytes);
 
-    Binary::from(&bytes[8..]).to_base64()
+    Ok(Binary::from(&bytes[8..]).to_base64())
 }
 
-pub fn decompress_addr(text: &str) -> String {
+pub fn decompress_addr(text: &str) -> StdResult<String> {
     let decoded = Binary::from_base64(text).unwrap();
     let mut bytes = [0u8; 32];
     bytes[8..].clone_from_slice(decoded.as_slice());
@@ -168,9 +169,11 @@ pub fn decompress_addr(text: &str) -> String {
 
     for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_ADDRESS_LENGTH {
         let index = (data & U256::from(0x1F)).as_u32() as usize;
-        result = BECH32_CHARSET.chars().nth(index).unwrap().to_string() + &result;
+        result = BECH32_CHARSET.chars().nth(index)
+            .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?
+            .to_string() + &result;
         data = data >> 5;
     }
 
-    TERRA_ADDRESS_HRP.to_string() + &result
+    Ok(TERRA_ADDRESS_HRP.to_string() + &result)
 }
