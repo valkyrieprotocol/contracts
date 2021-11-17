@@ -92,7 +92,7 @@ fn succeed_with_referrer() {
     super::add_reward_pool::will_success(
         &mut deps,
         PARTICIPATION_REWARD_AMOUNT.u128() * 2,
-        REFERRAL_REWARD_AMOUNTS[0].u128(),
+        REFERRAL_REWARD_AMOUNTS.iter().sum::<Uint128>().u128(),
     );
 
     let participator = Addr::unchecked("Participator");

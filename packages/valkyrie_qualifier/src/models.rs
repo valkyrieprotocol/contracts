@@ -1,7 +1,6 @@
+use cosmwasm_std::Decimal;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::QualifiedContinueOption;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct QualificationMsg {
@@ -13,6 +12,28 @@ pub struct QualificationMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct QualificationResult {
-    pub continue_option: QualifiedContinueOption,
-    pub reason: Option<String>,
+    pub can_participate: bool,
+    pub participation_reward_rate: Decimal,
+    pub referral_reward_rate: Decimal,
+    pub memo: Option<String>,
+}
+
+impl QualificationResult {
+    pub fn success() -> QualificationResult {
+        QualificationResult {
+            can_participate: true,
+            participation_reward_rate: Decimal::one(),
+            referral_reward_rate: Decimal::one(),
+            memo: None,
+        }
+    }
+
+    pub fn error(memo: Option<String>) -> QualificationResult {
+        QualificationResult {
+            can_participate: false,
+            participation_reward_rate: Decimal::zero(),
+            referral_reward_rate: Decimal::zero(),
+            memo,
+        }
+    }
 }

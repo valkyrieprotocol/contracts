@@ -726,6 +726,7 @@ pub fn participate(
             &mut response,
             actor,
             referrer_address,
+            QualificationResult::success()
         )?;
     }
 
@@ -750,25 +751,17 @@ pub fn participate_qualify_result(
     })?;
 
     let result: QualificationResult = from_binary(&Binary(core_response.data))?;
-    let continue_option = result.continue_option;
-
-    if continue_option.is_error() {
-        return Err(ContractError::Std(StdError::generic_err(
-            format!("Failed to qualify participation ({})", result.reason.unwrap_or_default()),
-        )));
-    }
 
     let context = QualifyParticipationContext::load(deps.storage)?;
-    if continue_option.can_participate() {
-        _participate(
-            deps.storage,
-            &deps.querier,
-            &env,
-            &mut response,
-            context.actor,
-            context.referrer,
-        )?;
-    }
+    _participate(
+        deps.storage,
+        &deps.querier,
+        &env,
+        &mut response,
+        context.actor,
+        context.referrer,
+        result,
+    )?;
 
     QualifyParticipationContext::clear(deps.storage);
 
@@ -782,7 +775,14 @@ fn _participate(
     response: &mut Response,
     actor: Addr,
     referrer: Option<Addr>,
+    qualify_result: QualificationResult,
 ) -> ContractResult<()> {
+    if !qualify_result.can_participate {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!("Failed to qualify participation ({})", qualify_result.memo.unwrap_or_default()),
+        )));
+    }
+
     let mut my_participation = Actor::may_load(storage, &actor)?
         .unwrap_or_else(|| Actor::new(actor.clone(), referrer));
 
@@ -809,16 +809,17 @@ fn _participate(
         deposit.save(storage)?;
     }
 
-    let referral_reward_limit_option: ReferralRewardLimitOptionResponse = querier.query_wasm_smart(
-        &campaign_config.campaign_manager,
-        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitOption {},
-    )?;
-
     let distributed_participation_reward_amount = distribute_participation_reward(
         &mut my_participation,
         &mut campaign_state,
         &reward_config,
+        &qualify_result.participation_reward_rate,
         env,
+    )?;
+
+    let referral_reward_limit_option: ReferralRewardLimitOptionResponse = querier.query_wasm_smart(
+        &campaign_config.campaign_manager,
+        &valkyrie::campaign_manager::query_msgs::QueryMsg::ReferralRewardLimitOption {},
     )?;
 
     let (
@@ -830,6 +831,7 @@ fn _participate(
         &mut campaign_state,
         &campaign_config,
         &reward_config,
+        &qualify_result.referral_reward_rate,
         env,
         &referral_reward_limit_option,
         storage,
@@ -930,21 +932,25 @@ fn distribute_participation_reward(
     actor: &mut Actor,
     campaign_state: &mut CampaignState,
     reward_config: &RewardConfig,
+    reward_rate: &Decimal,
     env: &Env,
 ) -> StdResult<Uint128> {
     actor.participation_count += 1;
+
+    let reward_amount = reward_config.participation_reward_amount * *reward_rate;
+
     actor.add_participation_reward(
-        reward_config.participation_reward_amount,
+        reward_amount,
         reward_config.participation_reward_lock_period + env.block.height,
     );
-    actor.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
-    campaign_state.cumulative_participation_reward_amount += reward_config.participation_reward_amount;
+    actor.cumulative_participation_reward_amount += reward_amount;
+    campaign_state.cumulative_participation_reward_amount += reward_amount;
     campaign_state.lock_balance(
         &reward_config.participation_reward_denom,
-        &reward_config.participation_reward_amount,
+        &reward_amount,
     );
 
-    Ok(reward_config.participation_reward_amount)
+    Ok(reward_amount)
 }
 
 fn distribute_referral_reward(
@@ -952,6 +958,7 @@ fn distribute_referral_reward(
     campaign_state: &mut CampaignState,
     campaign_config: &CampaignConfig,
     reward_config: &RewardConfig,
+    reward_rate: &Decimal,
     env: &Env,
     referral_limit_option: &ReferralRewardLimitOptionResponse,
     storage: &mut dyn Storage,
@@ -990,6 +997,7 @@ fn distribute_referral_reward(
             return Err(StdError::generic_err("Actor must not contain on referrer chain"));
         }
 
+        let reward_amount = *reward_amount * *reward_rate;
         let reward_limit = calc_referral_reward_limit(
             &referral_limit_option,
             &campaign_config,
@@ -997,9 +1005,9 @@ fn distribute_referral_reward(
             querier,
             &referrer_actor.address,
         )?.limit_amount;
-        let mut actor_receive_amount = *reward_amount;
+        let mut actor_receive_amount = reward_amount;
         let mut actor_overflow_amount = Uint128::zero();
-        let actor_reward_amount = referrer_actor.cumulative_referral_reward_amount + *reward_amount;
+        let actor_reward_amount = referrer_actor.cumulative_referral_reward_amount + reward_amount;
         if reward_limit < actor_reward_amount {
             actor_overflow_amount = actor_reward_amount.checked_sub(reward_limit)?;
             actor_receive_amount = actor_receive_amount.checked_sub(actor_overflow_amount)
@@ -1014,7 +1022,7 @@ fn distribute_referral_reward(
         referrer_actor.cumulative_referral_reward_amount += actor_receive_amount;
         campaign_state.cumulative_referral_reward_amount += actor_receive_amount;
         campaign_state.lock_balance(&referral_reward_denom, &actor_receive_amount);
-        distributed_amount += *reward_amount;
+        distributed_amount += reward_amount;
         overflow_amount += actor_overflow_amount;
 
         referrer_actor.save(storage)?;
