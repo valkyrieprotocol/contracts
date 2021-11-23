@@ -11,6 +11,7 @@ use super::states::{StakerState, StakingState};
 use valkyrie::utils::make_response;
 use valkyrie::message_factories;
 use valkyrie::governance::execute_msgs::{StakingConfigInitMsg, ExecuteMsg};
+use valkyrie::terra::is_contract;
 use crate::staking::states::StakingConfig;
 
 pub fn instantiate(
@@ -73,6 +74,10 @@ pub fn stake_governance_token(
 
     if amount.is_zero() {
         return Err(ContractError::Std(StdError::generic_err("Insufficient funds sent")));
+    }
+
+    if is_contract(&deps.querier, &sender)? {
+        return Err(ContractError::Std(StdError::generic_err("Can only called by wallet")));
     }
 
     let config = StakingConfig::load(deps.storage)?;

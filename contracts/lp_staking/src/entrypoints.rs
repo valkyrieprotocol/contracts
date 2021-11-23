@@ -76,34 +76,7 @@ pub fn receive_cw20(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> StdResult<Response> {
-    if let Ok(old) = OldConfig::load(deps.storage) {
-        Config {
-            token: old.token,
-            pair: old.pair,
-            lp_token: old.lp_token,
-            distribution_schedule: msg.distribution_schedule,
-        }
-        .save(deps.storage)?;
-
-        OldConfig::delete(deps.storage)
-    }
-
-    if let Ok(old) = OldState::load(deps.storage) {
-        State {
-            last_distributed: 0,
-            total_bond_amount: old.total_bond_amount,
-            global_reward_index: old.global_reward_index,
-        }
-        .save(deps.storage)?;
-
-        OldState::delete(deps.storage)
-    }
-
-    let config: Config = Config::load(deps.storage)?;
-    let mut state: State = State::load(deps.storage)?;
-    state.compute_reward(&config, env.block.height);
-    state.save(deps.storage)?;
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }
 

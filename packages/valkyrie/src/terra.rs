@@ -1,4 +1,4 @@
-use cosmwasm_std::{QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
 use terra_cosmwasm::TerraQuerier;
 
 use crate::utils::calc_ratio_amount;
@@ -47,4 +47,11 @@ pub fn calc_tax_one_plus(querier: &QuerierWrapper, denom: String, amount: Uint12
     let cap = querier.query_tax_cap(denom)?.cap;
 
     Ok(std::cmp::min(tax, cap))
+}
+
+pub fn is_contract(querier: &QuerierWrapper, address: &Addr) -> StdResult<bool> {
+    let querier = TerraQuerier::new(querier);
+
+    Ok(querier.query_contract_info(address.to_string())
+        .map_or(false, |_| true))
 }

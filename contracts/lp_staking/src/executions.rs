@@ -12,12 +12,17 @@ use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
 use valkyrie::lp_staking::execute_msgs::ExecuteMsg;
 use valkyrie::message_factories;
+use valkyrie::terra::is_contract;
 use valkyrie::utils::make_response;
 
 pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
     let mut response = make_response("bond");
 
     let sender_addr_raw: Addr = deps.api.addr_validate(&sender_addr.as_str())?;
+
+    if is_contract(&deps.querier, &sender_addr_raw)? {
+        return Err(StdError::generic_err("Can only called by wallet"));
+    }
 
     let config: Config = Config::load(deps.storage)?;
     let mut state: State = State::load(deps.storage)?;

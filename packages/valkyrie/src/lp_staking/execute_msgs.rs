@@ -39,6 +39,4 @@ pub enum Cw20HookMsg {
 
 /// We currently take no arguments for migrations
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {
-    pub distribution_schedule: Vec<(u64, u64, Uint128)>,
-}
+pub struct MigrateMsg {}
