@@ -308,8 +308,10 @@ pub fn add_reward_pool(
     // Validate
     let reward_config = RewardConfig::load(deps.storage)?;
 
-    if let cw20::Denom::Native(denom) = &reward_config.participation_reward_denom {
-        validate_native_send(&info, denom, &participation_reward_amount)?;
+    if !participation_reward_amount.is_zero() {
+        if let cw20::Denom::Native(denom) = &reward_config.participation_reward_denom {
+            validate_native_send(&info, denom, &participation_reward_amount)?;
+        }
     }
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
@@ -355,15 +357,17 @@ pub fn add_reward_pool(
     campaign_state.save(deps.storage)?;
 
     // If participation reward denom is cw20, It will be send with this execute_msg.
-    if let cw20::Denom::Cw20(token) = &reward_config.participation_reward_denom {
-        response = response.add_message(message_factories::wasm_execute(
-            token,
-            &Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: participation_reward_amount.clone(),
-            },
-        ));
+    if !participation_reward_amount.is_zero() {
+        if let cw20::Denom::Cw20(token) = &reward_config.participation_reward_denom {
+            response = response.add_message(message_factories::wasm_execute(
+                token,
+                &Cw20ExecuteMsg::TransferFrom {
+                    owner: info.sender.to_string(),
+                    recipient: env.contract.address.to_string(),
+                    amount: participation_reward_amount.clone(),
+                },
+            ));
+        }
     }
 
     response = response.add_message(message_factories::wasm_execute(
@@ -440,7 +444,7 @@ fn validate_reward_pool_weight(
         reward_config.participation_reward_denom.clone(),
         key_denom.clone(),
         participation_reward_amount,
-    )?;
+    ).unwrap_or(Uint128::zero());
 
     let referral_reward_value = swap_simulate(
         &querier,
@@ -462,7 +466,7 @@ fn validate_reward_pool_weight(
         )));
     }
 
-    Ok((key_denom, referral_reward_pool_rate, participation_reward_value + referral_reward_amount))
+    Ok((key_denom, referral_reward_pool_rate, participation_reward_value + referral_reward_value))
 }
 
 fn swap_simulate(
