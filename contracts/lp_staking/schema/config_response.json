@@ -3,12 +3,17 @@
   "title": "ConfigResponse",
   "type": "object",
   "required": [
+    "admin",
     "distribution_schedule",
     "lp_token",
     "pair",
-    "token"
+    "token",
+    "whitelisted_contracts"
   ],
   "properties": {
+    "admin": {
+      "type": "string"
+    },
     "distribution_schedule": {
       "type": "array",
       "items": {
@@ -40,6 +45,12 @@
     },
     "token": {
       "type": "string"
+    },
+    "whitelisted_contracts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "definitions": {

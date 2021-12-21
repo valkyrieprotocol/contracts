@@ -40,6 +40,11 @@ pub enum QueryMsg {
     VotingPower {
         address: String,
     },
+    TicketConfig {},
+    TicketState {},
+    TicketStakerState {
+        address: String,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -133,4 +138,12 @@ pub struct VotersResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct VotingPowerResponse {
     pub voting_power: Decimal,
+}
+
+// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TicketStateResponse {
+    pub address: String,
+    pub reward_index: Decimal,
+    pub pending_reward: Uint128,
 }

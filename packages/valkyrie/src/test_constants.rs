@@ -4,6 +4,7 @@ use cosmwasm_std::testing::mock_info;
 pub const DEFAULT_SENDER: &str = "DefaultSender";
 pub const CONTRACT_CREATOR: &str = "ContractCreator";
 pub const VALKYRIE_TOKEN: &str = "ValkyrieToken";
+pub const VALKYRIE_TICKET_TOKEN: &str = "TicketToken";
 pub const TERRASWAP_ROUTER: &str = "TerraswapRouter";
 
 pub fn default_sender() -> MessageInfo {
@@ -23,12 +24,15 @@ pub mod governance {
     use cosmwasm_std::testing::mock_info;
 
     use crate::test_constants::VALKYRIE_TOKEN;
+    use crate::test_constants::VALKYRIE_TICKET_TOKEN;
     use crate::test_utils::{mock_env_contract, mock_env_contract_height};
 
     pub const GOVERNANCE: &str = "Governance";
 
     // common config
     pub const GOVERNANCE_TOKEN: &str = VALKYRIE_TOKEN;
+    pub const TICKET_TOKEN: &str = VALKYRIE_TICKET_TOKEN;
+    pub const TICKET_DIST_SCHEDULE: (u64, u64, Uint128) = (0, 100, Uint128::new(100_000000u128));
 
     // poll config
     pub const POLL_QUORUM_PERCENT: u64 = 30;

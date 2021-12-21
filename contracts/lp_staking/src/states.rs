@@ -1,18 +1,20 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
+use valkyrie::terra::is_contract;
 
 pub const UST: &str = "uusd";
 
-const OLD_CONFIG: Item<OldConfig> = Item::new("config");
+const OLD_CONFIG: Item<OldConfig> = Item::new("config_v2");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OldConfig {
     pub token: Addr,
     pub lp_token: Addr,
     pub pair: Addr,
+    pub distribution_schedule: Vec<(u64, u64, Uint128)>,
 }
 
 impl OldConfig {
@@ -25,42 +27,38 @@ impl OldConfig {
     }
 }
 
-const CONFIG: Item<Config> = Item::new("config_v2");
+const CONFIG: Item<Config> = Item::new("config_v3");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
+    pub admin: Addr,
     pub token: Addr,
     pub lp_token: Addr,
     pub pair: Addr,
+    pub whitelisted_contracts: Vec<Addr>,
     pub distribution_schedule: Vec<(u64, u64, Uint128)>,
 }
 
 impl Config {
     pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        CONFIG.save(storage, self)
+        CONFIG.save(storage, self)?;
+        Ok(())
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<Config> {
         CONFIG.load(storage)
     }
-}
 
-const OLD_STATE: Item<OldState> = Item::new("state");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OldState {
-    pub pending_reward: Uint128,
-    pub total_bond_amount: Uint128,
-    pub global_reward_index: Decimal,
-}
-
-impl OldState {
-    pub fn load(storage: &dyn Storage) -> StdResult<OldState> {
-        OLD_STATE.load(storage)
+    pub fn is_whitelisted_contract(&self, address: &Addr) -> bool {
+        self.whitelisted_contracts.contains(&address)
     }
 
-    pub fn delete(storage: &mut dyn Storage) {
-        OLD_STATE.remove(storage)
+    pub fn is_authorized(&self, deps: &Deps, address: &Addr) -> StdResult<bool> {
+        if is_contract(&deps.querier, &address)? && !self.is_whitelisted_contract(&address) {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 }
 

@@ -1,21 +1,24 @@
-use cosmwasm_std::{Deps, Env, StdResult};
+use cosmwasm_std::{Deps, Env};
 
 use crate::states::{Config, StakerInfo, State};
+use valkyrie::common::ContractResult;
 use valkyrie::lp_staking::query_msgs::{ConfigResponse, StakerInfoResponse, StateResponse};
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> ContractResult<ConfigResponse> {
     let config: Config = Config::load(deps.storage)?;
     let resp = ConfigResponse {
+        admin: config.admin.to_string(),
         token: config.token.to_string(),
         pair: config.pair.to_string(),
         lp_token: config.lp_token.to_string(),
+        whitelisted_contracts: config.whitelisted_contracts.iter().map(|item| item.to_string()).collect(),
         distribution_schedule: config.distribution_schedule,
     };
 
     Ok(resp)
 }
 
-pub fn query_state(deps: Deps, block_height: Option<u64>) -> StdResult<StateResponse> {
+pub fn query_state(deps: Deps, block_height: Option<u64>) -> ContractResult<StateResponse> {
     let mut state: State = State::load(deps.storage)?;
     if let Some(block_height) = block_height {
         let config: Config = Config::load(deps.storage)?;
@@ -29,7 +32,11 @@ pub fn query_state(deps: Deps, block_height: Option<u64>) -> StdResult<StateResp
     })
 }
 
-pub fn query_staker_info(deps: Deps, env: Env, staker: String) -> StdResult<StakerInfoResponse> {
+pub fn query_staker_info(
+    deps: Deps,
+    env: Env,
+    staker: String,
+) -> ContractResult<StakerInfoResponse> {
     let block_height = env.block.height;
     let staker_raw = deps.api.addr_validate(&staker.as_str())?;
 

@@ -1,5 +1,5 @@
 use cosmwasm_std::{Decimal, Uint128};
-use cw20::Cw20ReceiveMsg;
+use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ pub struct InstantiateMsg {
     pub contract_config: ContractConfigInitMsg,
     pub poll_config: PollConfigInitMsg,
     pub staking_config: StakingConfigInitMsg,
+    pub ticket_config: TicketConfigInitMsg,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -34,6 +35,12 @@ pub struct StakingConfigInitMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TicketConfigInitMsg {
+    pub ticket_token: String,
+    pub distribution_schedule: Vec<(u64, u64, Uint128)>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
@@ -47,6 +54,10 @@ pub enum ExecuteMsg {
         execution_delay_period: Option<u64>,
         proposal_deposit: Option<Uint128>,
         snapshot_period: Option<u64>,
+    },
+    UpdateTicketConfig {
+        ticket_token: Option<String>,
+        distribution_schedule: Option<Vec<(u64, u64, Uint128)>>,
     },
     StakeGovernanceTokenHook {
         staker: String,
@@ -62,6 +73,7 @@ pub enum ExecuteMsg {
         vote: VoteOption,
         amount: Uint128,
     },
+    TicketClaim {},
     SnapshotPoll { poll_id: u64 },
     EndPoll { poll_id: u64 },
     ExecutePoll { poll_id: u64 },
@@ -81,4 +93,7 @@ pub enum Cw20HookMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    // pub staking_config: StakingConfigInitMsg,
+    pub ticket_config: TicketConfigInitMsg,
+}

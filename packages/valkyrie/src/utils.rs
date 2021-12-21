@@ -177,3 +177,16 @@ pub fn decompress_addr(text: &str) -> StdResult<String> {
 
     Ok(TERRA_ADDRESS_HRP.to_string() + &result)
 }
+
+pub fn is_valid_schedule(distribution_schedule: &Vec<(u64, u64, Uint128)>) -> bool {
+    let mut check_block = 0;
+
+    for (start, end, _amount) in distribution_schedule.iter() {
+        if start.clone() < check_block || start.clone() >= end.clone() {
+            return false;
+        }
+        check_block = end.clone();
+    }
+
+    return true;
+}

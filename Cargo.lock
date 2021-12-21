@@ -189,6 +189,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw2"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d48454f96494aa1018556cd457977375cc8c57ef3e5c767cfa2ea5ec24b0258"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cw20"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -198,6 +210,22 @@ dependencies = [
  "cw0",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "cw20-base"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe3791e0f6b4a0a82b86541d48dcc67c2d607da8e5691a91b40b2c06ddf09c52"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw0",
+ "cw2",
+ "cw20",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -740,6 +768,21 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "valkyrie-vp"
+version = "1.0.8-beta.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw0",
+ "cw20",
+ "cw20-base",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

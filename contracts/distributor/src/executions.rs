@@ -141,7 +141,7 @@ pub fn update_distribution(
     }
 
     if let Some(amount) = amount {
-        if distribution.released_amount(env.block.height) > amount {
+        if prev_released_amount > amount {
             return Err(ContractError::Std(StdError::generic_err("amount must be greater than released_amount")));
         }
 

@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     pub token: String,
     pub pair: String,
     pub lp_token: String,
+    pub whitelisted_contracts: Vec<String>,
     pub distribution_schedule: Vec<(u64, u64, Uint128)>,
 }
 
@@ -29,6 +30,14 @@ pub enum ExecuteMsg {
         staker_addr: String,
         already_staked_amount: Uint128,
     },
+    UpdateConfig {
+        whitelisted_contracts: Option<Vec<String>>,
+        distribution_schedule: Option<Vec<(u64, u64, Uint128)>>,
+    },
+    MigrateReward {
+        recipient: String,
+        amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -39,4 +48,7 @@ pub enum Cw20HookMsg {
 
 /// We currently take no arguments for migrations
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub admin: String,
+    pub whitelisted_contracts: Vec<String>,
+}
