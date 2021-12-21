@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use valkyrie::cw20::query_cw20_balance;
 use crate::poll::states::PollState;
 
-
 const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

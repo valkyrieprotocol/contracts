@@ -5,7 +5,7 @@ authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "A Campaign contract for Valkyrie Protocol - distribute reward when participate"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
+repository = "https://github.com/valkyrieprotocol/contracts.git"
 homepage = "https://valkyrieprotocol.com"
 documentation = "https://docs.valkyrieprotocol.com"
 

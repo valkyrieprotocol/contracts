@@ -1,21 +1,37 @@
 [package]
-name = "cw20"
-version = "0.8.1"
+name = "valkyrie-vp"
+version = "1.0.8-beta.0"
 authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "Basic implementation of a CosmWasm-20 compliant token"
 license = "Apache-2.0"
-repository = "https://github.com/valkyrieprotocol/valkyrie-contracts.git"
+repository = "https://github.com/valkyrieprotocol/contracts.git"
 homepage = "https://valkyrieprotocol.com"
 documentation = "https://docs.valkyrieprotocol.com"
+
+exclude = [
+    "contract.wasm",
+    "hash.txt",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-# use library feature to disable all instantiate/execute/query exports
-library = []
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
 
 [dependencies]
 cw0 = { version = "0.8.1" }
