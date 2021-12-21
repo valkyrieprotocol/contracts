@@ -6,7 +6,8 @@
     "distribution_schedule",
     "lp_token",
     "pair",
-    "token"
+    "token",
+    "whitelisted_contracts"
   ],
   "properties": {
     "distribution_schedule": {
@@ -40,6 +41,12 @@
     },
     "token": {
       "type": "string"
+    },
+    "whitelisted_contracts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "definitions": {

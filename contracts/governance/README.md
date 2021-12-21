@@ -1,3 +1,3 @@
 # Valkyrie Governance
 The Gov Contract contains logic for holding polls and Valkyrie Token (VKR) staking, and allows the Valkyrie Protocol to be governed by its users in a decentralized manner.
-New proposals for change are submitted as polls, and are voted on by VKR stakers through the Poll Lifecycle. Polls can contain messages that can be executed directly without changing the Valkyrie Protocol code.
+New proposals for change are submitted as polls, and are voted on by VKR stakers through the Poll Lifecycle. Polls can contain messages that can be executed directly without changing the Valkyrie Protocol code. VP(Valkyrian Pass) will provide some benefits to governance stakers.

@@ -1,7 +1,4 @@
-use cosmwasm_std::{
-    Addr, Coin, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult,
-    Uint128,
-};
+use cosmwasm_std::{Addr, Coin, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, StdResult, Uint128};
 
 use crate::states::{Config, StakerInfo, State, UST};
 
@@ -10,21 +7,30 @@ use terra_cosmwasm::TerraQuerier;
 use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::querier::query_token_balance;
+use valkyrie::common::ContractResult;
+use valkyrie::errors::ContractError;
 use valkyrie::lp_staking::execute_msgs::ExecuteMsg;
 use valkyrie::message_factories;
-use valkyrie::terra::is_contract;
-use valkyrie::utils::make_response;
+use valkyrie::utils::{is_valid_schedule, make_response};
 
-pub fn bond(deps: DepsMut, env: Env, sender_addr: String, amount: Uint128) -> StdResult<Response> {
+pub fn bond(
+    deps: DepsMut,
+    env: Env,
+    sender_addr: String,
+    amount: Uint128,
+) -> ContractResult<Response> {
     let mut response = make_response("bond");
 
     let sender_addr_raw: Addr = deps.api.addr_validate(&sender_addr.as_str())?;
 
-    if is_contract(&deps.querier, &sender_addr_raw)? {
-        return Err(StdError::generic_err("Can only called by wallet"));
+    let config: Config = Config::load(deps.storage)?;
+
+    if !config.is_authorized(&deps.as_ref(), &sender_addr_raw)? {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Can only called by wallet",
+        )));
     }
 
-    let config: Config = Config::load(deps.storage)?;
     let mut state: State = State::load(deps.storage)?;
     let mut staker_info: StakerInfo = StakerInfo::load_or_default(deps.storage, &sender_addr_raw)?;
 
@@ -51,7 +57,7 @@ pub fn auto_stake(
     info: MessageInfo,
     token_amount: Uint128,
     slippage_tolerance: Option<Decimal>,
-) -> StdResult<Response> {
+) -> ContractResult<Response> {
     let mut response = make_response("auto_stake");
 
     let config: Config = Config::load(deps.storage)?;
@@ -60,11 +66,13 @@ pub fn auto_stake(
     let pair_addr = &config.pair.as_str().to_string();
 
     if info.funds.len() != 1 || info.funds[0].denom != *UST {
-        return Err(StdError::generic_err("UST only."));
+        return Err(ContractError::Std(StdError::generic_err("UST only")));
     }
 
     if info.funds[0].amount == Uint128::zero() {
-        return Err(StdError::generic_err("Send UST more than zero."));
+        return Err(ContractError::Std(StdError::generic_err(
+            "Send UST more than zero",
+        )));
     }
 
     let uusd_amount: Uint128 = info.funds[0].amount;
@@ -156,10 +164,10 @@ pub fn auto_stake_hook(
     info: MessageInfo,
     staker_addr: String,
     already_staked_amount: Uint128,
-) -> StdResult<Response> {
+) -> ContractResult<Response> {
     // only can be called by itself
     if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(ContractError::Unauthorized {});
     }
 
     let config: Config = Config::load(deps.as_ref().storage)?;
@@ -173,7 +181,12 @@ pub fn auto_stake_hook(
     bond(deps, env, staker_addr, amount_to_stake)
 }
 
-pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
+pub fn unbond(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> ContractResult<Response> {
     let config: Config = Config::load(deps.storage)?;
     let sender_addr_raw: Addr = info.sender;
 
@@ -181,7 +194,9 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
     let mut staker_info: StakerInfo = StakerInfo::load_or_default(deps.storage, &sender_addr_raw)?;
 
     if staker_info.bond_amount < amount {
-        return Err(StdError::generic_err("Cannot unbond more than bond amount"));
+        return Err(ContractError::Std(StdError::generic_err(
+            "Cannot unbond more than bond amount",
+        )));
     }
 
     let mut response = make_response("unbond");
@@ -218,7 +233,7 @@ pub fn unbond(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> St
 }
 
 // withdraw rewards to executor
-pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let mut response = make_response("withdraw");
 
     let sender_addr_raw = info.sender;
@@ -252,6 +267,76 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     ));
 
     response = response.add_attribute("owner", sender_addr_raw.to_string());
+    response = response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
+}
+
+pub fn update_config(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    whitelisted_contracts: Option<Vec<String>>,
+    distribution_schedule: Option<Vec<(u64, u64, Uint128)>>,
+) -> ContractResult<Response> {
+    let mut response = make_response("update_config");
+
+    let mut config: Config = Config::load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(whitelisted_contracts) = whitelisted_contracts {
+        config.whitelisted_contracts = whitelisted_contracts.iter()
+            .map(|item| deps.api.addr_validate(item.as_str()).unwrap())
+            .collect();
+        response = response.add_attribute("is_updated_whitelisted_contracts", "true");
+    }
+
+    if let Some(distribution_schedule) = distribution_schedule {
+
+        let mut state = State::load(deps.storage)?;
+        state.compute_reward(&config, env.block.height);
+        state.save(deps.storage)?;
+
+        if !is_valid_schedule(&distribution_schedule) {
+            return Err(ContractError::Std(StdError::generic_err(
+                "invalid schedule",
+            )));
+        }
+
+        config.distribution_schedule = distribution_schedule;
+        response = response.add_attribute("is_updated_distribution_schedule", "true");
+    }
+
+    config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn migrate_reward(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    recipient: String,
+    amount: Uint128,
+) -> ContractResult<Response> {
+    let mut response = make_response("migrate_reward");
+
+    let config = Config::load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    response = response.add_message(message_factories::wasm_execute(
+        &config.token,
+        &Cw20ExecuteMsg::Transfer {
+            recipient: (&deps.api.addr_validate(recipient.as_str())?).to_string(),
+            amount,
+        },
+    ));
+
+    response = response.add_attribute("recipient", recipient.to_string());
     response = response.add_attribute("amount", amount.to_string());
 
     Ok(response)

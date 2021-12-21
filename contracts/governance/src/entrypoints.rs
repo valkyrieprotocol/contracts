@@ -10,6 +10,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 use valkyrie::governance::execute_msgs::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::governance::query_msgs::QueryMsg;
+use crate::vp::queries::{get_ticket_config, get_ticket_staker_state, get_ticket_state};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -35,6 +36,10 @@ pub fn instantiate(
         env.clone(),
         info.clone(),
         msg.poll_config,
+    )?;
+    crate::vp::executions::instantiate(
+        deps.branch(),
+        msg.ticket_config,
     )?;
 
     Ok(Response::default())
@@ -75,6 +80,16 @@ pub fn execute(
             proposal_deposit,
             snapshot_period,
         ),
+        ExecuteMsg::UpdateTicketConfig {
+            ticket_token,
+            distribution_schedule,
+        } => crate::vp::executions::update_ticket_config(
+            deps,
+            env,
+            info,
+            ticket_token,
+            distribution_schedule,
+        ),
         ExecuteMsg::StakeGovernanceTokenHook {
             staker,
             amount,
@@ -95,6 +110,7 @@ pub fn execute(
             vote,
             amount,
         } => crate::poll::executions::cast_vote(deps, env, info, poll_id, vote, amount),
+        ExecuteMsg::TicketClaim {} => crate::vp::executions::ticket_claim(deps, env, info),
         ExecuteMsg::SnapshotPoll {
             poll_id,
         } => crate::poll::executions::snapshot_poll(deps, env, info, poll_id),
@@ -154,21 +170,19 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    crate::vp::executions::instantiate(deps, msg.ticket_config)?;
+
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let result = match msg {
-        QueryMsg::ContractConfig {} => {
-            to_binary(&crate::common::queries::get_contract_config(deps, env)?)
-        }
+        QueryMsg::ContractConfig {} => to_binary(&crate::common::queries::get_contract_config(deps, env)?),
         QueryMsg::PollConfig {} => to_binary(&crate::poll::queries::get_poll_config(deps, env)?),
         QueryMsg::PollState {} => to_binary(&crate::poll::queries::get_poll_state(deps, env)?),
-        QueryMsg::Poll { poll_id } => {
-            to_binary(&crate::poll::queries::get_poll(deps, env, poll_id)?)
-        }
+        QueryMsg::Poll { poll_id } => to_binary(&crate::poll::queries::get_poll(deps, env, poll_id)?),
         QueryMsg::Polls {
             filter,
             start_after,
@@ -195,12 +209,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
             limit,
             order_by,
         )?),
-        QueryMsg::StakingConfig {} => {
-            to_binary(&crate::staking::queries::get_staking_config(deps, env)?)
-        },
-        QueryMsg::StakingState {} => {
-            to_binary(&crate::staking::queries::get_staking_state(deps, env)?)
-        }
+        QueryMsg::StakingConfig {} => to_binary(&crate::staking::queries::get_staking_config(deps, env)?),
+        QueryMsg::StakingState {} => to_binary(&crate::staking::queries::get_staking_state(deps, env)?),
         QueryMsg::StakerState { address } => to_binary(&crate::staking::queries::get_staker_state(
             deps, env, address,
         )?),
@@ -211,6 +221,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
         QueryMsg::VotingPower { address } => to_binary(&crate::staking::queries::get_voting_power(
             deps, env, address,
         )?),
+        QueryMsg::TicketConfig {} => to_binary(&get_ticket_config(deps)?),
+        QueryMsg::TicketState {} => to_binary(&get_ticket_state(deps)?),
+        QueryMsg::TicketStakerState { address } => to_binary(&get_ticket_staker_state(deps, env, address)?),
     }?;
 
     Ok(result)

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo};
 
-use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg, StakingConfigInitMsg};
-use valkyrie::test_constants::contract_creator;
+use valkyrie::governance::execute_msgs::{ContractConfigInitMsg, InstantiateMsg, PollConfigInitMsg, StakingConfigInitMsg, TicketConfigInitMsg};
+use valkyrie::test_constants::{contract_creator};
 use valkyrie::test_constants::governance::*;
 
 use crate::entrypoints;
@@ -24,7 +24,11 @@ pub fn init_default(deps: DepsMut) -> (Env, MessageInfo) {
         },
         staking_config: StakingConfigInitMsg {
             distributor: None,
-        }
+        },
+        ticket_config: TicketConfigInitMsg {
+            ticket_token : TICKET_TOKEN.to_string(),
+            distribution_schedule: vec![TICKET_DIST_SCHEDULE],
+        },
     };
 
     entrypoints::instantiate(deps, env.clone(), info.clone(), msg).unwrap();

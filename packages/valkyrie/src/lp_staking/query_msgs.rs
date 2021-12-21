@@ -14,9 +14,11 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
+    pub admin: String,
     pub token: String,
     pub pair: String,
     pub lp_token: String,
+    pub whitelisted_contracts: Vec<String>,
     pub distribution_schedule: Vec<(u64, u64, Uint128)>,
 }
 

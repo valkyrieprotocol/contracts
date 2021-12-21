@@ -13,6 +13,7 @@ use valkyrie::message_factories;
 use valkyrie::governance::execute_msgs::{StakingConfigInitMsg, ExecuteMsg};
 use valkyrie::terra::is_contract;
 use crate::staking::states::StakingConfig;
+use crate::vp::states::compute_ticket;
 
 pub fn instantiate(
     deps: DepsMut,
@@ -125,6 +126,10 @@ pub fn stake_governance_token_hook(
 
     let sender = deps.api.addr_validate(staker.as_str())?;
 
+    let (ticket_state, ticket_staker_state) = compute_ticket(&deps.as_ref(), &env, &sender)?;
+    ticket_state.save(deps.storage)?;
+    ticket_staker_state.save(deps.storage)?;
+
     let mut staking_state = StakingState::load(deps.storage)?;
     let mut staker_state = StakerState::load_safe(deps.storage, &sender)?;
 
@@ -194,6 +199,10 @@ pub fn unstake_governance_token_hook(
     }
 
     let sender = deps.api.addr_validate(staker.as_str())?;
+
+    let (ticket_state, ticket_staker_state) = compute_ticket(&deps.as_ref(), &env, &sender)?;
+    ticket_state.save(deps.storage)?;
+    ticket_staker_state.save(deps.storage)?;
 
     let mut staker_state = StakerState::may_load(deps.storage, &sender)?
         .ok_or(ContractError::Std(StdError::generic_err("Nothing staked")))?;
