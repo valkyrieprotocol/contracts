@@ -1,0 +1,29 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Build Production" type="docker-deploy" factoryName="docker-image" server-name="Docker">
+    <deployment type="docker-image">
+      <settings>
+        <option name="imageTag" value="cosmwasm/workspace-optimizer:0.12.4" />
+        <option name="containerName" value="cosmwasm-production-builder" />
+        <option name="volumeBindings">
+          <list>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/code/target" />
+              <option name="hostPath" value="$PROJECT_DIR$/target" />
+            </DockerVolumeBindingImpl>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/usr/local/cargo/registry" />
+              <option name="hostPath" value="$USER_HOME$/.cargo/registry" />
+            </DockerVolumeBindingImpl>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/code" />
+              <option name="hostPath" value="$PROJECT_DIR$" />
+            </DockerVolumeBindingImpl>
+          </list>
+        </option>
+      </settings>
+    </deployment>
+    <method v="2">
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Clean" run_configuration_type="CargoCommandRunConfiguration" />
+    </method>
+  </configuration>
+</component>
