@@ -30,6 +30,7 @@ pub fn instantiate(
     // Validate
     validate_quorum(msg.quorum)?;
     validate_threshold(msg.threshold)?;
+    validate_execution_delay_period(msg.execution_delay_period)?;
 
     // Execute
     let response = make_response("instantiate");
@@ -94,6 +95,7 @@ pub fn update_poll_config(
     }
 
     if let Some(execution_delay_period) = execution_delay_period {
+        validate_execution_delay_period(execution_delay_period)?;
         poll_config.execution_delay_period = execution_delay_period;
         response = response.add_attribute("is_updated_execution_delay_period", "true");
     }
@@ -439,6 +441,16 @@ fn validate_quorum(quorum: Decimal) -> StdResult<()> {
 fn validate_threshold(threshold: Decimal) -> StdResult<()> {
     if threshold > Decimal::one() {
         Err(StdError::generic_err("threshold must be 0 to 1"))
+    } else {
+        Ok(())
+    }
+}
+
+// Validate_threshold returns an error if the threshold is invalid
+/// (we require 1000+)
+fn validate_execution_delay_period(execution_delay_period: u64) -> StdResult<()> {
+    if execution_delay_period < 1000 {
+        Err(StdError::generic_err("execution_delay_period must be greater than 1000"))
     } else {
         Ok(())
     }
