@@ -276,6 +276,10 @@ pub fn update_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    token:Option<String>,
+    pair:Option<String>,
+    lp_token:Option<String>,
+    admin:Option<String>,
     whitelisted_contracts: Option<Vec<String>>,
     distribution_schedule: Option<Vec<(u64, u64, Uint128)>>,
 ) -> ContractResult<Response> {
@@ -284,6 +288,26 @@ pub fn update_config(
     let mut config: Config = Config::load(deps.storage)?;
     if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(token) = token {
+        config.token = deps.api.addr_validate(token.as_str())?;
+        response = response.add_attribute("is_updated_token", "true");
+    }
+
+    if let Some(pair) = pair {
+        config.pair = deps.api.addr_validate(pair.as_str())?;
+        response = response.add_attribute("is_updated_pair", "true");
+    }
+
+    if let Some(lp_token) = lp_token {
+        config.lp_token = deps.api.addr_validate(lp_token.as_str())?;
+        response = response.add_attribute("is_updated_lp_token", "true");
+    }
+
+    if let Some(admin) = admin {
+        config.admin = deps.api.addr_validate(admin.as_str())?;
+        response = response.add_attribute("is_updated_admin", "true");
     }
 
     if let Some(whitelisted_contracts) = whitelisted_contracts {

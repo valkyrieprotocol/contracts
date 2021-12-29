@@ -72,9 +72,13 @@ pub fn execute(
             already_staked_amount,
         } => auto_stake_hook(deps, env, info, staker_addr, already_staked_amount),
         ExecuteMsg::UpdateConfig {
+            token,
+            pair,
+            lp_token,
+            admin,
             whitelisted_contracts,
             distribution_schedule,
-        } => update_config(deps, env, info, whitelisted_contracts, distribution_schedule),
+        } => update_config(deps, env, info, token, pair, lp_token, admin, whitelisted_contracts, distribution_schedule),
         ExecuteMsg::MigrateReward { recipient, amount } => {
             migrate_reward(deps, env, info, recipient, amount)
         }

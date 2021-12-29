@@ -31,6 +31,10 @@ pub enum ExecuteMsg {
         already_staked_amount: Uint128,
     },
     UpdateConfig {
+        token: Option<String>,
+        pair: Option<String>,
+        lp_token: Option<String>,
+        admin: Option<String>,
         whitelisted_contracts: Option<Vec<String>>,
         distribution_schedule: Option<Vec<(u64, u64, Uint128)>>,
     },

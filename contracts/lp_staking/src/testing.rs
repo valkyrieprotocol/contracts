@@ -128,6 +128,10 @@ fn update_config() {
     ).unwrap();
 
     let msg = ExecuteMsg::UpdateConfig {
+        token: None,
+        pair: None,
+        lp_token: None,
+        admin: None,
         whitelisted_contracts: None,
         distribution_schedule: Some(vec![(200, 300, Uint128::from(1000000u128))]),
     };
@@ -137,6 +141,10 @@ fn update_config() {
     assert_eq!(res, ContractError::Unauthorized {});
 
     let msg = ExecuteMsg::UpdateConfig {
+        token: Some("reward0001".to_string()),
+        pair: Some("pair2".to_string()),
+        lp_token: Some("lp_token2".to_string()),
+        admin: Some("admin2".to_string()),
         whitelisted_contracts: None,
         distribution_schedule: Some(vec![(300, 400, Uint128::from(1000000u128))]),
     };
@@ -149,10 +157,10 @@ fn update_config() {
     assert_eq!(
         config,
         ConfigResponse {
-            admin: "admin".to_string(),
-            token: "reward0000".to_string(),
-            pair: "pair".to_string(),
-            lp_token: "lp_token".to_string(),
+            admin: "admin2".to_string(),
+            token: "reward0001".to_string(),
+            pair: "pair2".to_string(),
+            lp_token: "lp_token2".to_string(),
             whitelisted_contracts: vec!["contract1".to_string(), "contract2".to_string()],
             distribution_schedule: vec![(300, 400, Uint128::from(1000000u128))],
         }
@@ -160,6 +168,10 @@ fn update_config() {
 
 
     let msg = ExecuteMsg::UpdateConfig {
+        token: None,
+        pair: None,
+        lp_token: None,
+        admin: None,
         whitelisted_contracts: Some(vec!["contract3".to_string(), "contract4".to_string()]),
         distribution_schedule: None,
     };
@@ -172,10 +184,10 @@ fn update_config() {
     assert_eq!(
         config,
         ConfigResponse {
-            admin: "admin".to_string(),
-            token: "reward0000".to_string(),
-            pair: "pair".to_string(),
-            lp_token: "lp_token".to_string(),
+            admin: "admin2".to_string(),
+            token: "reward0001".to_string(),
+            pair: "pair2".to_string(),
+            lp_token: "lp_token2".to_string(),
             whitelisted_contracts: vec!["contract3".to_string(), "contract4".to_string()],
             distribution_schedule: vec![(300, 400, Uint128::from(1000000u128))],
         }
@@ -360,6 +372,10 @@ fn test_bond_tokens() {
     );
 
     let msg = ExecuteMsg::UpdateConfig {
+        token: None,
+        pair: None,
+        lp_token: None,
+        admin: None,
         whitelisted_contracts: None,
         distribution_schedule: Some(vec![
             (10, 200, Uint128::from(9500u128)),
