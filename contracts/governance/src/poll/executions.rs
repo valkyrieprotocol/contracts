@@ -1,4 +1,5 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, Env, from_binary, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128};
+use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::{ContractResult, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
@@ -128,6 +129,7 @@ pub fn create_poll(
     validate_title(&title)?;
     validate_description(&description)?;
     validate_link(&link)?;
+    validate_executions(&executions)?;
 
     let config = ContractConfig::load(deps.storage)?;
     if !config.is_governance_token(&info.sender) {
@@ -477,4 +479,24 @@ fn validate_link(link: &Option<String>) -> StdResult<()> {
     } else {
         Ok(())
     }
+}
+
+fn validate_executions(executions: &Vec<ExecutionMsg>) -> StdResult<()> {
+    for execution in executions.iter() {
+        match from_binary(&execution.msg) {
+            Ok(Cw20ExecuteMsg::Transfer { amount: _, recipient: _ }) => {
+                return Err(StdError::generic_err("Can't use Transfer message"))
+            },
+            Ok(Cw20ExecuteMsg::Send { amount: _, contract: _, msg: _ }) => {
+                return Err(StdError::generic_err("Can't use Send message"))
+            },
+            Ok(Cw20ExecuteMsg::IncreaseAllowance { spender: _, amount: _, expires: _}) => {
+                return Err(StdError::generic_err("Can't use IncreaseAllowance message"))
+            }
+            _ => continue
+        }
+
+    }
+
+    Ok(())
 }

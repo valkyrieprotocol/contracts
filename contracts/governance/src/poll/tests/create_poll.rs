@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128, StdResult};
+use cosmwasm_std::{Addr, attr, Env, MessageInfo, Response, to_binary, Uint128, StdResult, Binary};
 use cosmwasm_std::testing::mock_info;
 use cw20::Cw20ExecuteMsg;
 
@@ -291,6 +291,87 @@ fn failed_create_poll_invalid_link() {
         vec![],
     );
     expect_generic_err(&result, "Link too long");
+}
+
+#[test]
+fn failed_create_poll_transfer() {
+    let mut deps = custom_deps();
+
+    init_default(deps.as_mut());
+
+    let executions = vec![
+        ExecutionMsg {
+            order: 0,
+            contract: GOVERNANCE_TOKEN.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                amount: Uint128::new(1),
+                recipient: GOVERNANCE.to_string(),
+            }).unwrap(),
+        }
+    ];
+
+    let result = exec(
+        &mut deps,
+        governance_env(),
+        mock_info(GOVERNANCE_TOKEN, &[]),
+        Addr::unchecked(PROPOSER1),
+        POLL_PROPOSAL_DEPOSIT,
+        POLL_TITLE.to_string(),
+        POLL_DESCRIPTION.to_string(),
+        None,
+        executions,
+    );
+    expect_generic_err(&result, "Can't use Transfer message");
+
+    let executions = vec![
+        ExecutionMsg {
+            order: 0,
+            contract: GOVERNANCE_TOKEN.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                amount: Uint128::new(1),
+                contract: GOVERNANCE.to_string(),
+                msg: Binary::default(),
+            }).unwrap(),
+        }
+    ];
+
+    let result = exec(
+        &mut deps,
+        governance_env(),
+        mock_info(GOVERNANCE_TOKEN, &[]),
+        Addr::unchecked(PROPOSER1),
+        POLL_PROPOSAL_DEPOSIT,
+        POLL_TITLE.to_string(),
+        POLL_DESCRIPTION.to_string(),
+        None,
+        executions,
+    );
+    expect_generic_err(&result, "Can't use Send message");
+
+    let executions = vec![
+        ExecutionMsg {
+            order: 0,
+            contract: GOVERNANCE_TOKEN.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                amount: Uint128::new(1),
+                spender: GOVERNANCE.to_string(),
+                expires: None,
+            }).unwrap(),
+        }
+    ];
+
+    let result = exec(
+        &mut deps,
+        governance_env(),
+        mock_info(GOVERNANCE_TOKEN, &[]),
+        Addr::unchecked(PROPOSER1),
+        POLL_PROPOSAL_DEPOSIT,
+        POLL_TITLE.to_string(),
+        POLL_DESCRIPTION.to_string(),
+        None,
+        executions,
+    );
+    expect_generic_err(&result, "Can't use IncreaseAllowance message");
 }
 
 pub fn mock_exec_msg(order: u64) -> ExecutionMsg {
