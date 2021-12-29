@@ -176,7 +176,8 @@ fn update_config() {
         distribution_schedule: None,
     };
 
-    let info = mock_info(Addr::unchecked("admin").as_str(), &[]);
+    let info = mock_info(Addr::unchecked("admin2").as_str(), &[]);
+    //config.admin changed 'admin' to 'admin2'
     let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     let res = query(deps.as_ref(), env.clone(), QueryMsg::Config {}).unwrap();
