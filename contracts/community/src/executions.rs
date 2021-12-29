@@ -199,7 +199,7 @@ pub fn transfer(
             return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
         }
 
-        balance.free_balance
+        balance.free_balance.checked_sub(amount)?
     } else {
         let allowance = Allowance::may_load(deps.storage, &info.sender)?;
 

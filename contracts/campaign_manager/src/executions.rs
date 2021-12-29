@@ -18,10 +18,10 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    validate_zero_to_one(add_pool_fee_rate, "add_pool_fee_rate")?;
-    validate_zero_to_one(add_pool_min_referral_reward_rate, "add_pool_min_referral_reward_rate")?;
-    validate_zero_to_one(remove_pool_fee_rate, "remove_pool_fee_rate")?;
-    validate_zero_to_one(fee_burn_ratio, "fee_burn_ratio")?;
+    validate_zero_to_one(msg.add_pool_fee_rate, "add_pool_fee_rate")?;
+    validate_zero_to_one(msg.add_pool_min_referral_reward_rate, "add_pool_min_referral_reward_rate")?;
+    validate_zero_to_one(msg.remove_pool_fee_rate, "remove_pool_fee_rate")?;
+    validate_zero_to_one(msg.fee_burn_ratio, "fee_burn_ratio")?;
 
     // Execute
     let response = make_response("instantiate");
