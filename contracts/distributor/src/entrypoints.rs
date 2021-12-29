@@ -75,10 +75,6 @@ pub fn execute(
         ExecuteMsg::Distribute {
             id,
         } => executions::distribute(deps, env, info, id),
-        ExecuteMsg::Transfer {
-            recipient,
-            amount,
-        } => executions::transfer(deps, env, info, recipient, amount),
     }
 }
 

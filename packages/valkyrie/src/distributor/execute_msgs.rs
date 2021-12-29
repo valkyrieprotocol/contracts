@@ -38,10 +38,6 @@ pub enum ExecuteMsg {
     Distribute {
         id: Option<u64>,
     },
-    Transfer {
-        recipient: String,
-        amount: Uint128,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
