@@ -161,6 +161,10 @@ pub fn update_distribution(
     let prev_released_amount = distribution.released_amount(env.block.height);
 
     if let Some(start_height) = start_height {
+        if env.block.height >= distribution.start_height {
+            return Err(ContractError::Std(StdError::generic_err("Can't modify start_height of started distribution")));
+        }
+
         distribution.start_height = start_height;
         response = response.add_attribute("is_updated_start_height", "true");
     }
@@ -168,6 +172,10 @@ pub fn update_distribution(
     if let Some(end_height) = end_height {
         distribution.end_height = end_height;
         response = response.add_attribute("is_updated_end_height", "true");
+    }
+
+    if distribution.end_height - distribution.start_height < 10000 {
+        return Err(ContractError::Std(StdError::generic_err("Distribute period must be greater than 10000 block")));
     }
 
     if let Some(amount) = amount {
