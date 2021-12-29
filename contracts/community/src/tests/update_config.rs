@@ -12,19 +12,19 @@ pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
-    admins: Option<Vec<String>>,
+    admin: Option<String>,
 ) -> ContractResult<Response> {
     update_config(
         deps.as_mut(),
         env,
         info,
-        admins,
+        admin,
     )
 }
 
 pub fn will_success(
     deps: &mut CustomDeps,
-    admins: Option<Vec<String>>,
+    admin: Option<String>,
 ) -> (Env, MessageInfo, Response) {
     let env = community_env();
     let info = governance_sender();
@@ -33,7 +33,7 @@ pub fn will_success(
         deps,
         env.clone(),
         info.clone(),
-        admins,
+        admin,
     ).unwrap();
 
     (env, info, response)
@@ -45,15 +45,15 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let admins = vec!["Admin1".to_string(), "Admins2".to_string()];
+    let admin = "Admin1".to_string();
 
     will_success(
         &mut deps,
-        Some(admins.clone()),
+        Some(admin.clone()),
     );
 
     let config = ContractConfig::load(&deps.storage).unwrap();
-    assert_eq!(config.admins, admins.iter().map(|v| Addr::unchecked(v)).collect::<Vec<Addr>>());
+    assert_eq!(config.admin, Addr::unchecked(admin));
 }
 
 #[test]

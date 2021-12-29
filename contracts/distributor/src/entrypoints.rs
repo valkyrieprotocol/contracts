@@ -27,13 +27,16 @@ pub fn execute(
 ) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
-            admins,
+            admin,
         } => executions::update_config(
             deps,
             env,
             info,
-            admins,
+            admin,
         ),
+        ExecuteMsg::ApproveAdminNominee {
+            address,
+        } => executions::approve_admin_nominee(deps, env, info, address),
         ExecuteMsg::RegisterDistribution {
             start_height,
             end_height,

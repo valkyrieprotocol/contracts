@@ -91,6 +91,26 @@
     {
       "type": "object",
       "required": [
+        "approve_admin_nominee"
+      ],
+      "properties": {
+        "approve_admin_nominee": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "update_reward_config"
       ],
       "properties": {

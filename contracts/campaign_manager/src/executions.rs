@@ -169,11 +169,41 @@ pub fn update_config(
     }
 
     if let Some(contract_admin) = contract_admin.as_ref() {
-        config.contract_admin = deps.api.addr_validate(contract_admin)?;
-        response = response.add_attribute("is_updated_contract_admin", "true");
+        Config::save_contract_admin_nominee(deps.storage, &deps.api.addr_validate(contract_admin)?)?;
+        response = response.add_attribute("is_updated_contract_admin_nominee", "true");
     }
 
     config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn approve_contract_admin_nominee(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    address: String,
+) -> ContractResult<Response> {
+    // Validate
+    let mut campaign_config = Config::load(deps.storage)?;
+    if !campaign_config.is_contract_admin(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("approve_contract_admin_nominee");
+
+    let address = deps.api.addr_validate(address.as_str())?;
+    if let Some(admin_nominee) = Config::may_load_contract_admin_nominee(deps.storage)? {
+        if admin_nominee != address {
+            return Err(ContractError::Std(StdError::generic_err("It is not contract admin nominee")));
+        }
+    }
+
+    campaign_config.contract_admin = address;
+    response = response.add_attribute("is_updated_contract_admin", "true");
+
+    campaign_config.save(deps.storage)?;
 
     Ok(response)
 }

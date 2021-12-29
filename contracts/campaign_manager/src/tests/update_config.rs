@@ -4,7 +4,7 @@ use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign_manager::campaign_manager_env;
 use valkyrie::test_constants::default_sender;
-use valkyrie::test_constants::governance::governance_sender;
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_sender};
 use valkyrie::test_utils::expect_unauthorized_err;
 
 use crate::executions::update_config;
@@ -133,8 +133,11 @@ fn succeed() {
         fee_recipient: Addr::unchecked(fee_recipient),
         deactivate_period: deactivate_period.clone(),
         key_denom: key_denom.to_cw20(&deps.api),
-        contract_admin: Addr::unchecked(contract_admin),
+        contract_admin: Addr::unchecked(GOVERNANCE),
     });
+
+    let admin_nominee = Config::may_load_contract_admin_nominee(&deps.storage).unwrap();
+    assert_eq!(admin_nominee, Some(Addr::unchecked(contract_admin)));
 }
 
 #[test]

@@ -13,8 +13,6 @@ fn main() {
     create_dir_all(&out_dir).unwrap();
     remove_schemas(&out_dir).unwrap();
 
-    export_schema(&schema_for!(QualifiedContinueOption), &out_dir);
-
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
 
     export_schema(&schema_for!(QualificationMsg), &out_dir);

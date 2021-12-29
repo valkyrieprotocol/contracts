@@ -5,6 +5,7 @@ use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign_manager::campaign_manager_sender;
 use valkyrie::test_constants::default_sender;
 use valkyrie::test_constants::community::{COMMUNITY, community_env, MANAGING_TOKEN};
+use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_utils::{expect_generic_err, expect_invalid_zero_amount_err, expect_unauthorized_err};
 
 use crate::executions::increase_allowance;
@@ -32,7 +33,7 @@ pub fn will_success(
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
     let env = community_env();
-    let info = campaign_manager_sender();
+    let info = governance_sender();
 
     let response = exec(
         deps,
@@ -113,7 +114,7 @@ fn failed_overflow_free_balance() {
     let result = exec(
         &mut deps,
         community_env(),
-        campaign_manager_sender(),
+        governance_sender(),
         "Address2".to_string(),
         Uint128::new(1),
     );

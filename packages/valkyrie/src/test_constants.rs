@@ -59,7 +59,6 @@ pub mod community {
     use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
-    use crate::test_constants::campaign_manager::CAMPAIGN_MANAGER;
     use crate::test_constants::governance::GOVERNANCE;
     use crate::test_constants::VALKYRIE_TOKEN;
     use crate::test_utils::mock_env_contract;
@@ -67,7 +66,7 @@ pub mod community {
     pub const COMMUNITY: &str = "Community";
 
     pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const ADMINS: [&str; 2] = [GOVERNANCE, CAMPAIGN_MANAGER];
+    pub const ADMIN: &str = GOVERNANCE;
     pub const ALLOWED_ADDRESS: &str = "AllowedAddress";
     // pub const ALLOWED_AMOUNT: Uint128 = Uint128::new(1000);
 
@@ -91,7 +90,7 @@ pub mod distributor {
     pub const DISTRIBUTOR: &str = "Distributor";
 
     pub const MANAGING_TOKEN: &str = VALKYRIE_TOKEN;
-    pub const ADMINS: [&str; 1] = [GOVERNANCE];
+    pub const ADMIN: &str = GOVERNANCE;
 
     pub fn distributor_env() -> Env {
         mock_env_contract(DISTRIBUTOR)

@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 
 
 const CONTRACT_CONFIG: Item<ContractConfig> = Item::new("contract-config");
+const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractConfig {
-    pub admins: Vec<Addr>,
+    pub admin: Addr,
     pub managing_token: Addr,
 }
 
@@ -21,8 +22,16 @@ impl ContractConfig {
         CONTRACT_CONFIG.load(storage)
     }
 
+    pub fn may_load_admin_nominee(storage: &dyn Storage) -> StdResult<Option<Addr>> {
+        ADMIN_NOMINEE.may_load(storage)
+    }
+
+    pub fn save_admin_nominee(storage: &mut dyn Storage, address: &Addr) -> StdResult<()> {
+        ADMIN_NOMINEE.save(storage, address)
+    }
+
     pub fn is_admin(&self, address: &Addr) -> bool {
-        self.admins.contains(address)
+        self.admin == *address
     }
 }
 

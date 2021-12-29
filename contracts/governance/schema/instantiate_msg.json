@@ -5,7 +5,8 @@
   "required": [
     "contract_config",
     "poll_config",
-    "staking_config"
+    "staking_config",
+    "ticket_config"
   ],
   "properties": {
     "contract_config": {
@@ -16,6 +17,9 @@
     },
     "staking_config": {
       "$ref": "#/definitions/StakingConfigInitMsg"
+    },
+    "ticket_config": {
+      "$ref": "#/definitions/TicketConfigInitMsg"
     }
   },
   "definitions": {
@@ -79,6 +83,41 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "TicketConfigInitMsg": {
+      "type": "object",
+      "required": [
+        "distribution_schedule",
+        "ticket_token"
+      ],
+      "properties": {
+        "distribution_schedule": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              {
+                "$ref": "#/definitions/Uint128"
+              }
+            ],
+            "maxItems": 3,
+            "minItems": 3
+          }
+        },
+        "ticket_token": {
+          "type": "string"
         }
       }
     },

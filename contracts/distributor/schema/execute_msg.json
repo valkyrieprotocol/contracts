@@ -11,14 +11,31 @@
         "update_config": {
           "type": "object",
           "properties": {
-            "admins": {
+            "admin": {
               "type": [
-                "array",
+                "string",
                 "null"
-              ],
-              "items": {
-                "type": "string"
-              }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "approve_admin_nominee"
+      ],
+      "properties": {
+        "approve_admin_nominee": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
             }
           }
         }

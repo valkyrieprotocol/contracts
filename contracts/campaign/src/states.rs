@@ -14,6 +14,7 @@ const DEFAULT_LIMIT: u32 = 10;
 
 
 const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign_config");
+const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CampaignConfig {
@@ -40,6 +41,14 @@ impl CampaignConfig {
 
     pub fn load(storage: &dyn Storage) -> StdResult<CampaignConfig> {
         CAMPAIGN_CONFIG.load(storage)
+    }
+
+    pub fn may_load_admin_nominee(storage: &dyn Storage) -> StdResult<Option<Addr>> {
+        ADMIN_NOMINEE.may_load(storage)
+    }
+
+    pub fn save_admin_nominee(storage: &mut dyn Storage, address: &Addr) -> StdResult<()> {
+        ADMIN_NOMINEE.save(storage, address)
     }
 
     pub fn is_admin(&self, address: &Addr) -> bool {

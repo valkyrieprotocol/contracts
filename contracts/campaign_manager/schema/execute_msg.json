@@ -115,6 +115,26 @@
     {
       "type": "object",
       "required": [
+        "approve_contract_admin_nominee"
+      ],
+      "properties": {
+        "approve_contract_admin_nominee": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "update_referral_reward_limit_option"
       ],
       "properties": {

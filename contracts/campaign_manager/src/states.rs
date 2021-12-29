@@ -9,6 +9,7 @@ use valkyrie::common::OrderBy;
 use valkyrie::pagination::addr_range_option;
 
 const CONFIG: Item<Config> = Item::new("config");
+const CONTRACT_ADMIN_NOMINEE: Item<Addr> = Item::new("contract_admin_nominee");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -33,6 +34,14 @@ impl Config {
 
     pub fn load(storage: &dyn Storage) -> StdResult<Config> {
         CONFIG.load(storage)
+    }
+
+    pub fn may_load_contract_admin_nominee(storage: &dyn Storage) -> StdResult<Option<Addr>> {
+        CONTRACT_ADMIN_NOMINEE.may_load(storage)
+    }
+
+    pub fn save_contract_admin_nominee(storage: &mut dyn Storage, address: &Addr) -> StdResult<()> {
+        CONTRACT_ADMIN_NOMINEE.save(storage, address)
     }
 
     pub fn is_governance(&self, address: &Addr) -> bool {

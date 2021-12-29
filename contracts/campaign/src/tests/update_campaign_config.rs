@@ -6,7 +6,7 @@ use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
 use crate::executions::{update_campaign_config, MIN_TITLE_LENGTH, MAX_TITLE_LENGTH, MIN_DESC_LENGTH, MAX_DESC_LENGTH, MIN_URL_LENGTH, MAX_URL_LENGTH, MIN_PARAM_KEY_LENGTH, MAX_PARAM_KEY_LENGTH};
 use crate::states::CampaignConfig;
-use valkyrie::test_constants::campaign::{campaign_admin_sender, campaign_env};
+use valkyrie::test_constants::campaign::{CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env};
 use valkyrie::test_constants::default_sender;
 
 pub fn exec(
@@ -109,7 +109,10 @@ fn succeed() {
     assert_eq!(campaign_config.deposit_amount, deposit_amount);
     assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
-    assert_eq!(campaign_config.admin, admin);
+    assert_eq!(campaign_config.admin, Addr::unchecked(CAMPAIGN_ADMIN));
+
+    let admin_nominee = CampaignConfig::may_load_admin_nominee(&deps.storage).unwrap();
+    assert_eq!(admin_nominee, Some(Addr::unchecked(admin.as_str())));
 }
 
 #[test]
@@ -148,7 +151,10 @@ fn succeed_update_info_after_activation() {
     assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.qualification_description, Some(qualification_description));
-    assert_eq!(campaign_config.admin, admin);
+    assert_eq!(campaign_config.admin, Addr::unchecked(CAMPAIGN_ADMIN));
+
+    let admin_nominee = CampaignConfig::may_load_admin_nominee(&deps.storage).unwrap();
+    assert_eq!(admin_nominee, Some(Addr::unchecked(admin.as_str())));
 }
 
 #[test]
