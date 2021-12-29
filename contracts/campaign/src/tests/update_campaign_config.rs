@@ -125,8 +125,6 @@ fn succeed_update_info_after_activation() {
 
     let title = "Title2".to_string();
     let description = "Desc2".to_string();
-    let deposit_amount = Uint128::new(99);
-    let deposit_lock_period = 199u64;
     let qualifier = "Qualifier2".to_string();
     let qualification_description = "QualificationDescription2".to_string();
     let admin = "Admin2".to_string();
@@ -137,8 +135,8 @@ fn succeed_update_info_after_activation() {
         Some(description.clone()),
         None,
         None,
-        Some(deposit_amount),
-        Some(deposit_lock_period),
+        None,
+        None,
         Some(qualifier.clone()),
         Some(qualification_description.clone()),
         Some(admin.clone()),
@@ -147,8 +145,6 @@ fn succeed_update_info_after_activation() {
     let campaign_config = CampaignConfig::load(&deps.storage).unwrap();
     assert_eq!(campaign_config.title, title);
     assert_eq!(campaign_config.description, description);
-    assert_eq!(campaign_config.deposit_amount, deposit_amount);
-    assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.qualification_description, Some(qualification_description));
     assert_eq!(campaign_config.admin, Addr::unchecked(CAMPAIGN_ADMIN));
@@ -192,6 +188,40 @@ fn failed_update_url_after_activation() {
         Some("vkr2".to_string()),
         None,
         None,
+        None,
+        None,
+        None,
+    );
+
+    expect_generic_err(&result, "Only modifiable in pending status");
+
+    let result = exec(
+        &mut deps,
+        campaign_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        None,
+        None,
+        Some(Uint128::new(99)),
+        None,
+        None,
+        None,
+        None,
+    );
+
+    expect_generic_err(&result, "Only modifiable in pending status");
+
+    let result = exec(
+        &mut deps,
+        campaign_env(),
+        campaign_admin_sender(),
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(199u64),
         None,
         None,
         None,

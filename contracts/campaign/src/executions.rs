@@ -159,11 +159,23 @@ pub fn update_campaign_config(
     }
 
     if let Some(deposit_amount) = deposit_amount {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
         campaign_config.deposit_amount = deposit_amount;
         response = response.add_attribute("is_updated_deposit_amount", "true");
     }
 
     if let Some(deposit_lock_period) = deposit_lock_period {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
         campaign_config.deposit_lock_period = deposit_lock_period;
         response = response.add_attribute("is_updated_deposit_lock_period", "true");
     }
