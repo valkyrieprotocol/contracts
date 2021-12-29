@@ -4,7 +4,7 @@ use valkyrie::campaign_manager::execute_msgs::{CampaignInstantiateMsg, Instantia
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
-use valkyrie::utils::{find, make_response};
+use valkyrie::utils::{find, make_response, validate_zero_to_one};
 
 use crate::states::*;
 use valkyrie::cw20::{query_cw20_balance, query_balance};
@@ -18,6 +18,11 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
+    validate_zero_to_one(add_pool_fee_rate, "add_pool_fee_rate")?;
+    validate_zero_to_one(add_pool_min_referral_reward_rate, "add_pool_min_referral_reward_rate")?;
+    validate_zero_to_one(remove_pool_fee_rate, "remove_pool_fee_rate")?;
+    validate_zero_to_one(fee_burn_ratio, "fee_burn_ratio")?;
+
     // Execute
     let response = make_response("instantiate");
 
@@ -97,6 +102,8 @@ pub fn update_config(
     }
 
     if let Some(add_pool_fee_rate) = add_pool_fee_rate.as_ref() {
+        validate_zero_to_one(*add_pool_fee_rate, "add_pool_fee_rate")?;
+
         if !config.is_governance(&info.sender) {
             return Err(ContractError::Unauthorized {});
         }
@@ -106,6 +113,8 @@ pub fn update_config(
     }
 
     if let Some(add_pool_min_referral_reward_rate) = add_pool_min_referral_reward_rate.as_ref() {
+        validate_zero_to_one(*add_pool_min_referral_reward_rate, "add_pool_min_referral_reward_rate")?;
+
         if !config.is_governance(&info.sender) {
             return Err(ContractError::Unauthorized {});
         }
@@ -115,6 +124,8 @@ pub fn update_config(
     }
 
     if let Some(remove_pool_fee_rate) = remove_pool_fee_rate.as_ref() {
+        validate_zero_to_one(*remove_pool_fee_rate, "remove_pool_fee_rate")?;
+
         if !config.is_governance(&info.sender) {
             return Err(ContractError::Unauthorized {});
         }
@@ -124,6 +135,8 @@ pub fn update_config(
     }
 
     if let Some(fee_burn_ratio) = fee_burn_ratio.as_ref() {
+        validate_zero_to_one(*fee_burn_ratio, "fee_burn_ratio")?;
+
         if !config.is_governance(&info.sender) {
             return Err(ContractError::Unauthorized {});
         }
