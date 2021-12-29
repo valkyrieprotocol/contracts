@@ -53,6 +53,8 @@ fn test_compute_reward() {
     let mut env = governance_env();
     let info = mock_info(GOVERNANCE, &[]);
 
+    env.block.height = 0;
+
     StakingState {
         total_share: Uint128::zero()
     }.save(deps.as_mut().storage).unwrap();

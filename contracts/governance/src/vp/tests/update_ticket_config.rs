@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Uint128};
 use valkyrie::mock_querier::{custom_deps};
-use valkyrie::test_constants::governance::TICKET_DIST_SCHEDULE;
+use valkyrie::test_constants::governance::{TICKET_DIST_SCHEDULE, TICKET_TOKEN};
 use crate::vp::executions::update_ticket_config;
 use crate::vp::states::TicketConfig;
 
@@ -23,7 +23,7 @@ fn update_ticket_config_test() {
     );
 
     let config = TicketConfig::load(&deps.storage).unwrap();
-    assert_eq!(config.ticket_token, "abcd".to_string());
+    assert_eq!(config.ticket_token, TICKET_TOKEN.to_string());
     assert_eq!(config.distribution_schedule, vec![TICKET_DIST_SCHEDULE]);
 
     let _result = update_ticket_config(
