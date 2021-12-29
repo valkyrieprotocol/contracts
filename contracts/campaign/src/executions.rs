@@ -718,6 +718,10 @@ pub fn participate(
     // Validate
     let actor = deps.api.addr_validate(&actor)?;
 
+    if actor != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let campaign_config = CampaignConfig::load(deps.storage)?;
     let campaign_state = CampaignState::load(deps.storage)?;
     if !campaign_state.is_active(&campaign_config, &deps.querier, &env.block)? {
