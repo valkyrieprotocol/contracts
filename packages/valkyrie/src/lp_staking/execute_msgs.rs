@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Uint128};
 use cw20::Cw20ReceiveMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -22,14 +22,6 @@ pub enum ExecuteMsg {
     },
     /// Withdraw pending rewards
     Withdraw {},
-    AutoStake {
-        token_amount: Uint128,
-        slippage_tolerance: Option<Decimal>,
-    },
-    AutoStakeHook {
-        staker_addr: String,
-        already_staked_amount: Uint128,
-    },
     UpdateConfig {
         token: Option<String>,
         pair: Option<String>,
@@ -52,7 +44,4 @@ pub enum Cw20HookMsg {
 
 /// We currently take no arguments for migrations
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {
-    pub admin: String,
-    pub whitelisted_contracts: Vec<String>,
-}
+pub struct MigrateMsg {}

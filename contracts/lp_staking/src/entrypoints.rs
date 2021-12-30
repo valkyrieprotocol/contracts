@@ -1,11 +1,9 @@
 #[cfg(not(feature = "library"))]
 use crate::executions::{
-    auto_stake, auto_stake_hook, bond, migrate_reward, unbond, update_config,
-    withdraw,
+    bond, migrate_reward, unbond, update_config, withdraw,
 };
 use crate::queries::{query_config, query_staker_info, query_state};
-use crate::states::{Config, OldConfig, State};
-#[cfg(not(feature = "library"))]
+use crate::states::{Config, State};
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, Uint128, StdError};
 use cw20::Cw20ReceiveMsg;
@@ -63,14 +61,6 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::Unbond { amount } => unbond(deps, env, info, amount),
         ExecuteMsg::Withdraw {} => withdraw(deps, env, info),
-        ExecuteMsg::AutoStake {
-            token_amount,
-            slippage_tolerance,
-        } => auto_stake(deps, env, info, token_amount, slippage_tolerance),
-        ExecuteMsg::AutoStakeHook {
-            staker_addr,
-            already_staked_amount,
-        } => auto_stake_hook(deps, env, info, staker_addr, already_staked_amount),
         ExecuteMsg::UpdateConfig {
             token,
             pair,
@@ -116,22 +106,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    if let Ok(old) = OldConfig::load(deps.storage) {
-        Config {
-            admin: deps.api.addr_validate(msg.admin.as_str())?,
-            token: old.token,
-            pair: old.pair,
-            lp_token: old.lp_token,
-            whitelisted_contracts: msg.whitelisted_contracts.iter()
-                .map(|item| deps.api.addr_validate(item.as_str()).unwrap())
-                .collect(),
-            distribution_schedule: old.distribution_schedule,
-        }
-            .save(deps.storage)?;
-
-        OldConfig::delete(deps.storage)
-    }
-
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     Ok(Response::default())
 }

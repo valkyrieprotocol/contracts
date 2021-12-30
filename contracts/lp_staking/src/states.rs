@@ -5,28 +5,6 @@ use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 use valkyrie::terra::is_contract;
 
-pub const UST: &str = "uusd";
-
-const OLD_CONFIG: Item<OldConfig> = Item::new("config_v2");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OldConfig {
-    pub token: Addr,
-    pub lp_token: Addr,
-    pub pair: Addr,
-    pub distribution_schedule: Vec<(u64, u64, Uint128)>,
-}
-
-impl OldConfig {
-    pub fn load(storage: &dyn Storage) -> StdResult<OldConfig> {
-        OLD_CONFIG.load(storage)
-    }
-
-    pub fn delete(storage: &mut dyn Storage) {
-        OLD_CONFIG.remove(storage)
-    }
-}
-
 const CONFIG: Item<Config> = Item::new("config_v3");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
