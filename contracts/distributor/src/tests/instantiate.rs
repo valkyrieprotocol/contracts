@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use valkyrie::distributor::execute_msgs::InstantiateMsg;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::default_sender;
-use valkyrie::test_constants::distributor::{ADMINS, distributor_env, MANAGING_TOKEN};
+use valkyrie::test_constants::distributor::{ADMIN, distributor_env, MANAGING_TOKEN};
 
 use crate::executions::instantiate;
 use crate::states::{ContractConfig, ContractState};
@@ -13,11 +13,11 @@ pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
     info: MessageInfo,
-    admins: Vec<String>,
+    admin: String,
     managing_token: String,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
-        admins,
+        admin,
         managing_token,
     };
 
@@ -32,7 +32,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         deps,
         env.clone(),
         info.clone(),
-        ADMINS.iter().map(|v| v.to_string()).collect(),
+        ADMIN.to_string(),
         MANAGING_TOKEN.to_string(),
     ).unwrap();
 
@@ -47,7 +47,7 @@ fn succeed() {
 
     let config = ContractConfig::load(&deps.storage).unwrap();
     assert_eq!(config, ContractConfig {
-        admins: ADMINS.iter().map(|v| deps.api.addr_validate(v).unwrap()).collect(),
+        admin: deps.api.addr_validate(ADMIN).unwrap(),
         managing_token: Addr::unchecked(MANAGING_TOKEN),
     });
 

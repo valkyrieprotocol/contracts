@@ -190,3 +190,11 @@ pub fn is_valid_schedule(distribution_schedule: &Vec<(u64, u64, Uint128)>) -> bo
 
     return true;
 }
+
+pub fn validate_zero_to_one(value: Decimal, name: &str) -> StdResult<()> {
+    if Decimal::zero() <= value && value <= Decimal::one() {
+        Ok(())
+    } else {
+        Err(StdError::generic_err(format!("{} must be 0 to 1", name)))
+    }
+}

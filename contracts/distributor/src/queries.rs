@@ -10,7 +10,7 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ContractConfigRespons
     let config = ContractConfig::load(deps.storage)?;
 
     Ok(ContractConfigResponse {
-        admins: config.admins.iter().map(|v| v.to_string()).collect(),
+        admin: config.admin.to_string(),
         managing_token: config.managing_token.to_string(),
     })
 }

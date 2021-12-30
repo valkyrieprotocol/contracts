@@ -1,4 +1,5 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, Env, from_binary, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128};
+use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::{ContractResult, Execution, ExecutionMsg};
 use valkyrie::errors::ContractError;
@@ -29,6 +30,7 @@ pub fn instantiate(
     // Validate
     validate_quorum(msg.quorum)?;
     validate_threshold(msg.threshold)?;
+    validate_execution_delay_period(msg.execution_delay_period)?;
 
     // Execute
     let response = make_response("instantiate");
@@ -93,6 +95,7 @@ pub fn update_poll_config(
     }
 
     if let Some(execution_delay_period) = execution_delay_period {
+        validate_execution_delay_period(execution_delay_period)?;
         poll_config.execution_delay_period = execution_delay_period;
         response = response.add_attribute("is_updated_execution_delay_period", "true");
     }
@@ -128,6 +131,7 @@ pub fn create_poll(
     validate_title(&title)?;
     validate_description(&description)?;
     validate_link(&link)?;
+    validate_executions(&executions)?;
 
     let config = ContractConfig::load(deps.storage)?;
     if !config.is_governance_token(&info.sender) {
@@ -442,6 +446,16 @@ fn validate_threshold(threshold: Decimal) -> StdResult<()> {
     }
 }
 
+// Validate_threshold returns an error if the threshold is invalid
+/// (we require 1000+)
+fn validate_execution_delay_period(execution_delay_period: u64) -> StdResult<()> {
+    if execution_delay_period < 1000 {
+        Err(StdError::generic_err("execution_delay_period must be greater than 1000"))
+    } else {
+        Ok(())
+    }
+}
+
 // Validate_title returns an error if the title is invalid
 fn validate_title(title: &str) -> StdResult<()> {
     if title.len() < MIN_TITLE_LENGTH {
@@ -477,4 +491,24 @@ fn validate_link(link: &Option<String>) -> StdResult<()> {
     } else {
         Ok(())
     }
+}
+
+fn validate_executions(executions: &Vec<ExecutionMsg>) -> StdResult<()> {
+    for execution in executions.iter() {
+        match from_binary(&execution.msg) {
+            Ok(Cw20ExecuteMsg::Transfer { amount: _, recipient: _ }) => {
+                return Err(StdError::generic_err("Can't use Transfer message"))
+            },
+            Ok(Cw20ExecuteMsg::Send { amount: _, contract: _, msg: _ }) => {
+                return Err(StdError::generic_err("Can't use Send message"))
+            },
+            Ok(Cw20ExecuteMsg::IncreaseAllowance { spender: _, amount: _, expires: _}) => {
+                return Err(StdError::generic_err("Can't use IncreaseAllowance message"))
+            }
+            _ => continue
+        }
+
+    }
+
+    Ok(())
 }

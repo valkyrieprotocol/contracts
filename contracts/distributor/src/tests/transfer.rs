@@ -9,7 +9,7 @@ use valkyrie::test_constants::governance::{GOVERNANCE, governance_sender};
 use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
 use crate::executions::transfer;
-use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR, ADMINS};
+use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR, ADMIN};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -61,7 +61,7 @@ fn succeed() {
 
     let (_, _, response) = will_success(
         &mut deps,
-        ADMINS[0],
+        ADMIN,
         GOVERNANCE.to_string(),
         Uint128::new(100),
     );

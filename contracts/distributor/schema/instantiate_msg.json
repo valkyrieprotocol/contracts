@@ -3,15 +3,12 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "admins",
+    "admin",
     "managing_token"
   ],
   "properties": {
-    "admins": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "admin": {
+      "type": "string"
     },
     "managing_token": {
       "type": "string"

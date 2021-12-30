@@ -3,7 +3,7 @@ use cosmwasm_std::testing::mock_info;
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 
-use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN, TICKET_TOKEN};
+use valkyrie::test_constants::governance::{GOVERNANCE, governance_env, GOVERNANCE_TOKEN};
 use crate::staking::executions::{stake_governance_token_hook, unstake_governance_token_hook};
 use crate::staking::states::{StakerState, StakingState};
 use crate::tests::init_default;

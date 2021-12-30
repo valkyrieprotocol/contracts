@@ -159,11 +159,23 @@ pub fn update_campaign_config(
     }
 
     if let Some(deposit_amount) = deposit_amount {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
         campaign_config.deposit_amount = deposit_amount;
         response = response.add_attribute("is_updated_deposit_amount", "true");
     }
 
     if let Some(deposit_lock_period) = deposit_lock_period {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
         campaign_config.deposit_lock_period = deposit_lock_period;
         response = response.add_attribute("is_updated_deposit_lock_period", "true");
     }
@@ -180,9 +192,39 @@ pub fn update_campaign_config(
     }
 
     if let Some(admin) = admin.as_ref() {
-        campaign_config.admin = deps.api.addr_validate(admin)?;
-        response = response.add_attribute("is_updated_admin", "true");
+        CampaignConfig::save_admin_nominee(deps.storage, &deps.api.addr_validate(admin)?)?;
+        response = response.add_attribute("is_updated_admin_nominee", "true");
     }
+
+    campaign_config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn approve_admin_nominee(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    address: String,
+) -> ContractResult<Response> {
+    // Validate
+    let mut campaign_config = CampaignConfig::load(deps.storage)?;
+    if !campaign_config.is_admin(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("approve_admin_nominee");
+
+    let address = deps.api.addr_validate(address.as_str())?;
+    if let Some(admin_nominee) = CampaignConfig::may_load_admin_nominee(deps.storage)? {
+        if admin_nominee != address {
+            return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
+        }
+    }
+
+    campaign_config.admin = address;
+    response = response.add_attribute("is_updated_admin", "true");
 
     campaign_config.save(deps.storage)?;
 
@@ -687,6 +729,10 @@ pub fn participate(
 ) -> ContractResult<Response> {
     // Validate
     let actor = deps.api.addr_validate(&actor)?;
+
+    if actor != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let campaign_config = CampaignConfig::load(deps.storage)?;
     let campaign_state = CampaignState::load(deps.storage)?;

@@ -110,15 +110,15 @@ fn failed_invalid_threshold() {
         &mut deps,
         governance_env(),
         mock_info(GOVERNANCE, &[]),
+        Some(Decimal::percent(POLL_QUORUM_PERCENT)),
         Some(Decimal::percent(101)),
-        Some(Decimal::percent(POLL_THRESHOLD_PERCENT)),
         Some(POLL_VOTING_PERIOD),
         Some(POLL_EXECUTION_DELAY_PERIOD),
         Some(POLL_PROPOSAL_DEPOSIT),
         Some(POLL_SNAPSHOT_PERIOD),
     );
 
-    expect_generic_err(&result, "quorum must be 0 to 1");
+    expect_generic_err(&result, "threshold must be 0 to 1");
 }
 
 #[test]
@@ -131,15 +131,36 @@ fn failed_invalid_quorum() {
         &mut deps,
         governance_env(),
         mock_info(GOVERNANCE, &[]),
-        Some(Decimal::percent(POLL_QUORUM_PERCENT)),
         Some(Decimal::percent(101)),
+        Some(Decimal::percent(POLL_THRESHOLD_PERCENT)),
         Some(POLL_VOTING_PERIOD),
         Some(POLL_EXECUTION_DELAY_PERIOD),
         Some(POLL_PROPOSAL_DEPOSIT),
         Some(POLL_SNAPSHOT_PERIOD),
     );
 
-    expect_generic_err(&result, "threshold must be 0 to 1");
+    expect_generic_err(&result, "quorum must be 0 to 1");
+}
+
+#[test]
+fn failed_invalid_execution_delay_period() {
+    let mut deps = custom_deps();
+
+    init_default(deps.as_mut());
+
+    let result = exec(
+        &mut deps,
+        governance_env(),
+        mock_info(GOVERNANCE, &[]),
+        Some(Decimal::percent(POLL_QUORUM_PERCENT)),
+        Some(Decimal::percent(POLL_THRESHOLD_PERCENT)),
+        Some(POLL_VOTING_PERIOD),
+        Some(999),
+        Some(POLL_PROPOSAL_DEPOSIT),
+        Some(POLL_SNAPSHOT_PERIOD),
+    );
+
+    expect_generic_err(&result, "execution_delay_period must be greater than 1000");
 }
 
 #[test]

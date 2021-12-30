@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128, Addr, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 use cw20::Cw20ExecuteMsg;
 
 use valkyrie::common::ContractResult;
@@ -19,7 +19,7 @@ pub fn instantiate(
     let response = make_response("instantiate");
 
     ContractConfig {
-        admins: msg.admins.iter().map(|v| deps.api.addr_validate(v)).collect::<StdResult<Vec<Addr>>>()?,
+        admin: deps.api.addr_validate(msg.admin.as_str())?,
         managing_token: deps.api.addr_validate(msg.managing_token.as_str())?,
     }.save(deps.storage)?;
 
@@ -34,7 +34,7 @@ pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    admins: Option<Vec<String>>,
+    admin: Option<String>,
 ) -> ContractResult<Response> {
     // Validate
     let mut config = ContractConfig::load(deps.storage)?;
@@ -45,14 +45,44 @@ pub fn update_config(
     // Execute
     let mut response = make_response("update_config");
 
-    if let Some(admins) = admins.as_ref() {
-        config.admins = admins.iter()
-            .map(|v| deps.api.addr_validate(v))
-            .collect::<StdResult<Vec<Addr>>>()?;
-        response = response.add_attribute("is_updated_admins", "true");
+    if let Some(admin) = admin.as_ref() {
+        ContractConfig::save_admin_nominee(deps.storage, &deps.api.addr_validate(admin)?)?;
+        response = response.add_attribute("is_updated_admin_nominee", "true");
+        config.admin = deps.api.addr_validate(admin.as_str())?;
+        response = response.add_attribute("is_updated_admin", "true");
     }
 
     config.save(deps.storage)?;
+
+    Ok(response)
+}
+
+pub fn approve_admin_nominee(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    address: String,
+) -> ContractResult<Response> {
+    // Validate
+    let mut campaign_config = ContractConfig::load(deps.storage)?;
+    if !campaign_config.is_admin(&info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("approve_admin_nominee");
+
+    let address = deps.api.addr_validate(address.as_str())?;
+    if let Some(admin_nominee) = ContractConfig::may_load_admin_nominee(deps.storage)? {
+        if admin_nominee != address {
+            return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
+        }
+    }
+
+    campaign_config.admin = address;
+    response = response.add_attribute("is_updated_admin", "true");
+
+    campaign_config.save(deps.storage)?;
 
     Ok(response)
 }
@@ -169,7 +199,7 @@ pub fn transfer(
             return Err(ContractError::Std(StdError::generic_err("Insufficient balance")));
         }
 
-        balance.free_balance
+        balance.free_balance.checked_sub(amount)?
     } else {
         let allowance = Allowance::may_load(deps.storage, &info.sender)?;
 
