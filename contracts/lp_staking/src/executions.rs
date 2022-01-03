@@ -170,8 +170,8 @@ pub fn update_config(
     }
 
     if let Some(admin) = admin {
-        config.admin = deps.api.addr_validate(admin.as_str())?;
-        response = response.add_attribute("is_updated_admin", "true");
+        Config::save_admin_nominee(deps.storage, &deps.api.addr_validate(admin.as_str())?)?;
+        response = response.add_attribute("is_updated_admin_nominee", "true");
     }
 
     if let Some(whitelisted_contracts) = whitelisted_contracts {
@@ -226,6 +226,36 @@ pub fn migrate_reward(
 
     response = response.add_attribute("recipient", recipient.to_string());
     response = response.add_attribute("amount", amount.to_string());
+
+    Ok(response)
+}
+
+pub fn approve_admin_nominee(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    address: String,
+) -> ContractResult<Response> {
+    // Validate
+    let mut config = Config::load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Execute
+    let mut response = make_response("approve_admin_nominee");
+
+    let address = deps.api.addr_validate(address.as_str())?;
+    if let Some(admin_nominee) = Config::may_load_admin_nominee(deps.storage)? {
+        if admin_nominee != address {
+            return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
+        }
+    }
+
+    config.admin = address;
+    response = response.add_attribute("is_updated_admin", "true");
+
+    config.save(deps.storage)?;
 
     Ok(response)
 }

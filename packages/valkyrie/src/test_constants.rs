@@ -53,6 +53,8 @@ pub mod governance {
     pub fn governance_sender() -> MessageInfo {
         mock_info(GOVERNANCE, &[])
     }
+
+
 }
 
 pub mod community {
@@ -166,5 +168,31 @@ pub mod campaign {
 
     pub fn campaign_admin_sender() -> MessageInfo {
         mock_info(CAMPAIGN_ADMIN, &[])
+    }
+}
+
+pub mod liquidity {
+    use cosmwasm_std::{Env, Uint128};
+    use crate::test_constants::VALKYRIE_TOKEN;
+    use crate::test_utils::{mock_env_contract, mock_env_contract_height};
+
+    pub const LIQUIDITY: &str = "Liquidity";
+
+    pub const LP_REWARD_TOKEN: &str = VALKYRIE_TOKEN;
+    pub const LP_PAIR_TOKEN: &str = "ValkyrieLpPair";
+    pub const LP_LIQUIDITY_TOKEN: &str = "ValkyrieLpToken";
+    pub const LP_WHITELISTED1: &str = "ValkyrieLpWhitelist1";
+    pub const LP_WHITELISTED2: &str = "ValkyrieLpWhitelist2";
+    pub const LP_DISTRIBUTION_SCHEDULE1: (u64, u64, Uint128) = (0, 100, Uint128::new(1000000u128));
+    pub const LP_DISTRIBUTION_SCHEDULE2: (u64, u64, Uint128) = (100, 200, Uint128::new(10000000u128));
+
+    pub fn lp_env() -> Env {
+        let mut env = mock_env_contract(LIQUIDITY);
+        env.block.height = 0;
+        env
+    }
+
+    pub fn governance_env_height(height: u64) -> Env {
+        mock_env_contract_height(LIQUIDITY, height)
     }
 }

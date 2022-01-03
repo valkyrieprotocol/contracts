@@ -72,6 +72,9 @@ pub fn execute(
         ExecuteMsg::MigrateReward { recipient, amount } => {
             migrate_reward(deps, env, info, recipient, amount)
         }
+        ExecuteMsg::ApproveAdminNominee {
+            address,
+        } => crate::executions::approve_admin_nominee(deps, env, info, address),
     }
 }
 
