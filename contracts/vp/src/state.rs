@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 
 const CONFIG: Item<Config> = Item::new("config");
+const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Config {
@@ -43,6 +44,14 @@ impl Config {
             .find(|it| it.address == *address)
             .map(|item| item.ratio)
             .unwrap_or(self.base_swap_ratio)
+    }
+
+    pub fn may_load_admin_nominee(storage: &dyn Storage) -> StdResult<Option<Addr>> {
+        ADMIN_NOMINEE.may_load(storage)
+    }
+
+    pub fn save_admin_nominee(storage: &mut dyn Storage, address: &Addr) -> StdResult<()> {
+        ADMIN_NOMINEE.save(storage, address)
     }
 }
 

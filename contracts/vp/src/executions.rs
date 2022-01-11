@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdResult, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary, Uint128, WasmMsg};
 use crate::state::{Config, State, SwapRatio, SwapState};
 use cw20::Cw20ExecuteMsg;
 
@@ -19,9 +19,9 @@ pub fn update_config(
 
     let mut config = Config::load(deps.storage)?;
 
-    if let Some(admin) = admin {
-        config.admin = deps.api.addr_validate(admin.as_str())?;
-        response = response.add_attribute("is_updated_admin", "true");
+    if let Some(admin) = admin.as_ref() {
+        Config::save_admin_nominee(deps.storage, &deps.api.addr_validate(admin)?)?;
+        response = response.add_attribute("is_updated_admin_nominee", "true");
     }
 
     if let Some(whitelist) = whitelist {
@@ -98,6 +98,30 @@ pub fn mint(
 
     response = response.add_attribute("burn_amount", amount.to_string());
     response = response.add_attribute("mint_amount", mint_amount.to_string());
+
+    Ok(response)
+}
+
+pub fn approve_admin_nominee(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    // Execute
+    let mut response = Response::new();
+    response = response.add_attribute("action", "approve_admin_nominee");
+
+    if let Some(admin_nominee) = Config::may_load_admin_nominee(deps.storage)? {
+        if admin_nominee != info.sender {
+            return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
+        }
+    }
+
+    let mut config = Config::load(deps.storage)?;
+    config.admin = info.sender;
+    response = response.add_attribute("is_updated_admin", "true");
+
+    config.save(deps.storage)?;
 
     Ok(response)
 }

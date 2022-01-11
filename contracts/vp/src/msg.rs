@@ -83,6 +83,7 @@ pub enum ExecuteMsg {
         base_swap_ratio: Option<Decimal>,
         custom_swap_ratio: Option<Vec<SwapRatio>>,
     },
+    ApproveAdminNominee {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

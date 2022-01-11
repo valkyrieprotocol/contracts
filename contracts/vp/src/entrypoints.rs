@@ -137,7 +137,8 @@ pub fn execute(
             }
 
             crate::executions::update_config(deps, env, info, admin, whitelist, offer_token, base_swap_ratio, custom_swap_ratio)
-        }
+        },
+        ExecuteMsg::ApproveAdminNominee {} => crate::executions::approve_admin_nominee(deps, env, info),
     }
 }
 
