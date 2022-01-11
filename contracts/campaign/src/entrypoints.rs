@@ -57,9 +57,7 @@ pub fn execute(
             qualification_description,
             admin,
         ),
-        ExecuteMsg::ApproveAdminNominee {
-            address,
-        } => crate::executions::approve_admin_nominee(deps, env, info, address),
+        ExecuteMsg::ApproveAdminNominee {} => crate::executions::approve_admin_nominee(deps, env, info),
         ExecuteMsg::UpdateRewardConfig {
             participation_reward_amount,
             participation_reward_lock_period,

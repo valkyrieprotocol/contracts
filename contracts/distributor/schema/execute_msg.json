@@ -29,15 +29,7 @@
       ],
       "properties": {
         "approve_admin_nominee": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
+          "type": "object"
         }
       },
       "additionalProperties": false
@@ -184,30 +176,6 @@
               ],
               "format": "uint64",
               "minimum": 0.0
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "transfer"
-      ],
-      "properties": {
-        "transfer": {
-          "type": "object",
-          "required": [
-            "amount",
-            "recipient"
-          ],
-          "properties": {
-            "amount": {
-              "$ref": "#/definitions/Uint128"
-            },
-            "recipient": {
-              "type": "string"
             }
           }
         }

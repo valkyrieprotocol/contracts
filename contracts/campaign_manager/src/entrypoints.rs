@@ -58,9 +58,7 @@ pub fn execute(
             key_denom,
             contract_admin,
         ),
-        ExecuteMsg::ApproveContractAdminNominee {
-            address,
-        } => executions::approve_contract_admin_nominee(deps, env, info, address),
+        ExecuteMsg::ApproveContractAdminNominee {} => executions::approve_contract_admin_nominee(deps, env, info),
         ExecuteMsg::UpdateReferralRewardLimitOption {
             overflow_amount_recipient,
             base_count,

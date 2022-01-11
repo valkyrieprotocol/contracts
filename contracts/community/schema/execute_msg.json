@@ -29,15 +29,7 @@
       ],
       "properties": {
         "approve_admin_nominee": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
+          "type": "object"
         }
       },
       "additionalProperties": false

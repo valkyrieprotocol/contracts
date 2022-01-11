@@ -15,9 +15,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<String>,
     },
-    ApproveAdminNominee {
-        address: String,
-    },
+    ApproveAdminNominee {},
     RegisterDistribution {
         start_height: u64,
         end_height: u64,

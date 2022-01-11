@@ -205,25 +205,18 @@ pub fn approve_admin_nominee(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    address: String,
 ) -> ContractResult<Response> {
-    // Validate
-    let mut campaign_config = CampaignConfig::load(deps.storage)?;
-    if !campaign_config.is_admin(&info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Execute
     let mut response = make_response("approve_admin_nominee");
 
-    let address = deps.api.addr_validate(address.as_str())?;
     if let Some(admin_nominee) = CampaignConfig::may_load_admin_nominee(deps.storage)? {
-        if admin_nominee != address {
+        if admin_nominee != info.sender {
             return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
         }
     }
 
-    campaign_config.admin = address;
+    let mut campaign_config = CampaignConfig::load(deps.storage)?;
+    campaign_config.admin = info.sender;
     response = response.add_attribute("is_updated_admin", "true");
 
     campaign_config.save(deps.storage)?;

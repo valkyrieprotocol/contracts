@@ -34,9 +34,7 @@ pub enum ExecuteMsg {
         recipient: String,
         amount: Uint128,
     },
-    ApproveAdminNominee {
-        address: String,
-    }
+    ApproveAdminNominee {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

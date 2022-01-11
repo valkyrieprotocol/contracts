@@ -119,15 +119,7 @@
       ],
       "properties": {
         "approve_contract_admin_nominee": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "type": "string"
-            }
-          }
+          "type": "object"
         }
       },
       "additionalProperties": false

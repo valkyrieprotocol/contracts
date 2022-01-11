@@ -15,9 +15,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<String>,
     },
-    ApproveAdminNominee {
-        address: String,
-    },
+    ApproveAdminNominee {},
     IncreaseAllowance {
         address: String,
         amount: Uint128,

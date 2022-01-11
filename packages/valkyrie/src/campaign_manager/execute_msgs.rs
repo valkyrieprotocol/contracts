@@ -45,9 +45,7 @@ pub enum ExecuteMsg {
         key_denom: Option<Denom>,
         contract_admin: Option<String>,
     },
-    ApproveContractAdminNominee {
-        address: String,
-    },
+    ApproveContractAdminNominee {},
     UpdateReferralRewardLimitOption {
         overflow_amount_recipient: Option<String>,
         base_count: Option<u8>,

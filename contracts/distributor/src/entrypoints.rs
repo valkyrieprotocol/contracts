@@ -34,9 +34,7 @@ pub fn execute(
             info,
             admin,
         ),
-        ExecuteMsg::ApproveAdminNominee {
-            address,
-        } => executions::approve_admin_nominee(deps, env, info, address),
+        ExecuteMsg::ApproveAdminNominee {} => executions::approve_admin_nominee(deps, env, info),
         ExecuteMsg::RegisterDistribution {
             start_height,
             end_height,

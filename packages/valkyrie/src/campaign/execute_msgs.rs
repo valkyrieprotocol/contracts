@@ -33,9 +33,7 @@ pub enum ExecuteMsg {
         qualification_description: Option<String>,
         admin: Option<String>,
     },
-    ApproveAdminNominee {
-        address: String,
-    },
+    ApproveAdminNominee {},
     UpdateRewardConfig {
         participation_reward_amount: Option<Uint128>,
         participation_reward_lock_period: Option<u64>,
