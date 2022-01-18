@@ -318,6 +318,11 @@ pub fn update_activation(
     // Execute
     let mut response = make_response("update_activation");
 
+    let config = CampaignConfig::load(deps.storage)?;
+    if config.qualifier.is_none() {
+        return Err(ContractError::Std(StdError::generic_err("Required set qualifier")));
+    }
+
     campaign_state.active_flag = is_active;
 
     if is_active {
@@ -852,6 +857,10 @@ fn _participate(
 
         deposit.lock(campaign_config.deposit_amount, env.block.height, campaign_config.deposit_lock_period)?;
         deposit.save(storage)?;
+    } else {
+        if my_participation.participation_count > 100 {
+            return Err(ContractError::Std(StdError::generic_err("Exceed participation count")));
+        }
     }
 
     let distributed_participation_reward_amount = distribute_participation_reward(
