@@ -213,6 +213,8 @@ pub fn approve_admin_nominee(
         if admin_nominee != info.sender {
             return Err(ContractError::Std(StdError::generic_err("It is not admin nominee")));
         }
+    } else {
+        return Err(ContractError::Unauthorized {});
     }
 
     let mut campaign_config = CampaignConfig::load(deps.storage)?;
