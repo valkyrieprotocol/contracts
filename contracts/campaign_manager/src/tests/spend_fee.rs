@@ -66,6 +66,7 @@ fn succeed() {
         None,
         None,
         None,
+        None,
         Some(Decimal::percent(10)),
         None,
         None,

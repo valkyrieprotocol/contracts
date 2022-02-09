@@ -58,6 +58,8 @@ pub fn instantiate(
         deposit_denom: msg.deposit_denom.map(|d| d.to_cw20(deps.api)),
         deposit_amount: msg.deposit_amount,
         deposit_lock_period: msg.deposit_lock_period,
+        vp_token: deps.api.addr_validate(msg.vp_token.as_str())?,
+        vp_burn_amount: msg.vp_burn_amount,
         qualifier: msg.qualifier.map(|q| deps.api.addr_validate(q.as_str())).transpose()?,
         qualification_description: msg.qualification_description,
         admin: deps.api.addr_validate(&msg.admin)?,
@@ -107,6 +109,7 @@ pub fn update_campaign_config(
     parameter_key: Option<String>,
     deposit_amount: Option<Uint128>,
     deposit_lock_period: Option<u64>,
+    vp_burn_amount: Option<Uint128>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     admin: Option<String>,
@@ -178,6 +181,11 @@ pub fn update_campaign_config(
 
         campaign_config.deposit_lock_period = deposit_lock_period;
         response = response.add_attribute("is_updated_deposit_lock_period", "true");
+    }
+
+    if let Some(vp_burn_amount) = vp_burn_amount {
+        campaign_config.vp_burn_amount = vp_burn_amount;
+        response = response.add_attribute("is_updated_vp_burn_amount", "true");
     }
 
     if let Some(qualifier) = qualifier.as_ref() {
@@ -913,6 +921,17 @@ fn _participate(
     //Check balance after distribute
     campaign_state.validate_balance().map_err(|_| StdError::generic_err("Insufficient balance"))?;
     let participation_reward_denom = Denom::from_cw20(reward_config.participation_reward_denom);
+
+    if campaign_config.vp_burn_amount > Uint128::zero() {
+        response.messages.push(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: campaign_config.vp_token.to_string(),
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::BurnFrom {
+                owner: actor.to_string(),
+                amount: campaign_config.vp_burn_amount * qualify_result.vp_burn_rate,
+            })?,
+        })));
+    }
 
     response.attributes.push(attr(
         "distribute_result",

@@ -29,6 +29,7 @@ pub enum ExecuteMsg {
         parameter_key: Option<String>,
         deposit_amount: Option<Uint128>,
         deposit_lock_period: Option<u64>,
+        vp_burn_amount: Option<Uint128>,
         qualifier: Option<String>,
         qualification_description: Option<String>,
         admin: Option<String>,

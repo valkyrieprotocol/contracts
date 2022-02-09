@@ -31,6 +31,7 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             governance,
             valkyrie_token,
+            vp_token,
             terraswap_router,
             code_id,
             add_pool_fee_rate,
@@ -46,8 +47,9 @@ pub fn execute(
             env,
             info,
             governance,
-            terraswap_router,
             valkyrie_token,
+            vp_token,
+            terraswap_router,
             code_id,
             add_pool_fee_rate,
             add_pool_min_referral_reward_rate,
@@ -77,6 +79,7 @@ pub fn execute(
             deposit_denom,
             deposit_amount,
             deposit_lock_period,
+            vp_burn_amount,
             qualifier,
             qualification_description,
         } => executions::create_campaign(
@@ -87,6 +90,7 @@ pub fn execute(
             deposit_denom,
             deposit_amount,
             deposit_lock_period,
+            vp_burn_amount,
             qualifier,
             qualification_description,
         ),
@@ -111,7 +115,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    migrations::v1_0_6(deps, env, msg)
+    migrations::v1_0_8(deps, env, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

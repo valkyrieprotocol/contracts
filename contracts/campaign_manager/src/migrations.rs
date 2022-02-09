@@ -10,7 +10,7 @@ use valkyrie::utils::make_response;
 
 use crate::states::Config;
 
-pub fn v1_0_6(
+pub fn v1_0_8(
     deps: DepsMut,
     _env: Env,
     msg: MigrateMsg,
@@ -20,6 +20,7 @@ pub fn v1_0_6(
     Config {
         governance: legacy_config.governance,
         valkyrie_token: legacy_config.valkyrie_token,
+        vp_token: deps.api.addr_validate(msg.vp_token.as_str())?,
         terraswap_router: legacy_config.terraswap_router,
         code_id: legacy_config.code_id,
         add_pool_fee_rate: legacy_config.add_pool_fee_rate,
@@ -29,10 +30,10 @@ pub fn v1_0_6(
         fee_recipient: legacy_config.fee_recipient,
         deactivate_period: legacy_config.deactivate_period,
         key_denom: legacy_config.key_denom,
-        contract_admin: deps.api.addr_validate(msg.contract_admin.as_str())?,
+        contract_admin: legacy_config.contract_admin,
     }.save(deps.storage)?;
 
-    Ok(make_response("migrate_v1_0_6"))
+    Ok(make_response("migrate_v1_0_8"))
 }
 
 const CONFIG_LEGACY: Item<LegacyConfig> = Item::new("config");
@@ -50,4 +51,5 @@ pub struct LegacyConfig {
     pub fee_recipient: Addr,
     pub deactivate_period: u64,
     pub key_denom: Denom,
+    pub contract_admin: Addr,
 }

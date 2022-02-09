@@ -19,6 +19,7 @@ pub fn exec(
     parameter_key: Option<String>,
     deposit_amount: Option<Uint128>,
     deposit_lock_period: Option<u64>,
+    vp_burn_amount: Option<Uint128>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     admin: Option<String>,
@@ -33,6 +34,7 @@ pub fn exec(
         parameter_key,
         deposit_amount,
         deposit_lock_period,
+        vp_burn_amount,
         qualifier,
         qualification_description,
         admin,
@@ -47,6 +49,7 @@ pub fn will_success(
     parameter_key: Option<String>,
     deposit_amount: Option<Uint128>,
     deposit_lock_period: Option<u64>,
+    vp_burn_amount: Option<Uint128>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
     admin: Option<String>,
@@ -64,6 +67,7 @@ pub fn will_success(
         parameter_key,
         deposit_amount,
         deposit_lock_period,
+        vp_burn_amount,
         qualifier,
         qualification_description,
         admin,
@@ -84,6 +88,7 @@ fn succeed() {
     let parameter_key = "vkr2".to_string();
     let deposit_amount = Uint128::new(99);
     let deposit_lock_period = 199u64;
+    let vp_burn_amount = Uint128::new(99999999);
     let qualifier = "Qualifier2".to_string();
     let qualification_description = "QualificationDescription2".to_string();
     let admin = "Admin2".to_string();
@@ -96,6 +101,7 @@ fn succeed() {
         Some(parameter_key.clone()),
         Some(deposit_amount),
         Some(deposit_lock_period),
+        Some(vp_burn_amount.clone()),
         Some(qualifier.clone()),
         Some(qualification_description.clone()),
         Some(admin.clone()),
@@ -108,6 +114,7 @@ fn succeed() {
     assert_eq!(campaign_config.parameter_key, parameter_key);
     assert_eq!(campaign_config.deposit_amount, deposit_amount);
     assert_eq!(campaign_config.deposit_lock_period, deposit_lock_period);
+    assert_eq!(campaign_config.vp_burn_amount, vp_burn_amount);
     assert_eq!(campaign_config.qualifier, Some(Addr::unchecked(qualifier)));
     assert_eq!(campaign_config.admin, Addr::unchecked(CAMPAIGN_ADMIN));
 
@@ -133,6 +140,7 @@ fn succeed_update_info_after_activation() {
         &mut deps,
         Some(title.clone()),
         Some(description.clone()),
+        None,
         None,
         None,
         None,
@@ -174,6 +182,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         None,
+        None,
     );
 
     expect_generic_err(&result, "Only modifiable in pending status");
@@ -186,6 +195,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         Some("vkr2".to_string()),
+        None,
         None,
         None,
         None,
@@ -208,6 +218,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         None,
+        None,
     );
 
     expect_generic_err(&result, "Only modifiable in pending status");
@@ -222,6 +233,7 @@ fn failed_update_url_after_activation() {
         None,
         None,
         Some(199u64),
+        None,
         None,
         None,
         None,
@@ -240,6 +252,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_env(),
         default_sender(),
+        None,
         None,
         None,
         None,
@@ -273,6 +286,7 @@ fn failed_invalid_title() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Title too short");
 
@@ -281,6 +295,7 @@ fn failed_invalid_title() {
         campaign_env(),
         campaign_admin_sender(),
         Some(std::iter::repeat('b').take(MAX_TITLE_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -312,6 +327,7 @@ fn failed_invalid_description() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Description too short");
 
@@ -321,6 +337,7 @@ fn failed_invalid_description() {
         campaign_admin_sender(),
         None,
         Some(std::iter::repeat('b').take(MAX_DESC_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -351,6 +368,7 @@ fn failed_invalid_url() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "Url too short");
 
@@ -361,6 +379,7 @@ fn failed_invalid_url() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_URL_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,
@@ -390,6 +409,7 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         None,
+        None,
     );
     expect_generic_err(&result, "ParameterKey too short");
 
@@ -401,6 +421,7 @@ fn failed_invalid_parameter_key() {
         None,
         None,
         Some(std::iter::repeat('b').take(MAX_PARAM_KEY_LENGTH + 1).collect()),
+        None,
         None,
         None,
         None,

@@ -3,7 +3,7 @@ use cosmwasm_std::{Env, MessageInfo, Response, Addr};
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign::*;
-use valkyrie::test_constants::default_sender;
+use valkyrie::test_constants::{default_sender, VALKYRIE_TICKET_TOKEN};
 use valkyrie::test_utils::expect_unauthorized_err;
 
 use crate::executions::set_no_qualification;
@@ -43,6 +43,7 @@ fn succeed() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
 
     let config = CampaignConfig::load(&deps.storage).unwrap();

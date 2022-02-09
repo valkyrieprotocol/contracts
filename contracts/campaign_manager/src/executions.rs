@@ -28,6 +28,7 @@ pub fn instantiate(
 
     Config {
         governance: deps.api.addr_validate(msg.governance.as_str())?,
+        vp_token: deps.api.addr_validate(msg.vp_token.as_str())?,
         valkyrie_token: deps.api.addr_validate(msg.valkyrie_token.as_str())?,
         terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
         code_id: msg.code_id,
@@ -57,6 +58,7 @@ pub fn update_config(
     info: MessageInfo,
     governance: Option<String>,
     valkyrie_token: Option<String>,
+    vp_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
@@ -85,6 +87,15 @@ pub fn update_config(
 
         config.valkyrie_token = deps.api.addr_validate(valkyrie_token)?;
         response = response.add_attribute("is_updated_valkyrie_token", "true");
+    }
+
+    if let Some(vp_token) = vp_token.as_ref() {
+        if !config.is_governance(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        config.vp_token = deps.api.addr_validate(vp_token)?;
+        response = response.add_attribute("is_updated_vp_token", "true");
     }
 
     if let Some(terraswap_router) = terraswap_router.as_ref() {
@@ -289,6 +300,7 @@ pub fn create_campaign(
     deposit_denom: Option<Denom>,
     deposit_amount: Option<Uint128>,
     deposit_lock_period: Option<u64>,
+    vp_burn_amount: Option<Uint128>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
 ) -> ContractResult<Response> {
@@ -315,6 +327,8 @@ pub fn create_campaign(
             deposit_denom,
             deposit_amount: deposit_amount.unwrap_or_default(),
             deposit_lock_period: deposit_lock_period.unwrap_or_default(),
+            vp_token: config.vp_token.to_string(),
+            vp_burn_amount: vp_burn_amount.unwrap_or_default(),
             qualifier,
             qualification_description,
             referral_reward_token: config.valkyrie_token.to_string(),

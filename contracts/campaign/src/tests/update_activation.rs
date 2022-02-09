@@ -2,11 +2,11 @@ use cosmwasm_std::{Env, MessageInfo, Response};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::campaign::{campaign_admin_sender, campaign_env, campaign_env_height};
+use valkyrie::test_constants::campaign::{campaign_admin_sender, campaign_env, campaign_env_height, QUALIFIER};
 use valkyrie::test_constants::default_sender;
-use valkyrie::test_utils::expect_unauthorized_err;
+use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
-use crate::executions::update_activation;
+use crate::executions::{update_activation, update_campaign_config};
 use crate::states::CampaignState;
 
 pub fn exec(
@@ -21,6 +21,22 @@ pub fn exec(
 pub fn will_success(deps: &mut CustomDeps, is_active: bool) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
     let info = campaign_admin_sender();
+
+    update_campaign_config(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(QUALIFIER.to_string()),
+        Some("descdesc".to_string()),
+        None,
+    ).unwrap();
 
     let response = exec(deps, env.clone(), info.clone(), is_active).unwrap();
 
@@ -59,5 +75,23 @@ fn failed_invalid_permission() {
         default_sender(),
         true,
     );
+
     expect_unauthorized_err(&result);
+}
+
+
+#[test]
+fn failed_no_qualifier() {
+    let mut deps = custom_deps();
+
+    super::instantiate::default(&mut deps);
+
+    let result = exec(
+        &mut deps,
+        campaign_env(),
+        campaign_admin_sender(),
+        true,
+    );
+
+    expect_generic_err(&result, "Required set qualifier");
 }

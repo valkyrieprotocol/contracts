@@ -27,6 +27,8 @@ pub struct CampaignConfig {
     pub deposit_denom: Option<Denom>,
     pub deposit_amount: Uint128,
     pub deposit_lock_period: u64,
+    pub vp_token: Addr,
+    pub vp_burn_amount: Uint128,
     pub qualifier: Option<Addr>,
     pub qualification_description: Option<String>,
     pub admin: Addr,
