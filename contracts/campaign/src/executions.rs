@@ -184,6 +184,12 @@ pub fn update_campaign_config(
     }
 
     if let Some(vp_burn_amount) = vp_burn_amount {
+        if !is_pending(deps.storage)? {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Only modifiable in pending status",
+            )));
+        }
+
         campaign_config.vp_burn_amount = vp_burn_amount;
         response = response.add_attribute("is_updated_vp_burn_amount", "true");
     }
@@ -838,6 +844,24 @@ fn _participate(
     if !qualify_result.can_participate {
         return Err(ContractError::Std(StdError::generic_err(
             format!("Failed to qualify participation ({})", qualify_result.memo.unwrap_or_default()),
+        )));
+    }
+
+    if qualify_result.participation_reward_rate > Decimal::one() || qualify_result.participation_reward_rate < Decimal::zero() {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!("participation_reward_rate must be 0<=({})<=1", qualify_result.participation_reward_rate),
+        )));
+    }
+
+    if qualify_result.vp_burn_rate > Decimal::one() || qualify_result.vp_burn_rate < Decimal::zero() {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!("vp_burn_rate must be 0<=({})<=1", qualify_result.vp_burn_rate),
+        )));
+    }
+
+    if qualify_result.referral_reward_rate > Decimal::one() || qualify_result.referral_reward_rate < Decimal::zero() {
+        return Err(ContractError::Std(StdError::generic_err(
+            format!("referral_reward_rate must be 0<=({})<=1", qualify_result.referral_reward_rate),
         )));
     }
 

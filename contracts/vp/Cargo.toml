@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie-vp"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "Basic implementation of a CosmWasm-20 compliant token"

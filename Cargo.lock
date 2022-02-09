@@ -655,7 +655,7 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "valkyrie"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "bigint",
  "cosmwasm-schema",
@@ -672,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-campaign"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -689,11 +689,12 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-campaign-manager"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
+ "cw2",
  "cw20",
  "schemars",
  "serde",
@@ -704,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-community"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -718,7 +719,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-distributor"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -732,7 +733,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-governance"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -746,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-lp-staking"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -762,7 +763,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-qualifier"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -772,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "valkyrie-vp"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

@@ -1,6 +1,6 @@
 [package]
 name = "valkyrie"
-version = "1.0.8-beta.0"
+version = "1.0.8-beta.1"
 authors = ["Valkyrie Protocol"]
 edition = "2018"
 description = "Definition and types for the Valkyrie"

@@ -75,7 +75,7 @@ pub fn will_success(
     participation_reward_lock_period: u64,
     referral_reward_amounts: Vec<Uint128>,
     referral_reward_lock_period: u64,
-    vp_token:String,
+    vp_token: String,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
     let info = campaign_manager_sender();
