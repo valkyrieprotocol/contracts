@@ -153,6 +153,7 @@ pub mod campaign {
     pub const DEPOSIT_DENOM_NATIVE: &str = "uusd";
     pub const DEPOSIT_AMOUNT: Uint128 = Uint128::new(100);
     pub const DEPOSIT_LOCK_PERIOD: u64 = 10000;
+    pub const VP_BURN_AMOUNT: Uint128 = Uint128::new(0);
 
     pub fn campaign_env() -> Env {
         mock_env_contract(CAMPAIGN)

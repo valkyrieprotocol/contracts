@@ -3,7 +3,6 @@ use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::{DEFAULT_SENDER, default_sender};
 use valkyrie::test_constants::campaign::{campaign_env_height, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_LOCK_PERIOD};
 use valkyrie::test_utils::expect_generic_err;
 
@@ -76,18 +75,21 @@ fn failed_no_reward() {
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 1000, 1000);
+
+    let participator = Addr::unchecked("Participator");
     let (env, _, _) = super::participate::will_success(
         &mut deps,
-        DEFAULT_SENDER,
+        &participator.as_str(),
         None,
     );
 
-    will_success(&mut deps, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD, DEFAULT_SENDER);
+    will_success(&mut deps, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD, &participator.as_str());
 
+    let info = mock_info(&participator.as_str(), &[]);
     let result = exec(
         &mut deps,
         campaign_env_height(env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-        default_sender(),
+        info,
     );
     expect_generic_err(&result, "Not exist claimable participation reward");
 }

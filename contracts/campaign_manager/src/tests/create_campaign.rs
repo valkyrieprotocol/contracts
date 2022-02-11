@@ -4,7 +4,7 @@ use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TOKEN};
+use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD, PARTICIPATION_REWARD_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env};
 use valkyrie::test_constants::governance::GOVERNANCE;
@@ -20,6 +20,7 @@ pub fn exec(
     deposit_denom: Option<Denom>,
     deposit_amount: Option<Uint128>,
     deposit_lock_period: Option<u64>,
+    vp_burn_amount: Option<Uint128>,
     qualifier: Option<String>,
     qualification_description: Option<String>,
 ) -> ContractResult<Response> {
@@ -31,6 +32,7 @@ pub fn exec(
         deposit_denom,
         deposit_amount,
         deposit_lock_period,
+        vp_burn_amount,
         qualifier,
         qualification_description,
     )
@@ -60,6 +62,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
         Some(DEPOSIT_AMOUNT),
         Some(DEPOSIT_LOCK_PERIOD),
+        None,
         None,
         None,
     ).unwrap();
@@ -100,6 +103,8 @@ fn succeed() {
                     deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
                     deposit_amount: DEPOSIT_AMOUNT,
                     deposit_lock_period: DEPOSIT_LOCK_PERIOD,
+                    vp_token: VALKYRIE_TICKET_TOKEN.to_string(),
+                    vp_burn_amount: Uint128::zero(),
                     qualifier: None,
                     qualification_description: None,
                     referral_reward_token: VALKYRIE_TOKEN.to_string(),

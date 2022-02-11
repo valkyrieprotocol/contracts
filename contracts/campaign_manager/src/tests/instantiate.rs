@@ -4,7 +4,7 @@ use valkyrie::campaign_manager::execute_msgs::{InstantiateMsg, ReferralRewardLim
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign_manager::*;
-use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER, VALKYRIE_TOKEN};
+use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
 use crate::executions::instantiate;
@@ -29,6 +29,7 @@ pub fn exec(
     base_count: u8,
     percent_for_governance_staking: u16,
     contract_admin: String,
+    vp_token: String,
 ) -> ContractResult<Response> {
     let msg = InstantiateMsg {
         governance,
@@ -48,6 +49,7 @@ pub fn exec(
             percent_for_governance_staking,
         },
         contract_admin,
+        vp_token,
     };
 
     instantiate(
@@ -81,6 +83,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         REFERRAL_REWARD_LIMIT_BASE_COUNT,
         REFERRAL_REWARD_LIMIT_STAKING_PERCENT,
         GOVERNANCE.to_string(),
+        VALKYRIE_TICKET_TOKEN.to_string(),
     ).unwrap();
 
     (env, info, response)
@@ -106,6 +109,7 @@ fn succeed() {
         deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
         key_denom: cw20::Denom::Native(KEY_DENOM_NATIVE.to_string()),
         contract_admin: Addr::unchecked(GOVERNANCE),
+        vp_token: Addr::unchecked(VALKYRIE_TICKET_TOKEN),
     });
 
     let referral_reward_limit_option = ReferralRewardLimitOption::load(&deps.storage).unwrap();

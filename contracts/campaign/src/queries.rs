@@ -23,6 +23,8 @@ pub fn get_campaign_config(deps: Deps, _env: Env) -> ContractResult<CampaignConf
         deposit_lock_period: campaign_config.deposit_lock_period,
         qualifier: campaign_config.qualifier.map(|e| e.to_string()),
         qualification_description: campaign_config.qualification_description,
+        vp_token: campaign_config.vp_token.to_string(),
+        vp_burn_amount: campaign_config.vp_burn_amount,
         admin: campaign_config.admin.to_string(),
         creator: campaign_config.creator.to_string(),
         created_at: campaign_config.created_at,

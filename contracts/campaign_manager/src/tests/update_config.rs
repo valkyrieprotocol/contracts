@@ -16,6 +16,7 @@ pub fn exec(
     info: MessageInfo,
     governance: Option<String>,
     valkyrie_token: Option<String>,
+    vp_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
@@ -33,6 +34,7 @@ pub fn exec(
         info,
         governance,
         valkyrie_token,
+        vp_token,
         terraswap_router,
         code_id,
         add_pool_fee_rate,
@@ -50,6 +52,7 @@ pub fn will_success(
     deps: &mut CustomDeps,
     governance: Option<String>,
     valkyrie_token: Option<String>,
+    vp_token: Option<String>,
     terraswap_router: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
@@ -70,6 +73,7 @@ pub fn will_success(
         info.clone(),
         governance,
         valkyrie_token,
+        vp_token,
         terraswap_router,
         code_id,
         add_pool_fee_rate,
@@ -93,6 +97,7 @@ fn succeed() {
 
     let governance = "ChangedGovernance";
     let valkyrie_token = "ChangedVkrToken";
+    let vp_token = "ChangedVP";
     let terraswap_router = "ChangedTerraswapRouter";
     let code_id = 100u64;
     let add_pool_fee_rate = Decimal::percent(9);
@@ -108,6 +113,7 @@ fn succeed() {
         &mut deps,
         Some(governance.to_string()),
         Some(valkyrie_token.to_string()),
+        Some(vp_token.to_string()),
         Some(terraswap_router.to_string()),
         Some(code_id),
         Some(add_pool_fee_rate),
@@ -123,6 +129,7 @@ fn succeed() {
     let config = Config::load(&deps.storage).unwrap();
     assert_eq!(config, Config {
         governance: Addr::unchecked(governance),
+        vp_token: Addr::unchecked(vp_token),
         valkyrie_token: Addr::unchecked(valkyrie_token),
         terraswap_router: Addr::unchecked(terraswap_router),
         code_id: code_id.clone(),
@@ -150,6 +157,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_manager_env(),
         default_sender(),
+        None,
         None,
         None,
         None,

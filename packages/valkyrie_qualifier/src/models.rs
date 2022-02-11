@@ -15,6 +15,7 @@ pub struct QualificationResult {
     pub can_participate: bool,
     pub participation_reward_rate: Decimal,
     pub referral_reward_rate: Decimal,
+    pub vp_burn_rate: Decimal,
     pub memo: Option<String>,
 }
 
@@ -24,6 +25,7 @@ impl QualificationResult {
             can_participate: true,
             participation_reward_rate: Decimal::one(),
             referral_reward_rate: Decimal::one(),
+            vp_burn_rate: Decimal::one(),
             memo: None,
         }
     }
@@ -33,6 +35,7 @@ impl QualificationResult {
             can_participate: false,
             participation_reward_rate: Decimal::zero(),
             referral_reward_rate: Decimal::zero(),
+            vp_burn_rate: Decimal::one(),
             memo,
         }
     }

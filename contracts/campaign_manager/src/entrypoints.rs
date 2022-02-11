@@ -1,12 +1,16 @@
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary};
 use cosmwasm_std::entry_point;
+use cw2::{set_contract_version};
 
 use valkyrie::campaign_manager::execute_msgs::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use valkyrie::campaign_manager::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 
-use crate::{executions, migrations, queries};
+use crate::{executions, queries, migrations};
+
+const CONTRACT_NAME: &str = "valkyrie-campaign-manager";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -15,6 +19,8 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     crate::executions::instantiate(deps, env, info, msg)?;
 
     Ok(Response::default())
@@ -31,6 +37,7 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             governance,
             valkyrie_token,
+            vp_token,
             terraswap_router,
             code_id,
             add_pool_fee_rate,
@@ -46,8 +53,9 @@ pub fn execute(
             env,
             info,
             governance,
-            terraswap_router,
             valkyrie_token,
+            vp_token,
+            terraswap_router,
             code_id,
             add_pool_fee_rate,
             add_pool_min_referral_reward_rate,
@@ -77,6 +85,7 @@ pub fn execute(
             deposit_denom,
             deposit_amount,
             deposit_lock_period,
+            vp_burn_amount,
             qualifier,
             qualification_description,
         } => executions::create_campaign(
@@ -87,6 +96,7 @@ pub fn execute(
             deposit_denom,
             deposit_amount,
             deposit_lock_period,
+            vp_burn_amount,
             qualifier,
             qualification_description,
         ),
@@ -111,7 +121,37 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    migrations::v1_0_6(deps, env, msg)
+
+    if cw2::get_contract_version(deps.storage).is_err() {
+        cw2::set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.0".to_string())?;
+    }
+
+    //mig to v1.0.6 to v1.0.8-beta.0
+    let info = cw2::get_contract_version(deps.storage)?;
+    if info.version == "v1.0.6".to_string() {
+        let contract_admin = &deps.api.addr_validate(msg.contract_admin.as_str())?;
+        migrations::v106::migrate(deps.storage, &env, contract_admin)?;
+
+        set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.0")?;
+    }
+
+    //mig to v1.0.8-beta.0 to v1.0.8-beta.1
+    let info = cw2::get_contract_version(deps.storage)?;
+    if info.version == "1.0.8-beta.0".to_string() {
+        let vp_token = &deps.api.addr_validate(msg.vp_token.as_str())?;
+        migrations::v108_beta0::migrate(deps.storage, &env, vp_token)?;
+
+        set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.1")?;
+    }
+
+    //mig to v1.0.8-beta.1 to ??????
+    // let info = cw2::get_contract_version(deps.storage)?;
+    // if info.version == "1.0.8-beta.1" {
+    //     migrations::??????::migrate(&deps, &env, &msg);
+    //     set_contract_version(deps.storage, CONTRACT_NAME, "??????")
+    // }
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

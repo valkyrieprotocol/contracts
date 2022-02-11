@@ -47,6 +47,8 @@ pub struct CampaignConfigResponse {
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
     pub admin: String,
+    pub vp_token: String,
+    pub vp_burn_amount: Uint128,
     pub creator: String,
     pub created_at: Timestamp,
 }

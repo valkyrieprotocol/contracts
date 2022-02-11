@@ -1,25 +1,21 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, Env, Response};
+use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage};
 use cw20::Denom;
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use valkyrie::campaign_manager::execute_msgs::MigrateMsg;
-use valkyrie::common::ContractResult;
-use valkyrie::utils::make_response;
-
 use crate::states::Config;
 
-pub fn v1_0_6(
-    deps: DepsMut,
-    _env: Env,
-    msg: MigrateMsg,
-) -> ContractResult<Response> {
-    let legacy_config = CONFIG_LEGACY.load(deps.storage)?;
+pub fn migrate(
+    storage: &mut dyn Storage,
+    _env: &Env,
+    vp_token: &Addr,
+) -> StdResult<()> {
+    let legacy_config = ConfigV108Beta0::load(storage)?;
 
     Config {
         governance: legacy_config.governance,
         valkyrie_token: legacy_config.valkyrie_token,
+        vp_token: vp_token.clone(),
         terraswap_router: legacy_config.terraswap_router,
         code_id: legacy_config.code_id,
         add_pool_fee_rate: legacy_config.add_pool_fee_rate,
@@ -29,16 +25,16 @@ pub fn v1_0_6(
         fee_recipient: legacy_config.fee_recipient,
         deactivate_period: legacy_config.deactivate_period,
         key_denom: legacy_config.key_denom,
-        contract_admin: deps.api.addr_validate(msg.contract_admin.as_str())?,
-    }.save(deps.storage)?;
+        contract_admin: legacy_config.contract_admin,
+    }.save(storage)?;
 
-    Ok(make_response("migrate_v1_0_6"))
+    Ok(())
 }
 
-const CONFIG_LEGACY: Item<LegacyConfig> = Item::new("config");
+const CONFIG_V108_BETA0: Item<ConfigV108Beta0> = Item::new("config");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct LegacyConfig {
+pub struct ConfigV108Beta0 {
     pub governance: Addr,
     pub valkyrie_token: Addr,
     pub terraswap_router: Addr,
@@ -50,4 +46,15 @@ pub struct LegacyConfig {
     pub fee_recipient: Addr,
     pub deactivate_period: u64,
     pub key_denom: Denom,
+    pub contract_admin: Addr,
+}
+
+impl ConfigV108Beta0 {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        CONFIG_V108_BETA0.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<ConfigV108Beta0> {
+        CONFIG_V108_BETA0.load(storage)
+    }
 }

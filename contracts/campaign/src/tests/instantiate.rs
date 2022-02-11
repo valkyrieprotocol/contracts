@@ -12,7 +12,7 @@ use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::*;
 use crate::states::{CampaignConfig, CampaignState, RewardConfig};
-use valkyrie::test_constants::VALKYRIE_TOKEN;
+use valkyrie::test_constants::{VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -29,6 +29,7 @@ pub fn exec(
     participation_reward_lock_period: u64,
     referral_reward_amounts: Vec<Uint128>,
     referral_reward_lock_period: u64,
+    vp_token: String,
 ) -> ContractResult<Response> {
     let config_msg = CampaignConfigMsg {
         title,
@@ -48,6 +49,8 @@ pub fn exec(
         deposit_denom: Some(Denom::Native(DEPOSIT_DENOM_NATIVE.to_string())),
         deposit_amount: DEPOSIT_AMOUNT,
         deposit_lock_period: DEPOSIT_LOCK_PERIOD,
+        vp_token,
+        vp_burn_amount: VP_BURN_AMOUNT,
         qualifier,
         qualification_description,
         admin: CAMPAIGN_ADMIN.to_string(),
@@ -72,6 +75,7 @@ pub fn will_success(
     participation_reward_lock_period: u64,
     referral_reward_amounts: Vec<Uint128>,
     referral_reward_lock_period: u64,
+    vp_token: String,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
     let info = campaign_manager_sender();
@@ -91,6 +95,7 @@ pub fn will_success(
         participation_reward_lock_period,
         referral_reward_amounts,
         referral_reward_lock_period,
+        vp_token,
     ).unwrap();
 
     (env, info, response)
@@ -110,6 +115,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     )
 }
 
@@ -135,6 +141,8 @@ fn succeed() {
         admin: Addr::unchecked(CAMPAIGN_ADMIN),
         creator: Addr::unchecked(CAMPAIGN_ADMIN),
         created_at: env.block.time,
+        vp_burn_amount: VP_BURN_AMOUNT,
+        vp_token: Addr::unchecked(VALKYRIE_TICKET_TOKEN),
     });
 
     let campaign_state = CampaignState::load(&deps.storage).unwrap();
@@ -181,6 +189,7 @@ fn failed_invalid_title() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Title too short");
 
@@ -199,6 +208,7 @@ fn failed_invalid_title() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Title too long");
 }
@@ -222,6 +232,7 @@ fn failed_invalid_description() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Description too short");
 
@@ -240,6 +251,7 @@ fn failed_invalid_description() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Description too long");
 }
@@ -263,6 +275,7 @@ fn failed_invalid_url() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Url too short");
 
@@ -281,6 +294,7 @@ fn failed_invalid_url() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Url too long");
 }
@@ -304,6 +318,7 @@ fn failed_invalid_parameter_key() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "ParameterKey too short");
 
@@ -322,6 +337,7 @@ fn failed_invalid_parameter_key() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "ParameterKey too long");
 }
@@ -345,6 +361,7 @@ fn failed_invalid_amounts() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
 
     will_success(
@@ -360,6 +377,7 @@ fn failed_invalid_amounts() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
 
     let result = exec(
@@ -377,6 +395,7 @@ fn failed_invalid_amounts() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         vec![],
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Invalid reward scheme");
 
@@ -395,6 +414,7 @@ fn failed_invalid_amounts() {
         PARTICIPATION_REWARD_LOCK_PERIOD,
         vec![Uint128::zero(), Uint128::zero()],
         REFERRAL_REWARD_LOCK_PERIOD,
+        VALKYRIE_TICKET_TOKEN.to_string(),
     );
     expect_generic_err(&result, "Invalid reward scheme");
 }

@@ -15,6 +15,7 @@ const CONTRACT_ADMIN_NOMINEE: Item<Addr> = Item::new("contract_admin_nominee");
 pub struct Config {
     pub governance: Addr,
     pub valkyrie_token: Addr,
+    pub vp_token: Addr,
     pub terraswap_router: Addr,
     pub code_id: u64,
     pub add_pool_fee_rate: Decimal,

@@ -1,18 +1,23 @@
-use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, to_binary};
+use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, to_binary, Reply, SubMsgExecutionResponse, Binary, from_binary};
 use cosmwasm_std::testing::mock_info;
+use cosmwasm_std::ContractResult as ReplyResult;
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::common::ContractResult;
-use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_utils::expect_generic_err;
 
-use crate::executions::participate;
-use crate::states::{CampaignState, Actor};
+use valkyrie::mock_querier::{custom_deps, CustomDeps};
+use valkyrie::test_utils::{expect_generic_err};
+
+use crate::executions::{participate, participate_qualify_result, REPLY_QUALIFY_PARTICIPATION};
+use crate::states::{CampaignState, Actor, CampaignConfig};
 use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, PARTICIPATION_REWARD_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TOKEN};
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
 use valkyrie::governance::query_msgs::StakerStateResponse;
+use valkyrie_qualifier::QualificationResult;
+use crate::proto::MsgExecuteContractResponse;
+use protobuf::{Message};
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -21,7 +26,61 @@ pub fn exec(
     actor: String,
     referrer: Option<Referrer>,
 ) -> ContractResult<Response> {
-    participate(deps.as_mut(), env, info, actor, referrer)
+    let response = participate(deps.as_mut(), env.clone(), info, actor.clone(), referrer);
+
+    let campaign_config = CampaignConfig::load(deps.as_ref().storage).unwrap();
+
+    if response.is_err() {
+        return response;
+    }
+
+    let result:ContractResult<Response>;
+    if campaign_config.qualifier == None {
+        result = response;
+    } else {
+        //if has qualifier, call reply
+        let mut msg = MsgExecuteContractResponse::default();
+        msg.data = to_binary(&QualificationResult::success()).unwrap().to_vec();
+
+        let qualify_response = participate_qualify_result(deps.as_mut(), env, Reply {
+            id: REPLY_QUALIFY_PARTICIPATION,
+            result: ReplyResult::Ok(SubMsgExecutionResponse {
+                events: vec![],
+                data: Some(Binary::from(msg.write_to_bytes().unwrap())),
+            })
+        });
+
+        if qualify_response.is_err() {
+            return qualify_response;
+        }
+
+        result = qualify_response;
+    }
+
+    process_cw20(deps, &result);
+
+    result
+}
+
+fn process_cw20(
+    deps: &mut CustomDeps,
+    response: &ContractResult<Response>
+) {
+    let messages = &response.as_ref().unwrap().messages;
+
+    for message in messages {
+        match &message.msg {
+            CosmosMsg::Wasm(WasmMsg::Execute {contract_addr, funds: _, msg}) => {
+                match from_binary(&msg).unwrap() {
+                    Cw20ExecuteMsg::BurnFrom {owner, amount} => {
+                        deps.querier.minus_token_balances(&[(contract_addr.as_str(), &[(&owner.as_str(), &amount)])]);
+                    }
+                    _ => {}
+                }
+            },
+            _ => {}
+        };
+    };
 }
 
 pub fn will_success(
@@ -181,6 +240,57 @@ fn succeed_twice() {
 }
 
 #[test]
+fn succeed_with_burn_vp() {
+    let mut deps = custom_deps();
+
+    let vp_amount = Uint128::new(100);
+
+    super::instantiate::default(&mut deps);
+    super::update_campaign_config::will_success(
+        &mut deps,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(vp_amount.clone()),
+        None,
+        None,
+        None
+    );
+    super::update_activation::will_success(&mut deps, true);
+    super::add_reward_pool::will_success(&mut deps, 1000, 10000000000000);
+
+
+    let config = CampaignConfig::load(deps.as_ref().storage).unwrap();
+    let participator = Addr::unchecked("participator");
+
+    deps.querier.plus_token_balances(&[(config.vp_token.as_str(), &[(&participator.as_str(), &vp_amount)])]);
+
+    let (env, _, _) = will_success(&mut deps, participator.as_str(), None);
+
+    let participation = Actor::load(&deps.storage, &participator).unwrap();
+    assert_eq!(participation, Actor {
+        address: participator.clone(),
+        referrer: None,
+        participation_reward_amounts: vec![
+            (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
+        ],
+        referral_reward_amounts: vec![],
+        cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
+        cumulative_referral_reward_amount: Uint128::zero(),
+        participation_count: 1,
+        referral_count: 0,
+        last_participated_at: env.block.time,
+    });
+
+    let campaign_state = CampaignState::load(&deps.storage).unwrap();
+    assert_eq!(campaign_state.actor_count, 1);
+    assert_eq!(campaign_state.participation_count, 1);
+}
+
+#[test]
 fn failed_inactive_campaign() {
     let mut deps = custom_deps();
 
@@ -306,7 +416,7 @@ fn overflow_referral_reward() {
 
     let (referrer_env, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
 
-    assert_eq!(response.messages, vec![
+    assert_eq!(response.messages[0],
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
@@ -315,7 +425,7 @@ fn overflow_referral_reward() {
                 amount: Uint128::new(3),
             }).unwrap(),
         })),
-    ]);
+    );
 
     let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
     assert_eq!(referrer.referral_reward_amounts, vec![(Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD)]); //reach limit. overflow amount = 3

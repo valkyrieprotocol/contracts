@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub deactivate_period: u64,
     pub key_denom: Denom,
     pub valkyrie_token: String,
+    pub vp_token: String,
     pub referral_reward_limit_option: ReferralRewardLimitOptionMsg,
     pub contract_admin: String,
 }
@@ -34,6 +35,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         governance: Option<String>,
         valkyrie_token: Option<String>,
+        vp_token: Option<String>,
         terraswap_router: Option<String>,
         code_id: Option<u64>,
         add_pool_fee_rate: Option<Decimal>,
@@ -57,6 +59,7 @@ pub enum ExecuteMsg {
         deposit_denom: Option<Denom>,
         deposit_amount: Option<Uint128>,
         deposit_lock_period: Option<u64>,
+        vp_burn_amount: Option<Uint128>,
         qualifier: Option<String>,
         qualification_description: Option<String>,
     },
@@ -73,6 +76,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MigrateMsg {
     pub contract_admin: String,
+    pub vp_token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -85,6 +89,8 @@ pub struct CampaignInstantiateMsg {
     pub deposit_denom: Option<Denom>,
     pub deposit_amount: Uint128,
     pub deposit_lock_period: u64,
+    pub vp_token: String,
+    pub vp_burn_amount: Uint128,
     pub qualifier: Option<String>,
     pub qualification_description: Option<String>,
     pub referral_reward_token: String,
