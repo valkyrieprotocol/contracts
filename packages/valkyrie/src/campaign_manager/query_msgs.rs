@@ -38,6 +38,7 @@ pub struct ConfigResponse {
     pub deactivate_period: u64,
     pub key_denom: Denom,
     pub contract_admin: String,
+    pub vp_token: String,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -56,6 +57,7 @@ impl Default for ConfigResponse {
             deactivate_period: CAMPAIGN_DEACTIVATE_PERIOD,
             key_denom: Denom::Native(KEY_DENOM_NATIVE.to_string()),
             contract_admin: governance::GOVERNANCE.to_string(),
+            vp_token: VALKYRIE_TICKET_TOKEN.to_string(),
         }
     }
 }

@@ -21,6 +21,7 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
         deactivate_period: config.deactivate_period,
         key_denom: Denom::from_cw20(config.key_denom),
         contract_admin: config.contract_admin.to_string(),
+        vp_token: config.vp_token.to_string(),
     })
 }
 
