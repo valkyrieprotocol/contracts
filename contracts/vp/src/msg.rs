@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub offer_token: String,
     pub base_swap_ratio: Decimal,
     pub custom_swap_ratio: Vec<SwapRatio>,
+    pub router: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -66,6 +67,8 @@ pub enum ExecuteMsg {
     /// Only with the "mintable" extension. If authorized, creates amount new tokens
     /// and adds to the recipient balance.
     Mint { recipient: String, amount: Uint128 },
+    MintFromUusd {},
+    MintFromUusdHook { burner: String, exist_balance: Uint128 },
     UpdateMarketing {
         /// A URL pointing to the project behind this token.
         project: Option<String>,
@@ -82,6 +85,7 @@ pub enum ExecuteMsg {
         offer_token: Option<String>,
         base_swap_ratio: Option<Decimal>,
         custom_swap_ratio: Option<Vec<SwapRatio>>,
+        router: Option<String>,
     },
     ApproveAdminNominee {},
 }
@@ -139,4 +143,10 @@ pub enum QueryMsg {
     SwapState {
         ratio: Decimal,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MigrateMsg {
+    pub router: String,
 }

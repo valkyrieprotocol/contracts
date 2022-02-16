@@ -3,3 +3,4 @@ pub mod executions;
 pub mod entrypoints;
 pub mod msg;
 pub mod state;
+pub mod migrations;

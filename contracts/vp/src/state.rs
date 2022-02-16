@@ -14,6 +14,7 @@ pub struct Config {
     pub offer_token: Addr,
     pub base_swap_ratio: Decimal,
     pub custom_swap_ratio: Vec<SwapRatio>,
+    pub router: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
