@@ -170,9 +170,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    crate::vp::executions::instantiate(deps, msg.ticket_config)?;
-
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     Ok(Response::default())
 }
 
