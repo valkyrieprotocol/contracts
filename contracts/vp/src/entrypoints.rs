@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, from_binary, Addr};
 use cw20::{Cw20ReceiveMsg, MinterResponse};
 
-use crate::msg::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::queries::{query_config, query_state, query_swap_state};
 use crate::state::{Config};
 use cw20_base::ContractError;
@@ -178,4 +178,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::State {} => to_binary(&query_state(deps)?),
         QueryMsg::SwapState {ratio} => to_binary(&query_swap_state(deps, ratio)?),
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::default())
 }
