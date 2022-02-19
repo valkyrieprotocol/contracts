@@ -317,7 +317,7 @@ pub fn create_campaign(
 
     let create_campaign_msg = message_factories::wasm_instantiate(
         config.code_id,
-        Some(config.contract_admin.clone()),
+        Some(info.sender.clone()),
         to_binary(&CampaignInstantiateMsg {
             governance: config.governance.to_string(),
             campaign_manager: env.contract.address.to_string(),

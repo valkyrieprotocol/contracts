@@ -76,13 +76,13 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let (_, _, response) = default(&mut deps);
+    let (_, info, response) = default(&mut deps);
 
     assert_eq!(response.messages, vec![
         SubMsg {
             id: REPLY_CREATE_CAMPAIGN,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
-                admin: Some(GOVERNANCE.to_string()),
+                admin: Some(info.sender.to_string()),
                 code_id: CAMPAIGN_CODE_ID,
                 msg: to_binary(&CampaignInstantiateMsg {
                     governance: GOVERNANCE.to_string(),
