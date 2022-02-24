@@ -1,5 +1,5 @@
 use crate::campaign::enumerations::Referrer;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::common::Denom;
@@ -13,7 +13,8 @@ pub struct CampaignConfigMsg {
     pub parameter_key: String,
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
-    pub participation_reward_lock_period: u64,
+    // pub participation_reward_lock_period: u64,
+    pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>,
     pub referral_reward_amounts: Vec<Uint128>,
     pub referral_reward_lock_period: u64,
 }
@@ -37,7 +38,7 @@ pub enum ExecuteMsg {
     ApproveAdminNominee {},
     UpdateRewardConfig {
         participation_reward_amount: Option<Uint128>,
-        participation_reward_lock_period: Option<u64>,
+        participation_reward_distribution_schedule: Option<Vec<(u64, u64, Decimal)>>,
         referral_reward_amounts: Option<Vec<Uint128>>,
         referral_reward_lock_period: Option<u64>,
     },
@@ -86,4 +87,6 @@ pub struct ReferralReward {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>
+}

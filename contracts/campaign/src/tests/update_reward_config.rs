@@ -1,4 +1,4 @@
-use cosmwasm_std::{Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{Decimal, Env, MessageInfo, Response, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
@@ -14,7 +14,7 @@ pub fn exec(
     env: Env,
     info: MessageInfo,
     participation_reward_amount: Option<Uint128>,
-    participation_reward_lock_period: Option<u64>,
+    participation_reward_distribution_schedule: Option<Vec<(u64, u64, Decimal)>>,
     referral_reward_amounts: Option<Vec<Uint128>>,
     referral_reward_lock_period: Option<u64>,
 ) -> ContractResult<Response> {
@@ -23,7 +23,7 @@ pub fn exec(
         env,
         info,
         participation_reward_amount,
-        participation_reward_lock_period,
+        participation_reward_distribution_schedule,
         referral_reward_amounts,
         referral_reward_lock_period,
     )
@@ -32,7 +32,7 @@ pub fn exec(
 pub fn will_success(
     deps: &mut CustomDeps,
     participation_reward_amount: Option<Uint128>,
-    participation_reward_lock_period: Option<u64>,
+    participation_reward_distribution_schedule: Option<Vec<(u64, u64, Decimal)>>,
     referral_reward_amounts: Option<Vec<Uint128>>,
     referral_reward_lock_period: Option<u64>,
 ) -> (Env, MessageInfo, Response) {
@@ -44,7 +44,7 @@ pub fn will_success(
         env.clone(),
         info.clone(),
         participation_reward_amount,
-        participation_reward_lock_period,
+        participation_reward_distribution_schedule,
         referral_reward_amounts,
         referral_reward_lock_period,
     ).unwrap();
@@ -59,7 +59,11 @@ fn succeed() {
     super::instantiate::default(&mut deps);
 
     let participation_reward_amount = Uint128::new(122);
-    let participation_reward_lock_period = 99u64;
+    let participation_reward_distribution_schedule = vec![
+        (1000, 1000, Decimal::percent(50)),
+        (1000, 2000, Decimal::percent(30)),
+        (2000, 3000, Decimal::percent(20)),
+    ];
     let referral_reward_amounts = vec![
         Uint128::new(100),
         Uint128::new(50),
@@ -70,14 +74,15 @@ fn succeed() {
     will_success(
         &mut deps,
         Some(participation_reward_amount.clone()),
-        Some(participation_reward_lock_period.clone()),
+        Some(participation_reward_distribution_schedule.clone()),
         Some(referral_reward_amounts.clone()),
         Some(referral_reward_lock_period.clone()),
     );
 
     let config = RewardConfig::load(&deps.storage).unwrap();
     assert_eq!(config.participation_reward_amount, participation_reward_amount);
-    assert_eq!(config.participation_reward_lock_period, participation_reward_lock_period);
+    assert_eq!(config.participation_reward_lock_period, 0);
+    assert_eq!(config.participation_reward_distribution_schedule, participation_reward_distribution_schedule);
     assert_eq!(config.referral_reward_amounts, referral_reward_amounts);
     assert_eq!(config.referral_reward_lock_period, referral_reward_lock_period);
 }

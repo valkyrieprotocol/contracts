@@ -13,6 +13,7 @@ use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 use valkyrie::utils::calc_ratio_amount;
 
 use crate::executions::remove_reward_pool;
+use crate::states::CampaignState;
 
 pub fn exec(
     deps: &mut CustomDeps,
@@ -214,7 +215,7 @@ fn succeed_free_balance() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::add_reward_pool::will_success(&mut deps, 1000, 10000);
+    super::add_reward_pool::will_success(&mut deps, 7000, 10000);
     super::participate::will_success(&mut deps, "Participator1", None);
     super::participate::will_success(
         &mut deps,
@@ -226,7 +227,7 @@ fn succeed_free_balance() {
         &mut deps,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         Some(
-            Uint128::new(1000)
+            Uint128::new(7000)
                 .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
                 .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap(),
         ),
@@ -260,14 +261,14 @@ fn failed_overflow() {
     let mut deps = custom_deps();
 
     super::instantiate::default(&mut deps);
-    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, 6000, 2000);
 
     let result = exec(
         &mut deps,
         campaign_env(),
         campaign_admin_sender(),
         Denom::Native("uusd".to_string()),
-        Some(Uint128::new(1001)),
+        Some(Uint128::new(6001)),
     );
     expect_generic_err(&result, "Insufficient balance");
 
@@ -276,7 +277,7 @@ fn failed_overflow() {
         campaign_env(),
         campaign_admin_sender(),
         Denom::Token(VALKYRIE_TOKEN.to_string()),
-        Some(Uint128::new(1001)),
+        Some(Uint128::new(2001)),
     );
     expect_generic_err(&result, "Insufficient balance");
 
@@ -295,7 +296,7 @@ fn failed_overflow() {
         campaign_admin_sender(),
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         Some(
-            Uint128::new(1000)
+            Uint128::new(6000)
                 .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
                 .checked_sub(PARTICIPATION_REWARD_AMOUNT).unwrap()
                 .checked_add(Uint128::new(1)).unwrap(),
@@ -309,9 +310,10 @@ fn failed_overflow() {
         campaign_admin_sender(),
         Denom::Token(VALKYRIE_TOKEN.to_string()),
         Some(
-            Uint128::new(1000)
+            Uint128::new(2000)
                 .checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap()
-                .checked_add(Uint128::new(1)).unwrap(),
+                .checked_add(Uint128::new(1)).unwrap()
+                .checked_add(Uint128::new(1600)).unwrap(),
         ),
     );
     expect_generic_err(&result, "Insufficient balance");

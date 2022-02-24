@@ -11,3 +11,4 @@ pub mod claim_referral_reward;
 pub mod participate;
 pub mod deposit;
 pub mod withdraw;
+pub mod states;

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Timestamp, Uint128};
+use cosmwasm_std::{Decimal, Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,8 @@ pub struct CampaignConfigResponse {
 pub struct RewardConfigResponse {
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
-    pub participation_reward_lock_period: u64,
+    // pub participation_reward_lock_period: u64,
+    pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>,
     pub referral_reward_token: String,
     pub referral_reward_amounts: Vec<Uint128>,
     pub referral_reward_lock_period: u64,
@@ -100,12 +101,21 @@ pub struct ReferralRewardLimitAmount {
 pub struct ActorResponse {
     pub address: String,
     pub referrer_address: Option<String>,
+
+    pub unlocked_participation_reward_amount: Uint128,
+    pub claimed_participation_reward_amount: Uint128,
     pub participation_reward_amount: Uint128,
-    pub referral_reward_amount: Uint128,
+    pub participation_reward_last_distributed: u64,
     pub participation_reward_amounts: Vec<(Uint128, u64)>,
-    pub referral_reward_amounts: Vec<(Uint128, u64)>,
     pub cumulative_participation_reward_amount: Uint128,
+
+    pub claimed_referral_reward_amount: Uint128,
+    pub unlocked_referral_reward_amount: Uint128,
+    pub referral_reward_amount: Uint128,
+    pub referral_reward_amounts: Vec<(Uint128, u64)>,
     pub cumulative_referral_reward_amount: Uint128,
+    pub referral_reward_last_distributed: u64,
+
     pub participation_count: u64,
     pub referral_count: u64,
     pub last_participated_at: Timestamp,
@@ -116,12 +126,21 @@ impl ActorResponse {
         ActorResponse {
             address,
             referrer_address: referrer,
+
+            unlocked_participation_reward_amount: Uint128::zero(),
+            claimed_participation_reward_amount: Uint128::zero(),
             participation_reward_amount: Uint128::zero(),
-            referral_reward_amount: Uint128::zero(),
+            participation_reward_last_distributed: 0,
             participation_reward_amounts: vec![],
-            referral_reward_amounts: vec![],
             cumulative_participation_reward_amount: Uint128::zero(),
+
+            unlocked_referral_reward_amount: Uint128::zero(),
+            claimed_referral_reward_amount: Uint128::zero(),
+            referral_reward_amount: Uint128::zero(),
             cumulative_referral_reward_amount: Uint128::zero(),
+            referral_reward_amounts: vec![],
+            referral_reward_last_distributed: 0,
+
             participation_count: 0,
             referral_count: 0,
             last_participated_at: Timestamp::default(),
