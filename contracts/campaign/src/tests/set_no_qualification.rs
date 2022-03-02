@@ -1,4 +1,4 @@
-use cosmwasm_std::{Env, MessageInfo, Response, Addr};
+use cosmwasm_std::{Env, MessageInfo, Response, Addr, Decimal};
 
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
@@ -40,7 +40,11 @@ fn succeed() {
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         PARTICIPATION_REWARD_AMOUNT,
-        PARTICIPATION_REWARD_LOCK_PERIOD,
+        vec![
+            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2)),
+            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2)),
+            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2)),
+        ],
         REFERRAL_REWARD_AMOUNTS.to_vec(),
         REFERRAL_REWARD_LOCK_PERIOD,
         VALKYRIE_TICKET_TOKEN.to_string(),

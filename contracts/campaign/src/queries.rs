@@ -40,7 +40,8 @@ pub fn get_reward_config(
     Ok(RewardConfigResponse {
         participation_reward_denom: Denom::from_cw20(reward_config.participation_reward_denom),
         participation_reward_amount: reward_config.participation_reward_amount,
-        participation_reward_lock_period: reward_config.participation_reward_lock_period,
+        // participation_reward_lock_period: reward_config.participation_reward_lock_period,
+        participation_reward_distribution_schedule: reward_config.participation_reward_distribution_schedule,
         referral_reward_token: reward_config.referral_reward_token.to_string(),
         referral_reward_amounts: reward_config.referral_reward_amounts,
         referral_reward_lock_period: reward_config.referral_reward_lock_period,
@@ -129,22 +130,7 @@ pub fn get_actor(
     let actor = Actor::may_load(deps.storage, &address)?
         .unwrap_or_else(|| Actor::new(address.clone(), None));
 
-    let (unlocked_participation_reward, locked_participation_reward) = actor.participation_reward_amount(env.block.height);
-    let (unlocked_referral_reward, locked_referral_reward) = actor.referral_reward_amount(env.block.height);
-
-    Ok(ActorResponse {
-        address: actor.address.to_string(),
-        referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
-        participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
-        referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
-        participation_reward_amounts: actor.participation_reward_amounts,
-        referral_reward_amounts: actor.referral_reward_amounts,
-        cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
-        cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
-        participation_count: actor.participation_count,
-        referral_count: actor.referral_count,
-        last_participated_at: actor.last_participated_at,
-    })
+    Ok(get_actor_response(deps, env.block.height, &actor)?)
 }
 
 pub fn query_actors(
@@ -155,29 +141,49 @@ pub fn query_actors(
     order_by: Option<OrderBy>,
 ) -> ContractResult<ActorsResponse> {
     let start_after = start_after.map(|v| deps.api.addr_validate(&v)).transpose()?;
-    let participations = Actor::query(deps.storage, start_after, limit, order_by)?
-        .iter()
-        .map(|actor| {
-            let (unlocked_participation_reward, locked_participation_reward) = actor.participation_reward_amount(env.block.height);
-            let (unlocked_referral_reward, locked_referral_reward) = actor.referral_reward_amount(env.block.height);
+    let actors = Actor::query(deps.storage, start_after, limit, order_by)?;
 
-            ActorResponse {
-                address: actor.address.to_string(),
-                referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
-                participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
-                referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
-                participation_reward_amounts: actor.participation_reward_amounts.clone(),
-                referral_reward_amounts: actor.referral_reward_amounts.clone(),
-                cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
-                cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
-                participation_count: actor.participation_count,
-                referral_count: actor.referral_count,
-                last_participated_at: actor.last_participated_at,
-            }
-        })
-        .collect();
+    let mut participations:Vec<ActorResponse> = vec![];
+    for actor in actors.iter() {
+        let response = get_actor_response(deps, env.block.height, actor)?;
+        participations.push(response);
+    }
 
     Ok(ActorsResponse { actors: participations })
+}
+
+fn get_actor_response(
+    deps: Deps,
+    height: u64,
+    actor: &Actor,
+) -> ContractResult<ActorResponse> {
+    let (unlocked_participation_reward, locked_participation_reward) = actor.participation_reward_amount(deps.storage, height)?;
+    let (unlocked_referral_reward, locked_referral_reward) = actor.referral_reward_amount(height);
+
+    let actor_state = ActorState::load_or_default(deps.storage, &actor.address)?;
+
+    Ok(ActorResponse {
+        address: actor.address.to_string(),
+        referrer_address: actor.referrer.as_ref().map(|v| v.to_string()),
+
+        unlocked_participation_reward_amount: unlocked_participation_reward,
+        claimed_participation_reward_amount: actor_state.claimed_participation_reward_amount,
+        participation_reward_amount: unlocked_participation_reward + locked_participation_reward,
+        participation_reward_last_distributed: actor_state.participation_reward_last_distributed,
+        participation_reward_amounts: actor.participation_reward_amounts.clone(),
+        cumulative_participation_reward_amount: actor.cumulative_participation_reward_amount,
+
+        claimed_referral_reward_amount: actor_state.claimed_referral_reward_amount,
+        unlocked_referral_reward_amount: unlocked_referral_reward,
+        referral_reward_amount: unlocked_referral_reward + locked_referral_reward,
+        referral_reward_amounts: actor.referral_reward_amounts.clone(),
+        cumulative_referral_reward_amount: actor.cumulative_referral_reward_amount,
+        referral_reward_last_distributed: actor_state.referral_reward_last_distributed,
+
+        participation_count: actor.participation_count,
+        referral_count: actor.referral_count,
+        last_participated_at: actor.last_participated_at,
+    })
 }
 
 pub fn deposit(deps: Deps, _env: Env, address: String) -> ContractResult<Deposit> {

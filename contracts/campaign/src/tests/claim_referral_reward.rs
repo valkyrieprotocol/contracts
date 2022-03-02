@@ -3,7 +3,7 @@ use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::campaign::{campaign_env, campaign_env_height, REFERRAL_REWARD_AMOUNTS, REFERRAL_REWARD_LOCK_PERIOD};
+use valkyrie::test_constants::campaign::{campaign_env, campaign_env_height, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, REFERRAL_REWARD_LOCK_PERIOD};
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::claim_referral_reward;
@@ -31,7 +31,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, PARTICIPATION_REWARD_AMOUNT.u128() * 2, 4000);
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);
@@ -68,7 +68,7 @@ fn succeed() {
     );
     assert_eq!(
         campaign_state.balance(&cw20::Denom::Cw20(Addr::unchecked(VALKYRIE_TOKEN))).total,
-        Uint128::new(1000).checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap(),
+        Uint128::new(4000).checked_sub(REFERRAL_REWARD_AMOUNTS[0]).unwrap(),
     );
 }
 
@@ -78,7 +78,7 @@ fn failed_no_reward() {
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
-    super::add_reward_pool::will_success(&mut deps, 1000, 1000);
+    super::add_reward_pool::will_success(&mut deps, PARTICIPATION_REWARD_AMOUNT.u128() * 2, 4000);
 
     let referrer = Addr::unchecked("Referrer");
     super::participate::will_success(&mut deps, referrer.as_str(), None);

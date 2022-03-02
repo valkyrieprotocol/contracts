@@ -62,7 +62,7 @@ pub fn execute(
         ExecuteMsg::ApproveAdminNominee {} => crate::executions::approve_admin_nominee(deps, env, info),
         ExecuteMsg::UpdateRewardConfig {
             participation_reward_amount,
-            participation_reward_lock_period,
+            participation_reward_distribution_schedule,
             referral_reward_amounts,
             referral_reward_lock_period,
         } => crate::executions::update_reward_config(
@@ -70,7 +70,7 @@ pub fn execute(
             env,
             info,
             participation_reward_amount,
-            participation_reward_lock_period,
+            participation_reward_distribution_schedule,
             referral_reward_amounts,
             referral_reward_lock_period,
         ),
@@ -137,7 +137,7 @@ pub fn receive_cw20(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    crate::executions::migrate(deps, env, msg)
+    crate::migrations::migrate(deps, env, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

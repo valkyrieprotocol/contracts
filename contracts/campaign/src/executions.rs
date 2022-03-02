@@ -1,3 +1,4 @@
+use std::ops::Add;
 use cosmwasm_std::{Addr, Api, attr, Binary, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, WasmMsg};
 use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
 use protobuf::Message;
@@ -5,7 +6,7 @@ use terraswap::asset::AssetInfo;
 use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
 
 use valkyrie::campaign::enumerations::Referrer;
-use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, MigrateMsg, ReferralReward};
+use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, ReferralReward};
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::common::{ContractResult, Denom};
@@ -40,6 +41,7 @@ pub fn instantiate(
     validate_url(&campaign_config.url)?;
     validate_description(&campaign_config.description)?;
     validate_parameter_key(&campaign_config.parameter_key)?;
+    validate_participation_reward_distribution_schedule(&campaign_config.participation_reward_distribution_schedule)?;
 
     if let Some(desc) = msg.qualification_description.as_ref() {
         validate_qualification_description(desc)?;
@@ -72,29 +74,12 @@ pub fn instantiate(
     RewardConfig {
         participation_reward_denom: campaign_config.participation_reward_denom.to_cw20(deps.api),
         participation_reward_amount: campaign_config.participation_reward_amount,
-        participation_reward_lock_period: campaign_config.participation_reward_lock_period,
+        participation_reward_lock_period: 0, //lagacy
+        participation_reward_distribution_schedule: campaign_config.participation_reward_distribution_schedule,
         referral_reward_token: deps.api.addr_validate(msg.referral_reward_token.as_str())?,
         referral_reward_amounts: campaign_config.referral_reward_amounts,
         referral_reward_lock_period: campaign_config.referral_reward_lock_period,
     }.save(deps.storage)?;
-
-    Ok(response)
-}
-
-pub fn migrate(
-    deps: DepsMut,
-    env: Env,
-    _msg: MigrateMsg,
-) -> ContractResult<Response> {
-    // Execute
-    let mut response = make_response("migrate");
-    response = response.add_attribute("chain_id", env.block.chain_id.clone());
-
-    let mut campaign_state = CampaignState::load(deps.storage)?;
-
-    campaign_state.chain_id = env.block.chain_id;
-
-    campaign_state.save(deps.storage)?;
 
     Ok(response)
 }
@@ -245,7 +230,8 @@ pub fn update_reward_config(
     _env: Env,
     info: MessageInfo,
     participation_reward_amount: Option<Uint128>,
-    participation_reward_lock_period: Option<u64>,
+    // participation_reward_lock_period: Option<u64>,
+    participation_reward_distribution_schedule: Option<Vec<(u64, u64, Decimal)>>,
     referral_reward_amounts: Option<Vec<Uint128>>,
     referral_reward_lock_period: Option<u64>,
 ) -> ContractResult<Response> {
@@ -270,9 +256,11 @@ pub fn update_reward_config(
         response = response.add_attribute("is_updated_participation_reward_amount", "true");
     }
 
-    if let Some(participation_reward_lock_period) = participation_reward_lock_period {
-        reward_config.participation_reward_lock_period = participation_reward_lock_period;
-        response = response.add_attribute("is_updated_participation_reward_lock_period", "true");
+    if let Some(participation_reward_distribution_schedule) = participation_reward_distribution_schedule {
+        validate_participation_reward_distribution_schedule(&participation_reward_distribution_schedule)?;
+
+        reward_config.participation_reward_distribution_schedule = participation_reward_distribution_schedule;
+        response = response.add_attribute("is_updated_participation_reward_distribution_schedule", "true");
     }
 
     if let Some(referral_reward_amounts) = referral_reward_amounts {
@@ -653,27 +641,31 @@ pub fn remove_reward_pool(
 
 pub fn claim_participation_reward(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     // Validate
-    let mut actor = Actor::may_load(deps.storage, &info.sender)?
+    let actor = Actor::may_load(deps.storage, &info.sender)?
         .ok_or(ContractError::NotFound {})?;
+    let mut actor_state = ActorState::load_or_default(deps.storage, &info.sender)?;
 
-    let reward_amount = actor.claim_participation_reward_amount(env.block.height);
+    let (reward_amount, _) = actor.participation_reward_amount(deps.storage, env.block.height)?;
 
     if reward_amount.is_zero() {
         return Err(ContractError::Std(StdError::generic_err("Not exist claimable participation reward")));
     }
 
     // Execute
-    let mut response = make_response("claim_participation_reward");
-
     let reward_config = RewardConfig::load(deps.storage)?;
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
     campaign_state.unlock_balance(&reward_config.participation_reward_denom, &reward_amount)?;
     campaign_state.withdraw(&reward_config.participation_reward_denom, &reward_amount)?;
 
+    actor_state.claimed_participation_reward_amount += reward_amount;
+    actor_state.participation_reward_last_distributed = env.block.height;
+
     actor.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
+    actor_state.save(deps.storage)?;
 
+    let mut response = make_response("claim_participation_reward");
     response = response.add_message(make_send_msg(
         &deps.querier,
         reward_config.participation_reward_denom.clone(),
@@ -696,6 +688,7 @@ pub fn claim_referral_reward(deps: DepsMut, env: Env, info: MessageInfo) -> Cont
     // Validate
     let mut actor = Actor::may_load(deps.storage, &info.sender)?
         .ok_or(ContractError::NotFound {})?;
+    let mut actor_state = ActorState::load_or_default(deps.storage, &info.sender)?;
 
     let reward_amount = actor.claim_referral_reward_amount(env.block.height);
 
@@ -704,8 +697,6 @@ pub fn claim_referral_reward(deps: DepsMut, env: Env, info: MessageInfo) -> Cont
     }
 
     // Execute
-    let mut response = make_response("claim_referral_reward");
-
     let reward_config = RewardConfig::load(deps.storage)?;
     let mut campaign_state = CampaignState::load(deps.storage)?;
 
@@ -718,9 +709,14 @@ pub fn claim_referral_reward(deps: DepsMut, env: Env, info: MessageInfo) -> Cont
         &reward_amount,
     )?;
 
+    actor_state.claimed_referral_reward_amount += reward_amount;
+    actor_state.referral_reward_last_distributed = env.block.height;
+
     actor.save(deps.storage)?;
     campaign_state.save(deps.storage)?;
+    actor_state.save(deps.storage)?;
 
+    let mut response = make_response("claim_referral_reward");
     response = response.add_message(make_send_msg(
         &deps.querier,
         cw20::Denom::Cw20(reward_config.referral_reward_token),
@@ -1039,6 +1035,8 @@ fn distribute_participation_reward(
     actor.add_participation_reward(
         reward_amount,
         reward_config.participation_reward_lock_period + env.block.height,
+        //lagacy
+        //reward_config.participation_reward_lock_period always ZERO
     );
     actor.cumulative_participation_reward_amount += reward_amount;
     campaign_state.cumulative_participation_reward_amount += reward_amount;
@@ -1282,6 +1280,38 @@ fn validate_qualification_description(description: &str) -> StdResult<()> {
     }
 }
 
+pub fn validate_participation_reward_distribution_schedule(schedule: &Vec<(u64, u64, Decimal)>) -> StdResult<()> {
+    if schedule.len() == 0 {
+        return Err(StdError::generic_err("Invalid schedule. schedule is empty."));
+    }
+
+    let mut sum_of_ratio = Decimal::zero();
+    let mut last_end:u64 = 0;
+
+    for (start, end, ratio) in schedule.iter() {
+        if start > end {
+            return Err(StdError::generic_err(format!("Invalid schedule. must be start <= end (start: {}, end: {}, ratio: {})", start, end, ratio)));
+        }
+
+        if ratio.is_zero() {
+            return Err(StdError::generic_err(format!("Invalid schedule. ratio > 0 (start: {}, end: {}, ratio: {})", start, end, ratio)));
+        }
+
+        if start.clone() < last_end {
+            return Err(StdError::generic_err(format!("Invalid schedule. schedule's start >= previous schedule's end (previous end: {}, start: {})", last_end, start)));
+        }
+
+        last_end = end.clone();
+        sum_of_ratio = sum_of_ratio.add(ratio.clone());
+    }
+
+    if sum_of_ratio != Decimal::one() {
+        Err(StdError::generic_err(format!("Sum of ratio must be One(1) (sum: {})", sum_of_ratio)))
+    } else {
+        Ok(())
+    }
+}
+
 fn make_send_msg(
     querier: &QuerierWrapper,
     denom: Cw20Denom,
@@ -1412,5 +1442,66 @@ fn test_validate_qualification_description() {
                 .collect::<String>()
         ),
         Err(StdError::generic_err("Qualification description too long"))
+    );
+}
+
+#[test]
+fn test_validate_participation_reward_distribution_schedule() {
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![]
+        ),
+        Err(StdError::generic_err("Invalid schedule. schedule is empty."))
+    );
+
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![
+                (0, 100, Decimal::percent(49)),
+                (100, 200, Decimal::percent(50)),
+            ]
+        ),
+        Err(StdError::generic_err("Sum of ratio must be One(1) (sum: 0.99)"))
+    );
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![
+                (101, 100, Decimal::percent(100)),
+            ]
+        ),
+        Err(StdError::generic_err("Invalid schedule. must be start <= end (start: 101, end: 100, ratio: 1)"))
+    );
+
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![
+                (100, 100, Decimal::percent(0)),
+                (100, 200, Decimal::percent(100)),
+            ]
+        ),
+        Err(StdError::generic_err("Invalid schedule. ratio > 0 (start: 100, end: 100, ratio: 0)"))
+    );
+
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![
+                (100, 100, Decimal::percent(10)),
+                (200, 300, Decimal::percent(20)),
+                (299, 400, Decimal::percent(30)),
+            ]
+        ),
+        Err(StdError::generic_err("Invalid schedule. schedule's start >= previous schedule's end (previous end: 300, start: 299)"))
+    );
+
+    assert_eq!(
+        validate_participation_reward_distribution_schedule(
+            &vec![
+                (100, 100, Decimal::from_ratio(10u128, 100u128)),
+                (200, 300, Decimal::from_ratio(20u128, 100u128)),
+                (300, 400, Decimal::from_ratio(30u128, 100u128)),
+                (400, 500, Decimal::from_ratio(40u128, 100u128)),
+            ]
+        ),
+        Ok(())
     );
 }
