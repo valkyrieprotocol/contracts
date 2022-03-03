@@ -57,7 +57,7 @@ pub struct CampaignConfigResponse {
 pub struct RewardConfigResponse {
     pub participation_reward_denom: Denom,
     pub participation_reward_amount: Uint128,
-    // pub participation_reward_lock_period: u64,
+    pub participation_reward_lock_period: u64,
     pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>,
     pub referral_reward_token: String,
     pub referral_reward_amounts: Vec<Uint128>,

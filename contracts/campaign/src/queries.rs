@@ -40,7 +40,7 @@ pub fn get_reward_config(
     Ok(RewardConfigResponse {
         participation_reward_denom: Denom::from_cw20(reward_config.participation_reward_denom),
         participation_reward_amount: reward_config.participation_reward_amount,
-        // participation_reward_lock_period: reward_config.participation_reward_lock_period,
+        participation_reward_lock_period: reward_config.participation_reward_lock_period,
         participation_reward_distribution_schedule: reward_config.participation_reward_distribution_schedule,
         referral_reward_token: reward_config.referral_reward_token.to_string(),
         referral_reward_amounts: reward_config.referral_reward_amounts,
