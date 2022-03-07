@@ -52,7 +52,7 @@ pub fn get_campaign_state(deps: Deps, env: Env) -> ContractResult<CampaignStateR
 
     Ok(CampaignStateResponse {
         actor_count: state.actor_count,
-        participation_count: state.actor_count,
+        participation_count: state.participation_count,
         cumulative_participation_reward_amount: state.cumulative_participation_reward_amount,
         cumulative_referral_reward_amount: state.cumulative_referral_reward_amount,
         locked_balances: state.locked_balances.iter()
