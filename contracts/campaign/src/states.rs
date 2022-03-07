@@ -13,7 +13,6 @@ use valkyrie::governance::query_msgs::StakerStateResponse;
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
 
-
 const CAMPAIGN_CONFIG: Item<CampaignConfig> = Item::new("campaign_config");
 const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
 
@@ -235,9 +234,7 @@ const REWARD_CONFIG: Item<RewardConfig> = Item::new("reward_config");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RewardConfig {
     pub participation_reward_denom: Denom,
-    pub participation_reward_amount: Uint128,
-    pub participation_reward_lock_period: u64,
-    pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>,
+    pub participation_reward_distribution_schedule: Vec<(u64, u64, Uint128)>,
     pub referral_reward_token: Addr,
     pub referral_reward_amounts: Vec<Uint128>,
     pub referral_reward_lock_period: u64,
@@ -261,6 +258,15 @@ impl RewardConfig {
 
         Ok(())
     }
+
+    pub fn sum_of_participation_reward(&self) -> Uint128 {
+        let mut sum_of_p_reward = Uint128::zero();
+        for s in self.participation_reward_distribution_schedule.iter() {
+            sum_of_p_reward += s.2.clone();
+        };
+
+        sum_of_p_reward
+    }
 }
 
 
@@ -270,8 +276,15 @@ const ACTORS: Map<&Addr, Actor> = Map::new("actor");
 pub struct Actor {
     pub address: Addr,
     pub referrer: Option<Addr>,
-    pub participation_reward_amounts: Vec<(Uint128, u64)>,
+
+    pub participation_reward_amounts: Vec<(u64, u64, Uint128)>,
+    pub participation_reward_last_distributed: u64,
+    pub claimed_participation_reward_amount: Uint128,
+
     pub referral_reward_amounts: Vec<(Uint128, u64)>,
+    pub referral_reward_last_distributed: u64,
+    pub claimed_referral_reward_amount: Uint128,
+
     pub cumulative_participation_reward_amount: Uint128,
     pub cumulative_referral_reward_amount: Uint128,
     pub participation_count: u64,
@@ -284,8 +297,15 @@ impl Actor {
         Actor {
             address,
             referrer,
+
             participation_reward_amounts: vec![],
+            participation_reward_last_distributed: 0,
+            claimed_participation_reward_amount: Uint128::zero(),
+
             referral_reward_amounts: vec![],
+            referral_reward_last_distributed: 0,
+            claimed_referral_reward_amount: Uint128::zero(),
+
             cumulative_participation_reward_amount: Uint128::zero(),
             cumulative_referral_reward_amount: Uint128::zero(),
             participation_count: 0,
@@ -351,72 +371,48 @@ impl Actor {
             .collect()
     }
 
-    pub fn add_participation_reward(&mut self, amount: Uint128, unlock_height: u64) {
-        self.participation_reward_amounts.push((amount, unlock_height));
+    pub fn add_participation_reward(&mut self, unlock_height_amount:(u64, u64, Uint128)) {
+        self.participation_reward_amounts.push(unlock_height_amount);
     }
 
     pub fn add_referral_reward(&mut self, amount: Uint128, unlock_height: u64) {
         self.referral_reward_amounts.push((amount, unlock_height));
     }
 
-    pub fn participation_reward_amount(&self, storage:&dyn Storage, height: u64) -> StdResult<(Uint128, Uint128)> {
+    pub fn participation_reward_amount(&self, height: u64) -> StdResult<(Uint128, Uint128)> {
         let mut unlocked_amount = Uint128::zero();
         let mut total_amount = Uint128::zero();
 
-        let reward_config = RewardConfig::load(storage)?;
-        let actor_state = ActorState::load_or_default(storage, &self.address)?;
-
         let mut last_end_height = 0;
 
-        for (_ , unlock_height) in self.participation_reward_amounts.iter() {
-            let participate_height = unlock_height - reward_config.participation_reward_lock_period;
-            for (_, end, _) in reward_config.participation_reward_distribution_schedule.iter() {
-                last_end_height = end.clone() + participate_height.clone();
-            }
-        }
+        for (start, end, amount) in self.participation_reward_amounts.iter() {
+            let start_height = start.clone();
+            let end_height = end.clone();
 
+            if start_height <= height && end_height >= self.participation_reward_last_distributed {
+                if start_height == end_height {
+                    unlocked_amount += amount;
+                } else {
+                    // min(s.1, block_height) - max(s.0, last_distributed)
+                    let passed_blocks =
+                        std::cmp::min(end_height, height) - std::cmp::max(start_height, self.participation_reward_last_distributed);
 
-
-        for (amount, unlock_height) in self.participation_reward_amounts.iter() {
-            total_amount += amount;
-
-            let participate_height = unlock_height - reward_config.participation_reward_lock_period;
-
-            for (start, end, distribution_ratio) in reward_config.participation_reward_distribution_schedule.iter() {
-                //s.0 = begin block height of this schedule
-                //s.1 = (Optional) end block height of this schedule
-
-                let start_height = start.clone() + participate_height.clone();
-                let end_height = end.clone() + participate_height.clone();
-
-                let distribution_amount_schedule = amount.clone() * distribution_ratio.clone();
-
-                if start_height <= height && end_height >= actor_state.participation_reward_last_distributed {
-                    if start_height == end_height {
-                        unlocked_amount += distribution_amount_schedule;
-                    } else {
-                        // min(s.1, block_height) - max(s.0, last_distributed)
-                        let passed_blocks =
-                            std::cmp::min(end_height, height) - std::cmp::max(start_height, actor_state.participation_reward_last_distributed);
-
-                        let num_blocks = end_height - start_height;
-                        let distribution_amount_per_block: Decimal = Decimal::from_ratio(distribution_amount_schedule, num_blocks);
-                        // distribution_amount_per_block = distribution amount of this schedule / blocks count of this schedule.
-                        unlocked_amount +=
-                            distribution_amount_per_block * Uint128::new(passed_blocks as u128);
-                    }
+                    let num_blocks = end_height - start_height;
+                    let distribution_amount_per_block: Decimal = Decimal::from_ratio(amount.clone(), num_blocks);
+                    // distribution_amount_per_block = distribution amount of this schedule / blocks count of this schedule.
+                    unlocked_amount +=
+                        distribution_amount_per_block * Uint128::new(passed_blocks as u128);
                 }
-
-                last_end_height = max(end_height, last_end_height) ;
             }
-            // self.last_distributed = block_height; >>> will be executed in 'claim_participation_reward'
+
+            total_amount += amount;
+            last_end_height = max(end_height, last_end_height) ;
         }
 
         if last_end_height <= height {
             //remaining reward can be made calculation(like 1uusd).
             //so, after all schedule, user can claim all remainings.
-            let actor_state = ActorState::load_or_default(storage, &self.address)?;
-            let unlocked_amount = total_amount - actor_state.claimed_participation_reward_amount;
+            let unlocked_amount = total_amount - self.claimed_participation_reward_amount;
             Ok((unlocked_amount, Uint128::zero()))
         } else {
             Ok((unlocked_amount, total_amount - unlocked_amount))
@@ -455,46 +451,6 @@ impl Actor {
         unlocked_amount
     }
 }
-
-const ACTORSTATE: Map<&Addr, ActorState> = Map::new("actor-state");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ActorState {
-    pub address:Addr,
-
-    pub participation_reward_last_distributed: u64,
-    pub claimed_participation_reward_amount: Uint128,
-
-    pub referral_reward_last_distributed: u64,
-    pub claimed_referral_reward_amount: Uint128,
-}
-
-impl ActorState {
-    pub fn new(address: Addr) -> ActorState {
-        ActorState {
-            address,
-            participation_reward_last_distributed: 0,
-            claimed_participation_reward_amount: Uint128::zero(),
-            referral_reward_last_distributed: 0,
-            claimed_referral_reward_amount: Uint128::zero(),
-        }
-    }
-
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        ACTORSTATE.save(storage, &self.address, self)
-    }
-
-    #[allow(dead_code)]
-    pub fn load_or_default(storage: &dyn Storage, address: &Addr) -> StdResult<ActorState> {
-        let loaded = ACTORSTATE.may_load(storage, address)?;
-        if let Some(loaded) = loaded {
-            Ok(loaded)
-        } else {
-            Ok(ActorState::new(address.clone()))
-        }
-    }
-}
-
 
 const DEPOSITS: Map<&Addr, Deposit> = Map::new("deposit");
 

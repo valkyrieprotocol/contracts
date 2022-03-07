@@ -1,14 +1,9 @@
-use cosmwasm_std::{Addr, BankMsg, coin, CosmosMsg, Decimal, Env, MessageInfo, Response, SubMsg, Uint128};
-use cosmwasm_std::testing::mock_info;
+use cosmwasm_std::{Addr, Decimal, Uint128};
 
-use valkyrie::common::ContractResult;
-use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::campaign::{campaign_env_height, DEPOSIT_AMOUNT, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
-use valkyrie::test_utils::expect_generic_err;
+use valkyrie::mock_querier::{custom_deps};
+use valkyrie::test_constants::campaign::{DEPOSIT_AMOUNT};
 
-use crate::executions::claim_participation_reward;
-use crate::queries::{get_actor, get_campaign_state};
-use crate::states::{Actor, CampaignState};
+use crate::queries::{get_actor};
 
 #[test]
 fn calc_unlocked_reward() {
@@ -58,6 +53,7 @@ fn calc_unlocked_reward() {
     env.block.height = 12345 + 15;
     let participator = Addr::unchecked("Participator");
     super::deposit::will_success(&mut deps, participator.as_str(), DEPOSIT_AMOUNT);
+
     super::participate::exec(
         &mut deps,
         env.clone(),

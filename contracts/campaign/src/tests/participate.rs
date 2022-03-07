@@ -10,8 +10,8 @@ use valkyrie::test_utils::{expect_generic_err};
 
 use crate::executions::{participate, participate_qualify_result, REPLY_QUALIFY_PARTICIPATION};
 use crate::states::{CampaignState, Actor, CampaignConfig};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, REFERRAL_REWARD_LOCK_PERIOD};
-use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TOKEN};
+use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, REFERRAL_REWARD_LOCK_PERIOD, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
+use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
 use valkyrie::governance::query_msgs::StakerStateResponse;
@@ -73,14 +73,17 @@ fn process_cw20(
     for message in messages {
         match &message.msg {
             CosmosMsg::Wasm(WasmMsg::Execute {contract_addr, funds: _, msg}) => {
-                match from_binary(&msg).unwrap() {
-                    Cw20ExecuteMsg::BurnFrom {owner, amount} => {
-                        deps.querier.minus_token_balances(&[(contract_addr.as_str(), &[(&owner.as_str(), &amount)])]);
+                if contract_addr == VALKYRIE_TICKET_TOKEN {
+                    match from_binary(&msg).unwrap() {
+                        Cw20ExecuteMsg::BurnFrom {owner, amount} => {
+                            deps.querier.minus_token_balances(&[(contract_addr.as_str(), &[(&owner.as_str(), &amount)])]);
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
             },
-            _ => {}
+            _ => {
+            }
         };
     };
 }
@@ -140,7 +143,15 @@ fn succeed_without_referrer() {
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_amounts: vec![
             // (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
         ],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT ,
         participation_reward_last_distributed: 0,
@@ -206,7 +217,15 @@ fn succeed_with_referrer() {
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_amounts: vec![
             // (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
         ],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT ,
         participation_reward_last_distributed: 0,
@@ -234,7 +253,15 @@ fn succeed_with_referrer() {
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_amounts: vec![
             // (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
         ],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT ,
         participation_reward_last_distributed: 0,
@@ -278,8 +305,24 @@ fn succeed_twice() {
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT + PARTICIPATION_REWARD_AMOUNT,
         participation_reward_amounts: vec![
             // (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
         ],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT + PARTICIPATION_REWARD_AMOUNT,
         participation_reward_last_distributed: 0,
@@ -343,7 +386,15 @@ fn succeed_with_burn_vp() {
         participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_amounts: vec![
             // (PARTICIPATION_REWARD_AMOUNT, env.block.height + PARTICIPATION_REWARD_LOCK_PERIOD),
-            (PARTICIPATION_REWARD_AMOUNT, env.block.height + 0),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2),
+            (env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0,
+             env.block.height + PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1,
+             PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2),
         ],
         cumulative_participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_last_distributed: 0,

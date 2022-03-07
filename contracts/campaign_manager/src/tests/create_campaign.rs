@@ -1,11 +1,11 @@
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, Env, MessageInfo, ReplyOn, Response, SubMsg, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, Binary, CosmosMsg, Env, MessageInfo, ReplyOn, Response, SubMsg, to_binary, Uint128, WasmMsg};
 
 use valkyrie::campaign::execute_msgs::CampaignConfigMsg;
 use valkyrie::campaign_manager::execute_msgs::CampaignInstantiateMsg;
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{DEFAULT_SENDER, default_sender, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
-use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
+use valkyrie::test_constants::campaign::{CAMPAIGN_DESCRIPTION, CAMPAIGN_PARAMETER_KEY, CAMPAIGN_TITLE, CAMPAIGN_URL, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS, DEPOSIT_DENOM_NATIVE, DEPOSIT_AMOUNT, DEPOSIT_LOCK_PERIOD, REFERRAL_REWARD_LOCK_PERIOD, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
 use valkyrie::test_constants::campaign_manager::{CAMPAIGN_CODE_ID, CAMPAIGN_MANAGER, campaign_manager_env};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
@@ -48,11 +48,10 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         url: CAMPAIGN_URL.to_string(),
         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
         participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
-        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
         participation_reward_distribution_schedule: vec![
-            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2)),
-            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2)),
-            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2)),
+            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1,
+            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2,
+            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3
         ],
         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
         referral_reward_lock_period: REFERRAL_REWARD_LOCK_PERIOD,
@@ -99,11 +98,10 @@ fn succeed() {
                         url: CAMPAIGN_URL.to_string(),
                         parameter_key: CAMPAIGN_PARAMETER_KEY.to_string(),
                         participation_reward_denom: Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
-                        participation_reward_amount: PARTICIPATION_REWARD_AMOUNT,
                         participation_reward_distribution_schedule: vec![
-                            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1.2)),
-                            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2.2)),
-                            (PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.0, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.1, Decimal::percent(PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3.2)),
+                            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1,
+                            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2,
+                            PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3
                         ],
                         referral_reward_amounts: REFERRAL_REWARD_AMOUNTS.to_vec(),
                         referral_reward_lock_period: REFERRAL_REWARD_LOCK_PERIOD,

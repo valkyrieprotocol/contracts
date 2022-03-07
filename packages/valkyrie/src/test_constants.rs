@@ -146,11 +146,10 @@ pub mod campaign {
     pub const CAMPAIGN_ADMIN: &str = "CampaignAdmin";
     pub const PARTICIPATION_REWARD_DENOM_NATIVE: &str = "uusd";
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(3000);
-    pub const PARTICIPATION_REWARD_LOCK_PERIOD: u64 = 10;
 
-    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1: (u64, u64, u64) = (10, 10, 10); //start, end, percent
-    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2: (u64, u64, u64) = (10, 100, 40);
-    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3: (u64, u64, u64) = (100, 200, 50);
+    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1: (u64, u64, Uint128) = (10, 10, Uint128::new(300)); //start, end, amount
+    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2: (u64, u64, Uint128) = (10, 100, Uint128::new(1200));
+    pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3: (u64, u64, Uint128) = (100, 200, Uint128::new(1500));
 
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(400), Uint128::new(300), Uint128::new(200)];
     pub const REFERRAL_REWARD_LOCK_PERIOD: u64 = 100;

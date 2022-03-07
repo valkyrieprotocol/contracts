@@ -13,7 +13,6 @@ use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 use valkyrie::utils::calc_ratio_amount;
 
 use crate::executions::remove_reward_pool;
-use crate::states::CampaignState;
 
 pub fn exec(
     deps: &mut CustomDeps,
