@@ -61,7 +61,6 @@ pub fn execute(
         ),
         ExecuteMsg::ApproveAdminNominee {} => crate::executions::approve_admin_nominee(deps, env, info),
         ExecuteMsg::UpdateRewardConfig {
-            participation_reward_amount,
             participation_reward_distribution_schedule,
             referral_reward_amounts,
             referral_reward_lock_period,
@@ -69,7 +68,6 @@ pub fn execute(
             deps,
             env,
             info,
-            participation_reward_amount,
             participation_reward_distribution_schedule,
             referral_reward_amounts,
             referral_reward_lock_period,

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Timestamp, Uint128};
+use cosmwasm_std::{Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -56,9 +56,7 @@ pub struct CampaignConfigResponse {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct RewardConfigResponse {
     pub participation_reward_denom: Denom,
-    pub participation_reward_amount: Uint128,
-    pub participation_reward_lock_period: u64,
-    pub participation_reward_distribution_schedule: Vec<(u64, u64, Decimal)>,
+    pub participation_reward_distribution_schedule: Vec<(u64, u64, Uint128)>,
     pub referral_reward_token: String,
     pub referral_reward_amounts: Vec<Uint128>,
     pub referral_reward_lock_period: u64,
@@ -106,7 +104,7 @@ pub struct ActorResponse {
     pub claimed_participation_reward_amount: Uint128,
     pub participation_reward_amount: Uint128,
     pub participation_reward_last_distributed: u64,
-    pub participation_reward_amounts: Vec<(Uint128, u64)>,
+    pub participation_reward_amounts: Vec<(u64, u64, Uint128)>,
     pub cumulative_participation_reward_amount: Uint128,
 
     pub claimed_referral_reward_amount: Uint128,

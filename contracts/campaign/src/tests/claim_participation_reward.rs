@@ -3,12 +3,11 @@ use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::terra::extract_tax;
 use valkyrie::test_constants::campaign::{campaign_env_height, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::claim_participation_reward;
-use crate::states::{Actor, ActorState, CampaignState};
+use crate::states::{Actor, CampaignState};
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo) -> ContractResult<Response> {
     claim_participation_reward(deps.as_mut(), env, info)
