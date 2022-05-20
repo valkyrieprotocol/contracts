@@ -5,7 +5,6 @@ use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::message_matchers;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::terra::extract_tax;
 use valkyrie::test_constants::{default_sender, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign::{CAMPAIGN, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS};
 use valkyrie::test_constants::campaign_manager::CAMPAIGN_MANAGER;
@@ -24,7 +23,7 @@ pub fn exec(
     let response = remove_reward_pool(deps.as_mut(), env, info, denom, amount)?;
 
     for msg in message_matchers::native_send(&response.messages) {
-        deps.querier.minus_native_balance_with_tax(CAMPAIGN, msg.amount.clone());
+        deps.querier.minus_native_balance(CAMPAIGN, msg.amount.clone());
         deps.querier.plus_native_balance(msg.to_address.as_str(), msg.amount);
     }
 
@@ -64,30 +63,27 @@ pub fn will_success(
 #[test]
 fn succeed_at_pending() {
     let mut deps = custom_deps();
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
     super::add_reward_pool::will_success(&mut deps, 10000, 10000);
 
     let mut denom = Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string());
     let amount = Uint128::new(4000);
-    let tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), amount).unwrap();
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
-            amount: vec![coin(amount.checked_sub(tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(amount.u128(), "uluna")],
         })),
     ]);
 
     let remain_amount = Uint128::new(6000);
-    let tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), remain_amount).unwrap();
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
-            amount: vec![coin(remain_amount.checked_sub(tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(remain_amount.u128(), "uluna")],
         })),
     ]);
 
@@ -121,7 +117,6 @@ fn succeed_at_pending() {
 #[test]
 fn succeed_at_active() {
     let mut deps = custom_deps();
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     let burn_rate = Decimal::percent(10);
 
@@ -129,37 +124,34 @@ fn succeed_at_active() {
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 10000, 10000);
 
-    let mut denom = Denom::Native("uusd".to_string());
+    let mut denom = Denom::Native("uluna".to_string());
     let amount = Uint128::new(4000);
     let (burn_amount, expect_amount) = calc_ratio_amount(amount, burn_rate);
-    let burn_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), burn_amount).unwrap();
-    let expect_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), expect_amount).unwrap();
 
     let (_, _, response) = will_success(&mut deps, denom.clone(), Some(amount));
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_MANAGER.to_string(),
-            amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(burn_amount.u128(), "uluna")],
         })),
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
-            amount: vec![coin(expect_amount.checked_sub(expect_tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(expect_amount.u128(), "uluna")],
         })),
     ]);
 
     let remain_amount = Uint128::new(6000);
     let (burn_amount, expect_amount) = calc_ratio_amount(remain_amount, burn_rate);
-    let burn_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), burn_amount).unwrap();
-    let expect_tax = extract_tax(&deps.as_ref().querier, "uusd".to_string(), expect_amount).unwrap();
+
     let (_, _, response) = will_success(&mut deps, denom.clone(), None);
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_MANAGER.to_string(),
-            amount: vec![coin(burn_amount.checked_sub(burn_tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(burn_amount.u128(), "uluna")],
         })),
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: CAMPAIGN_ADMIN.to_string(),
-            amount: vec![coin(expect_amount.checked_sub(expect_tax).unwrap().u128(), "uusd")],
+            amount: vec![coin(expect_amount.u128(), "uluna")],
         })),
     ]);
 
@@ -248,7 +240,7 @@ fn failed_invalid_permission() {
         &mut deps,
         campaign_env(),
         default_sender(),
-        Denom::Native("uusd".to_string()),
+        Denom::Native("uluna".to_string()),
         None,
     );
 
@@ -266,7 +258,7 @@ fn failed_overflow() {
         &mut deps,
         campaign_env(),
         campaign_admin_sender(),
-        Denom::Native("uusd".to_string()),
+        Denom::Native("uluna".to_string()),
         Some(Uint128::new(6001)),
     );
     expect_generic_err(&result, "Insufficient balance");

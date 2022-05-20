@@ -1,23 +1,19 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Binary, Coin, CosmosMsg, QuerierWrapper, StdResult, to_binary, Uint128, WasmMsg,
+    Addr, BankMsg, Binary, Coin, CosmosMsg, StdResult, to_binary, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use serde::Serialize;
 
-use crate::terra::extract_tax;
-
 pub fn native_send(
-    querier: &QuerierWrapper,
     denom: String,
     recipient: &Addr,
-    amount_with_tax: Uint128,
+    amount: Uint128,
 ) -> StdResult<CosmosMsg> {
-    let tax = extract_tax(querier, denom.to_string(), amount_with_tax)?;
-
+    //only luna
     Ok(CosmosMsg::Bank(BankMsg::Send {
         to_address: recipient.to_string(),
         amount: vec![Coin {
-            amount: amount_with_tax.checked_sub(tax)?,
+            amount,
             denom,
         }],
     }))

@@ -606,7 +606,6 @@ pub fn remove_reward_pool(
 
         campaign_state.withdraw(&denom_cw20, &remove_pool_fee_amount)?;
         response = response.add_message(make_send_msg(
-            &deps.querier,
             denom_cw20.clone(),
             remove_pool_fee_amount,
             &campaign_config.campaign_manager,
@@ -615,7 +614,6 @@ pub fn remove_reward_pool(
 
     campaign_state.withdraw(&denom_cw20, &receive_amount)?;
     response = response.add_message(make_send_msg(
-        &deps.querier,
         denom_cw20,
         receive_amount,
         &info.sender,
@@ -656,7 +654,6 @@ pub fn claim_participation_reward(deps: DepsMut, env: Env, info: MessageInfo) ->
 
     let mut response = make_response("claim_participation_reward");
     response = response.add_message(make_send_msg(
-        &deps.querier,
         reward_config.participation_reward_denom.clone(),
         reward_amount,
         &actor.address,
@@ -705,7 +702,6 @@ pub fn claim_referral_reward(deps: DepsMut, env: Env, info: MessageInfo) -> Cont
 
     let mut response = make_response("claim_referral_reward");
     response = response.add_message(make_send_msg(
-        &deps.querier,
         cw20::Denom::Cw20(reward_config.referral_reward_token),
         reward_amount,
         &actor.address,
@@ -1219,7 +1215,6 @@ pub fn withdraw(
         campaign_state.save(deps.storage)?;
 
         response = response.add_message(make_send_msg(
-            &deps.querier,
             denom,
             amount,
             &info.sender,
@@ -1308,22 +1303,20 @@ pub fn validate_participation_reward_distribution_schedule(schedule: &Vec<(u64, 
 }
 
 fn make_send_msg(
-    querier: &QuerierWrapper,
     denom: Cw20Denom,
-    amount_with_tax: Uint128,
+    amount: Uint128,
     recipient: &Addr,
 ) -> StdResult<CosmosMsg> {
     match denom {
         Cw20Denom::Native(denom) => Ok(message_factories::native_send(
-            querier,
             denom,
             recipient,
-            amount_with_tax,
+            amount,
         )?),
         Cw20Denom::Cw20(contract_address) => Ok(message_factories::cw20_transfer(
             &contract_address,
             recipient,
-            amount_with_tax,
+            amount,
         )),
     }
 }

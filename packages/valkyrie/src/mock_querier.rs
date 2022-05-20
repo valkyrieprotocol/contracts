@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery, from_binary, BankQuery, AllBalanceResponse, Addr, QuerierWrapper};
+use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery, from_binary, BankQuery, AllBalanceResponse, Addr};
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::{TokenInfoResponse, Cw20QueryMsg};
-use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
+use terra_cosmwasm::{TerraQueryWrapper};
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse, StakerStateResponse};
-use crate::terra::calc_tax_one_plus;
 use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg};
 use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse, ReferralRewardLimitOptionResponse};
 
@@ -33,7 +32,6 @@ pub fn custom_deps() -> CustomDeps {
 pub struct WasmMockQuerier {
     base: MockQuerier<TerraQueryWrapper>,
     token_querier: TokenQuerier,
-    tax_querier: TaxQuerier,
     voting_powers_querier: VotingPowerQuerier,
     campaign_manager_config_querier: CampaignManagerConfigQuerier,
     governance_querier: GovConfigQuerier,
@@ -153,30 +151,6 @@ pub(crate) fn balances_to_map(
     balances_map
 }
 
-#[derive(Clone, Default)]
-pub struct TaxQuerier {
-    rate: Decimal,
-    // this lets us iterate over all pairs that match the first string
-    caps: HashMap<String, Uint128>,
-}
-
-impl TaxQuerier {
-    pub fn new(rate: Decimal, caps: &[(&str, &Uint128)]) -> Self {
-        TaxQuerier {
-            rate,
-            caps: caps_to_map(caps),
-        }
-    }
-}
-
-pub(crate) fn caps_to_map(caps: &[(&str, &Uint128)]) -> HashMap<String, Uint128> {
-    let mut owner_map: HashMap<String, Uint128> = HashMap::new();
-    for (denom, cap) in caps.iter() {
-        owner_map.insert(denom.to_string(), **cap);
-    }
-    owner_map
-}
-
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
@@ -196,9 +170,6 @@ impl Querier for WasmMockQuerier {
 impl WasmMockQuerier {
     pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
         match &request {
-            QueryRequest::Custom(
-                TerraQueryWrapper { route, query_data }
-            ) => self.handle_custom(route, query_data),
             QueryRequest::Wasm(
                 WasmQuery::Raw { contract_addr, key }
             ) => self.handle_wasm_raw(contract_addr, key),
@@ -206,24 +177,6 @@ impl WasmMockQuerier {
                 WasmQuery::Smart { contract_addr, msg }
             ) => self.handle_wasm_smart(contract_addr, msg),
             _ => self.base.handle_query(request),
-        }
-    }
-    fn handle_custom(&self, route: &TerraRoute, query_data: &TerraQuery) -> QuerierResult {
-        match route {
-            TerraRoute::Treasury => self.handle_custom_treasury(query_data),
-            _ => return QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_custom".to_string(),
-            }),
-        }
-    }
-
-    fn handle_custom_treasury(&self, query_data: &TerraQuery) -> QuerierResult {
-        match query_data {
-            TerraQuery::TaxRate {} => self.query_tax_rate(),
-            TerraQuery::TaxCap { denom } => self.query_tax_cap(denom),
-            _ => return QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_custom_treasury".to_string(),
-            }),
         }
     }
 
@@ -404,27 +357,6 @@ impl WasmMockQuerier {
         }
     }
 
-    fn query_tax_rate(&self) -> QuerierResult {
-        let response = TaxRateResponse {
-            rate: self.tax_querier.rate,
-        };
-
-        SystemResult::Ok(ContractResult::Ok(to_binary(&response).unwrap()))
-    }
-
-    fn query_tax_cap(&self, denom: &String) -> QuerierResult {
-        let response = TaxCapResponse {
-            cap: self
-                .tax_querier
-                .caps
-                .get(denom)
-                .copied()
-                .unwrap_or_default(),
-        };
-
-        SystemResult::Ok(ContractResult::Ok(to_binary(&response).unwrap()))
-    }
-
     fn query_token_info(&self, contract_addr: &String, key: &[u8]) -> Option<QuerierResult> {
         if key.to_vec() != to_length_prefixed(b"token_info").to_vec() {
             return None;
@@ -511,7 +443,6 @@ impl WasmMockQuerier {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
-            tax_querier: TaxQuerier::default(),
             campaign_manager_config_querier: CampaignManagerConfigQuerier::default(),
             voting_powers_querier: VotingPowerQuerier::default(),
             governance_querier: GovConfigQuerier::default(),
@@ -602,11 +533,6 @@ impl WasmMockQuerier {
         }
     }
 
-    // configure the token owner mock querier
-    pub fn with_tax(&mut self, rate: Decimal, caps: &[(&str, &Uint128)]) {
-        self.tax_querier = TaxQuerier::new(rate, caps);
-    }
-
     pub fn plus_native_balance(&mut self, address: &str, balances: Vec<Coin>) {
         let mut current_balances = from_binary::<AllBalanceResponse>(
             &self.base.handle_query(
@@ -648,23 +574,6 @@ impl WasmMockQuerier {
         }
 
         self.base.update_balance(Addr::unchecked(address.to_string()), current_balances);
-    }
-
-    pub fn minus_native_balance_with_tax(&mut self, address: &str, mut balances: Vec<Coin>) {
-        for balance in balances.iter_mut() {
-            if balance.denom == "uluna" {
-                return;
-            }
-
-            let tax = calc_tax_one_plus(
-                &QuerierWrapper::new(self),
-                balance.denom.clone(),
-                balance.amount,
-            ).unwrap();
-            balance.amount = balance.amount + tax;
-        }
-
-        self.minus_native_balance(address, balances)
     }
 
     pub fn with_balance(&mut self, balances: &[(&str, &[Coin])]) {

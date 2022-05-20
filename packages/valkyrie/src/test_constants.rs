@@ -119,7 +119,7 @@ pub mod campaign_manager {
     pub const FEE_BURN_RATIO_PERCENT: u64 = 50;
     pub const FEE_RECIPIENT: &str = GOVERNANCE;
     pub const CAMPAIGN_DEACTIVATE_PERIOD: u64 = 403290;
-    pub const KEY_DENOM_NATIVE: &str = "uusd";
+    pub const KEY_DENOM_NATIVE: &str = "uluna";
     pub const REFERRAL_REWARD_LIMIT_BASE_COUNT: u8 = 5;
     pub const REFERRAL_REWARD_LIMIT_STAKING_PERCENT: u16 = 50;
 
@@ -144,7 +144,7 @@ pub mod campaign {
     pub const CAMPAIGN_URL: &str = "https://campaign.url";
     pub const CAMPAIGN_PARAMETER_KEY: &str = "vkr";
     pub const CAMPAIGN_ADMIN: &str = "CampaignAdmin";
-    pub const PARTICIPATION_REWARD_DENOM_NATIVE: &str = "uusd";
+    pub const PARTICIPATION_REWARD_DENOM_NATIVE: &str = "uluna";
     pub const PARTICIPATION_REWARD_AMOUNT: Uint128 = Uint128::new(3000);
 
     pub const PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1: (u64, u64, Uint128) = (10, 10, Uint128::new(300)); //start, end, amount
@@ -154,7 +154,7 @@ pub mod campaign {
     pub const REFERRAL_REWARD_AMOUNTS: [Uint128; 3] = [Uint128::new(400), Uint128::new(300), Uint128::new(200)];
     pub const REFERRAL_REWARD_LOCK_PERIOD: u64 = 100;
     pub const QUALIFIER: &str = "Qualifier";
-    pub const DEPOSIT_DENOM_NATIVE: &str = "uusd";
+    pub const DEPOSIT_DENOM_NATIVE: &str = "uluna";
     pub const DEPOSIT_AMOUNT: Uint128 = Uint128::new(100);
     pub const DEPOSIT_LOCK_PERIOD: u64 = 10000;
     pub const VP_BURN_AMOUNT: Uint128 = Uint128::new(0);

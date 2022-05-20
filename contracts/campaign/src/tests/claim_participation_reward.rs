@@ -25,7 +25,6 @@ pub fn will_success(deps: &mut CustomDeps, height: u64, sender: &str) -> (Env, M
 #[test]
 fn succeed() {
     let mut deps = custom_deps();
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
@@ -48,7 +47,7 @@ fn succeed() {
         SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: participator.to_string(),
             amount: vec![coin(
-                2900, //subtracted tax
+                3000, //subtracted tax
                 PARTICIPATION_REWARD_DENOM_NATIVE.to_string(),
             )],
         })),

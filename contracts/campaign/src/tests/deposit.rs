@@ -31,7 +31,7 @@ pub fn will_success(
     amount: Uint128,
 ) -> (Env, MessageInfo, Response) {
     let env = campaign_env();
-    let info = mock_info(sender, &[coin(amount.u128(), "uusd")]);
+    let info = mock_info(sender, &[coin(amount.u128(), "uluna")]);
 
     let response = exec(
         deps,
@@ -92,18 +92,6 @@ fn failed_invalid_funds() {
         vec![],
     );
     assert_eq!(result.unwrap_err(), ContractError::Std(StdError::generic_err("Missing deposit denom")));
-
-    let result = exec(
-        &mut deps,
-        campaign_env(),
-        mock_info("Actor", &[]),
-        "Actor",
-        vec![
-            (Denom::Native("uluna".to_string()), Uint128::new(100)),
-            (Denom::Native("ukrw".to_string()), Uint128::new(100)),
-        ],
-    );
-    assert_eq!(result.unwrap_err(), ContractError::Std(StdError::generic_err("Too many sent denom")));
 
     let result = exec(
         &mut deps,

@@ -8,7 +8,6 @@ use crate::queries::{get_actor};
 #[test]
 fn calc_unlocked_reward() {
     let mut deps = custom_deps();
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);

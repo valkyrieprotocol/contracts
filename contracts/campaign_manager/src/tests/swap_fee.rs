@@ -55,12 +55,12 @@ fn succeed_native() {
     super::instantiate::default(&mut deps);
 
     deps.querier.plus_native_balance(CAMPAIGN_MANAGER, vec![
-        coin(10000u128, "uusd"),
+        coin(10000u128, "uluna"),
     ]);
 
     let (_, _, response) = will_success(
         &mut deps,
-        Denom::Native("uusd".to_string()),
+        Denom::Native("uluna".to_string()),
         None,
         None,
     );
@@ -68,12 +68,12 @@ fn succeed_native() {
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TERRASWAP_ROUTER.to_string(),
-            funds: vec![coin(10000, "uusd")],
+            funds: vec![coin(10000, "uluna")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
                     SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
-                            denom: "uusd".to_string(),
+                            denom: "uluna".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
                             contract_addr: Addr::unchecked(VALKYRIE_TOKEN).to_string(),
@@ -137,16 +137,15 @@ fn succeed_route() {
     super::instantiate::default(&mut deps);
 
     deps.querier.plus_native_balance(CAMPAIGN_MANAGER, vec![
-        coin(10000u128, "ukrw"),
+        coin(10000u128, "uluna"),
     ]);
 
     let (_, _, response) = will_success(
         &mut deps,
-        Denom::Native("ukrw".to_string()),
+        Denom::Native("uluna".to_string()),
         None,
         Some(vec![
-            Denom::Native("ukrw".to_string()),
-            Denom::Native("uusd".to_string()),
+            Denom::Native("uluna".to_string()),
             Denom::Token(VALKYRIE_TOKEN.to_string()),
         ]),
     );
@@ -154,16 +153,12 @@ fn succeed_route() {
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: TERRASWAP_ROUTER.to_string(),
-            funds: vec![coin(10000, "ukrw")],
+            funds: vec![coin(10000, "uluna")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
-                    SwapOperation::NativeSwap {
-                        offer_denom: "ukrw".to_string(),
-                        ask_denom: "uusd".to_string(),
-                    },
                     SwapOperation::TerraSwap {
                         offer_asset_info: AssetInfo::NativeToken {
-                            denom: "uusd".to_string(),
+                            denom: "uluna".to_string(),
                         },
                         ask_asset_info: AssetInfo::Token {
                             contract_addr: Addr::unchecked(VALKYRIE_TOKEN).to_string(),
@@ -184,62 +179,24 @@ fn failed_invalid_route() {
     super::instantiate::default(&mut deps);
 
     deps.querier.plus_native_balance(CAMPAIGN_MANAGER, vec![
-        coin(10000u128, "ukrw"),
+        coin(10000u128, "uluna"),
     ]);
 
     let result = exec(
         &mut deps,
         campaign_manager_env(),
         default_sender(),
-        Denom::Native("ukrw".to_string()),
+        Denom::Native("uluna".to_string()),
         None,
         Some(vec![
-            Denom::Native("ukrw".to_string()),
+            Denom::Native("uluna".to_string()),
         ]),
     );
     expect_generic_err(
         &result,
         format!(
             "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), VALKYRIE_TOKEN.to_string(),
-        ).as_str(),
-    );
-
-    let result = exec(
-        &mut deps,
-        campaign_manager_env(),
-        default_sender(),
-        Denom::Native("ukrw".to_string()),
-        None,
-        Some(vec![
-            Denom::Native("uusd".to_string()),
-            Denom::Token(VALKYRIE_TOKEN.to_string()),
-        ]),
-    );
-    expect_generic_err(
-        &result,
-        format!(
-            "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), VALKYRIE_TOKEN.to_string(),
-        ).as_str(),
-    );
-
-    let result = exec(
-        &mut deps,
-        campaign_manager_env(),
-        default_sender(),
-        Denom::Native("ukrw".to_string()),
-        None,
-        Some(vec![
-            Denom::Native("ukrw".to_string()),
-            Denom::Native("uusd".to_string()),
-        ]),
-    );
-    expect_generic_err(
-        &result,
-        format!(
-            "route must start with '{}' and end with '{}'",
-            "ukrw".to_string(), VALKYRIE_TOKEN.to_string(),
+            "uluna".to_string(), VALKYRIE_TOKEN.to_string(),
         ).as_str(),
     );
 }
