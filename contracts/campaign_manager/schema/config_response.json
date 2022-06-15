@@ -13,8 +13,9 @@
     "governance",
     "key_denom",
     "remove_pool_fee_rate",
-    "terraswap_router",
-    "valkyrie_token"
+    "valkyrie_proxy",
+    "valkyrie_token",
+    "vp_token"
   ],
   "properties": {
     "add_pool_fee_rate": {
@@ -51,10 +52,13 @@
     "remove_pool_fee_rate": {
       "$ref": "#/definitions/Decimal"
     },
-    "terraswap_router": {
+    "valkyrie_proxy": {
       "type": "string"
     },
     "valkyrie_token": {
+      "type": "string"
+    },
+    "vp_token": {
       "type": "string"
     }
   },
@@ -64,7 +68,7 @@
       "type": "string"
     },
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

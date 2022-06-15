@@ -23,7 +23,7 @@
   },
   "definitions": {
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

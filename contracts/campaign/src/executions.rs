@@ -2,8 +2,6 @@ use std::ops::Mul;
 use cosmwasm_std::{Addr, Api, attr, Binary, CosmosMsg, Decimal, DepsMut, Env, from_binary, MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, Storage, SubMsg, to_binary, Uint128, WasmMsg};
 use cw20::{Cw20ExecuteMsg, Denom as Cw20Denom};
 use protobuf::Message;
-use terraswap::asset::AssetInfo;
-use terraswap::router::{QueryMsg, SimulateSwapOperationsResponse, SwapOperation};
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::campaign::execute_msgs::{CampaignConfigMsg, DistributeResult, ReferralReward};
@@ -12,6 +10,9 @@ use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::errors::ContractError;
 use valkyrie::message_factories;
+use valkyrie::proxy::asset::AssetInfo;
+use valkyrie::proxy::execute_msgs::SwapOperation;
+use valkyrie::proxy::query_msgs::{QueryMsg, SimulateSwapOperationsResponse};
 use valkyrie::utils::{calc_ratio_amount, make_response};
 use valkyrie_qualifier::{QualificationMsg, QualificationResult};
 use valkyrie_qualifier::execute_msgs::ExecuteMsg as QualifierExecuteMsg;
@@ -475,7 +476,7 @@ fn validate_reward_pool_weight(
 
     let participation_reward_value = swap_simulate(
         &querier,
-        &global_campaign_config.terraswap_router,
+        &global_campaign_config.valkyrie_proxy,
         reward_config.participation_reward_denom.clone(),
         key_denom.clone(),
         participation_reward_amount,
@@ -483,7 +484,7 @@ fn validate_reward_pool_weight(
 
     let referral_reward_value = swap_simulate(
         &querier,
-        &global_campaign_config.terraswap_router,
+        &global_campaign_config.valkyrie_proxy,
         cw20::Denom::Cw20(reward_config.referral_reward_token.clone()),
         key_denom.clone(),
         referral_reward_amount,
@@ -506,7 +507,7 @@ fn validate_reward_pool_weight(
 
 fn swap_simulate(
     querier: &QuerierWrapper,
-    terraswap_router: &String,
+    valkyrie_proxy: &String,
     offer: cw20::Denom,
     ask: cw20::Denom,
     amount: Uint128,
@@ -516,39 +517,44 @@ fn swap_simulate(
     }
 
     let response: SimulateSwapOperationsResponse = querier.query_wasm_smart(
-        terraswap_router,
+        valkyrie_proxy,
         &QueryMsg::SimulateSwapOperations {
             offer_amount: amount,
-            operations: vec![swap_operation(offer, ask)],
+            operations: vec![swap_operation(offer, ask)?],
         },
     )?;
 
     Ok(response.amount)
 }
 
-fn swap_operation(offer: cw20::Denom, ask: cw20::Denom) -> SwapOperation {
+fn swap_operation(offer: cw20::Denom, ask: cw20::Denom) -> StdResult<SwapOperation> {
     match offer {
         cw20::Denom::Native(offer_denom) => {
             match ask {
-                cw20::Denom::Native(ask_denom) => SwapOperation::NativeSwap {
-                    offer_denom,
-                    ask_denom,
+                cw20::Denom::Cw20(ask_token) => {
+                    Ok(SwapOperation::Swap {
+                        offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
+                        ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
+                    })
                 },
-                cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
-                    offer_asset_info: AssetInfo::NativeToken { denom: offer_denom },
-                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
-                },
+                _ => {
+                    Err(StdError::generic_err("unavailable native swap"))
+                }
             }
         }
         cw20::Denom::Cw20(offer_token) => {
             match ask {
-                cw20::Denom::Native(ask_denom) => SwapOperation::TerraSwap {
-                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
-                    ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
+                cw20::Denom::Native(ask_denom) => {
+                    Ok(SwapOperation::Swap {
+                        offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
+                        ask_asset_info: AssetInfo::NativeToken { denom: ask_denom },
+                    })
                 },
-                cw20::Denom::Cw20(ask_token) => SwapOperation::TerraSwap {
-                    offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
-                    ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
+                cw20::Denom::Cw20(ask_token) => {
+                    Ok(SwapOperation::Swap {
+                        offer_asset_info: AssetInfo::Token { contract_addr: offer_token.to_string() },
+                        ask_asset_info: AssetInfo::Token { contract_addr: ask_token.to_string() },
+                    })
                 },
             }
         }
@@ -1017,7 +1023,7 @@ fn distribute_participation_reward(
     let mut total_actor_reward = Uint128::zero();
 
     for (start, end, amount) in reward_config.participation_reward_distribution_schedule.iter() {
-        let reward_amount = reward_rate.mul(amount.clone());
+        let reward_amount = reward_rate.clone().mul(amount.clone());
         total_actor_reward += reward_amount;
         actor.add_participation_reward(
             (start + height, end + height, reward_amount)
@@ -1025,7 +1031,7 @@ fn distribute_participation_reward(
     }
 
     let total_schedule_amount = reward_config.sum_of_participation_reward();
-    let gap =  total_actor_reward - reward_rate.mul(total_schedule_amount);
+    let gap =  total_actor_reward - reward_rate.clone().mul(total_schedule_amount);
     if !gap.is_zero() {
         //add gap to last reward
         let last_index = actor.participation_reward_amounts.len() - 1;

@@ -17,7 +17,7 @@ pub fn exec(
     governance: Option<String>,
     valkyrie_token: Option<String>,
     vp_token: Option<String>,
-    terraswap_router: Option<String>,
+    valkyrie_proxy: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
     add_pool_min_referral_reward_rate: Option<Decimal>,
@@ -35,7 +35,7 @@ pub fn exec(
         governance,
         valkyrie_token,
         vp_token,
-        terraswap_router,
+        valkyrie_proxy,
         code_id,
         add_pool_fee_rate,
         add_pool_min_referral_reward_rate,
@@ -53,7 +53,7 @@ pub fn will_success(
     governance: Option<String>,
     valkyrie_token: Option<String>,
     vp_token: Option<String>,
-    terraswap_router: Option<String>,
+    valkyrie_proxy: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
     add_pool_min_referral_reward_rate: Option<Decimal>,
@@ -74,7 +74,7 @@ pub fn will_success(
         governance,
         valkyrie_token,
         vp_token,
-        terraswap_router,
+        valkyrie_proxy,
         code_id,
         add_pool_fee_rate,
         add_pool_min_referral_reward_rate,
@@ -95,26 +95,26 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let governance = "ChangedGovernance";
-    let valkyrie_token = "ChangedVkrToken";
-    let vp_token = "ChangedVP";
-    let terraswap_router = "ChangedTerraswapRouter";
+    let governance = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
+    let valkyrie_token = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
+    let vp_token = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
+    let valkyrie_proxy = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
     let code_id = 100u64;
     let add_pool_fee_rate = Decimal::percent(9);
     let add_pool_min_referral_reward_rate = Decimal::percent(20);
     let remove_pool_fee_rate = Decimal::percent(99);
     let fee_burn_ratio = Decimal::percent(90);
-    let fee_recipient = "ChangedFeeRecipient";
+    let fee_recipient = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
     let deactivate_period = 99u64;
     let key_denom = Denom::Native("ukrw".to_string());
-    let contract_admin = "ChangedContAdm";
+    let contract_admin = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
 
     will_success(
         &mut deps,
         Some(governance.to_string()),
         Some(valkyrie_token.to_string()),
         Some(vp_token.to_string()),
-        Some(terraswap_router.to_string()),
+        Some(valkyrie_proxy.to_string()),
         Some(code_id),
         Some(add_pool_fee_rate),
         Some(add_pool_min_referral_reward_rate),
@@ -131,7 +131,7 @@ fn succeed() {
         governance: Addr::unchecked(governance),
         vp_token: Addr::unchecked(vp_token),
         valkyrie_token: Addr::unchecked(valkyrie_token),
-        terraswap_router: Addr::unchecked(terraswap_router),
+        valkyrie_proxy: Addr::unchecked(valkyrie_proxy),
         code_id: code_id.clone(),
         add_pool_fee_rate: add_pool_fee_rate.clone(),
         add_pool_min_referral_reward_rate: add_pool_min_referral_reward_rate.clone(),

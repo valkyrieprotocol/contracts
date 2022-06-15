@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::executions::remove_distribution_message;
 use valkyrie::test_utils::expect_unauthorized_err;
 use crate::states::Distribution;
-use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
+use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR, RECIPIENT};
 use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_constants::default_sender;
 use valkyrie::lp_staking::execute_msgs::Cw20HookMsg;
@@ -53,7 +53,7 @@ fn succeed() {
         &mut deps,
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         Some(to_binary(&Cw20HookMsg::Bond {}).unwrap()),
     );
@@ -77,7 +77,7 @@ fn failed_invalid_permission() {
         &mut deps,
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         None,
     );

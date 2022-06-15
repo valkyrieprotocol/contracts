@@ -56,7 +56,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let address = Addr::unchecked("Addr1");
+    let address = Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n");
     let amount = Uint128::new(100);
     will_success(&mut deps, address.to_string(), amount.clone());
 
@@ -93,7 +93,7 @@ fn failed_invalid_permission() {
         &mut deps,
         community_env(),
         default_sender(),
-        "Address".to_string(),
+        "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string(),
         Uint128::new(100),
     );
     expect_unauthorized_err(&result);
@@ -109,13 +109,13 @@ fn failed_overflow_free_balance() {
 
     super::instantiate::default(&mut deps);
 
-    will_success(&mut deps, "Address1".to_string(), Uint128::new(1000));
+    will_success(&mut deps, "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string(), Uint128::new(1000));
 
     let result = exec(
         &mut deps,
         community_env(),
         governance_sender(),
-        "Address2".to_string(),
+        "terra1333veey879eeqcff8j3gfcgwt8cfrg9mq20v6f".to_string(),
         Uint128::new(1),
     );
     expect_generic_err(&result, "Insufficient balance");
@@ -131,7 +131,7 @@ fn failed_zero_amount() {
         &mut deps,
         community_env(),
         campaign_manager_sender(),
-        "Address".to_string(),
+        "terra1333veey879eeqcff8j3gfcgwt8cfrg9mq20v6f".to_string(),
         Uint128::zero(),
     );
 

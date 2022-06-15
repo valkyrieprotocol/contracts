@@ -6,7 +6,7 @@ use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 
 use crate::executions::{update_campaign_config, MIN_TITLE_LENGTH, MAX_TITLE_LENGTH, MIN_DESC_LENGTH, MAX_DESC_LENGTH, MIN_URL_LENGTH, MAX_URL_LENGTH, MIN_PARAM_KEY_LENGTH, MAX_PARAM_KEY_LENGTH};
 use crate::states::CampaignConfig;
-use valkyrie::test_constants::campaign::{CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env};
+use valkyrie::test_constants::campaign::{ADMIN2, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, QUALIFIER2};
 use valkyrie::test_constants::default_sender;
 
 pub fn exec(
@@ -89,9 +89,9 @@ fn succeed() {
     let deposit_amount = Uint128::new(99);
     let deposit_lock_period = 199u64;
     let vp_burn_amount = Uint128::new(99999999);
-    let qualifier = "Qualifier2".to_string();
+    let qualifier = QUALIFIER2.to_string();
     let qualification_description = "QualificationDescription2".to_string();
-    let admin = "Admin2".to_string();
+    let admin = ADMIN2.to_string();
 
     will_success(
         &mut deps,
@@ -132,9 +132,9 @@ fn succeed_update_info_after_activation() {
 
     let title = "Title2".to_string();
     let description = "Desc2".to_string();
-    let qualifier = "Qualifier2".to_string();
+    let qualifier = QUALIFIER2.to_string();
     let qualification_description = "QualificationDescription2".to_string();
-    let admin = "Admin2".to_string();
+    let admin = ADMIN2.to_string();
 
     will_success(
         &mut deps,

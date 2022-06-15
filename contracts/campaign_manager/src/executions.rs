@@ -9,8 +9,8 @@ use valkyrie::utils::{find, make_response, validate_zero_to_one};
 use crate::states::*;
 use valkyrie::cw20::{query_cw20_balance, query_balance};
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::AssetInfo;
-use terraswap::router::{ExecuteMsg as TerraswapExecuteMsg, SwapOperation};
+use valkyrie::proxy::asset::AssetInfo;
+use valkyrie::proxy::execute_msgs::{ExecuteMsg as ProxyExecuteMsg, SwapOperation};
 
 pub fn instantiate(
     deps: DepsMut,
@@ -30,7 +30,7 @@ pub fn instantiate(
         governance: deps.api.addr_validate(msg.governance.as_str())?,
         vp_token: deps.api.addr_validate(msg.vp_token.as_str())?,
         valkyrie_token: deps.api.addr_validate(msg.valkyrie_token.as_str())?,
-        terraswap_router: deps.api.addr_validate(msg.terraswap_router.as_str())?,
+        valkyrie_proxy: deps.api.addr_validate(msg.valkyrie_proxy.as_str())?,
         code_id: msg.code_id,
         add_pool_fee_rate: msg.add_pool_fee_rate,
         add_pool_min_referral_reward_rate: msg.add_pool_min_referral_reward_rate,
@@ -59,7 +59,7 @@ pub fn update_config(
     governance: Option<String>,
     valkyrie_token: Option<String>,
     vp_token: Option<String>,
-    terraswap_router: Option<String>,
+    valkyrie_proxy: Option<String>,
     code_id: Option<u64>,
     add_pool_fee_rate: Option<Decimal>,
     add_pool_min_referral_reward_rate: Option<Decimal>,
@@ -98,13 +98,13 @@ pub fn update_config(
         response = response.add_attribute("is_updated_vp_token", "true");
     }
 
-    if let Some(terraswap_router) = terraswap_router.as_ref() {
+    if let Some(valkyrie_proxy) = valkyrie_proxy.as_ref() {
         if !config.is_governance(&info.sender) {
             return Err(ContractError::Unauthorized {});
         }
 
-        config.terraswap_router = deps.api.addr_validate(terraswap_router)?;
-        response = response.add_attribute("is_updated_terraswap_router", "true");
+        config.valkyrie_proxy = deps.api.addr_validate(valkyrie_proxy)?;
+        response = response.add_attribute("is_updated_valkyrie_proxy", "true");
     }
 
     if let Some(code_id) = code_id.as_ref() {
@@ -456,13 +456,14 @@ pub fn swap_fee(
     let mut response = make_response("swap_fee");
 
     let operations: Vec<SwapOperation> = route.windows(2).map(|pair| {
-        pair_to_terraswap_operation(pair)
+        pair_to_swap_operation(pair)
     }).collect();
 
-    let terraswap_msg = TerraswapExecuteMsg::ExecuteSwapOperations {
+    let swap_msg = ProxyExecuteMsg::ExecuteSwapOperations {
         operations,
         minimum_receive: None,
         to: None,
+        max_spread: None,
     };
 
     let balance = query_balance(
@@ -487,17 +488,17 @@ pub fn swap_fee(
     let swap_msg = match denom {
         Denom::Native(denom) => {
             message_factories::wasm_execute_with_funds(
-                &config.terraswap_router,
+                &config.valkyrie_proxy,
                 vec![coin(amount.u128(), denom)],
-                &terraswap_msg,
+                &swap_msg,
             )
         }
         Denom::Token(address) => {
             message_factories::wasm_execute(
                 &deps.api.addr_validate(&address)?,
                 &Cw20ExecuteMsg::Send {
-                    contract: config.terraswap_router.to_string(),
-                    msg: to_binary(&terraswap_msg)?,
+                    contract: config.valkyrie_proxy.to_string(),
+                    msg: to_binary(&swap_msg)?,
                     amount,
                 },
             )
@@ -509,20 +510,11 @@ pub fn swap_fee(
     Ok(response)
 }
 
-fn pair_to_terraswap_operation(pair: &[Denom]) -> SwapOperation {
+fn pair_to_swap_operation(pair: &[Denom]) -> SwapOperation {
     let left = pair[0].clone();
     let right = pair[1].clone();
 
-    if let Denom::Native(left_denom) = left.clone() {
-        if let Denom::Native(right_denom) = right.clone() {
-            return SwapOperation::NativeSwap {
-                offer_denom: left_denom,
-                ask_denom: right_denom,
-            };
-        }
-    }
-
-    SwapOperation::TerraSwap {
+    SwapOperation::Swap {
         offer_asset_info: denom_to_asset_info(left),
         ask_asset_info: denom_to_asset_info(right),
     }

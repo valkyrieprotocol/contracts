@@ -28,8 +28,8 @@ fn will_success(deps: &mut CustomDeps, env:Env, sender:&Addr) {
 
 #[test]
 fn succeed() {
-    let sender1 = Addr::unchecked("sender1");
-    let sender2 = Addr::unchecked("sender2");
+    let sender1 = Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n");
+    let sender2 = Addr::unchecked("terra1333veey879eeqcff8j3gfcgwt8cfrg9mq20v6f");
 
     let mut deps = custom_deps();
     let (env, _info, _response) = default(&mut deps, None);

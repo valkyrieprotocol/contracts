@@ -5,9 +5,8 @@
   "required": [
     "description",
     "parameter_key",
-    "participation_reward_amount",
     "participation_reward_denom",
-    "participation_reward_lock_period",
+    "participation_reward_distribution_schedule",
     "referral_reward_amounts",
     "referral_reward_lock_period",
     "title",
@@ -20,16 +19,31 @@
     "parameter_key": {
       "type": "string"
     },
-    "participation_reward_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
     "participation_reward_denom": {
       "$ref": "#/definitions/Denom"
     },
-    "participation_reward_lock_period": {
-      "type": "integer",
-      "format": "uint64",
-      "minimum": 0.0
+    "participation_reward_distribution_schedule": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          {
+            "$ref": "#/definitions/Uint128"
+          }
+        ],
+        "maxItems": 3,
+        "minItems": 3
+      }
     },
     "referral_reward_amounts": {
       "type": "array",
@@ -51,7 +65,7 @@
   },
   "definitions": {
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

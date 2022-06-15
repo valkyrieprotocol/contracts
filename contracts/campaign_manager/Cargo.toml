@@ -38,14 +38,12 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 serde = { version = "1.0.126", default-features = false, features = ["derive"] }
-schemars = { version = "0.8.3" }
-cw2 = { version = "0.8.1" }
-cw20 = { version = "0.8.1" }
-cosmwasm-std = { version = "0.16.0" }
-cw-storage-plus = { version = "0.8.1", features = ["iterator"] }
+schemars = { version = "0.8.10" }
+cw2 = { version = "0.11.0" }
+cw20 = { version = "0.11.0" }
+cosmwasm-std = { version = "1.0.0" }
+cw-storage-plus = { version = "0.11.0", features = ["iterator"] }
 valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "1.0.8-beta.1" }
-terraswap = "2.4.0"
 
 [dev-dependencies]
-cosmwasm-schema = { version = "0.16.0" }
-terra-cosmwasm = { version = "2.2.0" }
+cosmwasm-schema = { version = "1.0.0" }

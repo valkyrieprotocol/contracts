@@ -3,10 +3,10 @@ use cosmwasm_std::{Env, MessageInfo, Uint128, Response, coin, CosmosMsg, WasmMsg
 use valkyrie::common::{ContractResult, Denom};
 use crate::executions::swap_fee;
 use valkyrie::test_utils::expect_generic_err;
-use terraswap::router::{ExecuteMsg, SwapOperation};
-use terraswap::asset::AssetInfo;
 use cw20::Cw20ExecuteMsg;
-use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER, VALKYRIE_TOKEN};
+use valkyrie::proxy::asset::AssetInfo;
+use valkyrie::proxy::execute_msgs::{ExecuteMsg, SwapOperation};
+use valkyrie::test_constants::{default_sender, VALKYRIE_PROXY, VALKYRIE_TOKEN};
 use valkyrie::test_constants::campaign_manager::{CAMPAIGN_MANAGER, campaign_manager_env};
 
 pub fn exec(
@@ -67,11 +67,11 @@ fn succeed_native() {
 
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TERRASWAP_ROUTER.to_string(),
+            contract_addr: VALKYRIE_PROXY.to_string(),
             funds: vec![coin(10000, "uluna")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
-                    SwapOperation::TerraSwap {
+                    SwapOperation::Swap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
                         },
@@ -82,6 +82,7 @@ fn succeed_native() {
                 ],
                 minimum_receive: None,
                 to: None,
+                max_spread: None,
             }).unwrap(),
         })),
     ]);
@@ -91,7 +92,7 @@ fn succeed_native() {
 fn succeed_token() {
     let mut deps = custom_deps();
     deps.querier.with_token_balances(&[(
-        "Token1",
+        "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n",
         &[(CAMPAIGN_MANAGER, &Uint128::new(10000))],
     )]);
 
@@ -99,23 +100,23 @@ fn succeed_token() {
 
     let (_, _, response) = will_success(
         &mut deps,
-        Denom::Token("Token1".to_string()),
+        Denom::Token("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string()),
         None,
         None,
     );
 
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "Token1".to_string(),
+            contract_addr: "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: TERRASWAP_ROUTER.to_string(),
+                contract: VALKYRIE_PROXY.to_string(),
                 amount: Uint128::new(10000),
                 msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                     operations: vec![
-                        SwapOperation::TerraSwap {
+                        SwapOperation::Swap {
                             offer_asset_info: AssetInfo::Token {
-                                contract_addr: Addr::unchecked("Token1").to_string(),
+                                contract_addr: Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n").to_string(),
                             },
                             ask_asset_info: AssetInfo::Token {
                                 contract_addr: Addr::unchecked(VALKYRIE_TOKEN).to_string(),
@@ -124,6 +125,7 @@ fn succeed_token() {
                     ],
                     minimum_receive: None,
                     to: None,
+                    max_spread: None,
                 }).unwrap(),
             }).unwrap(),
         })),
@@ -152,11 +154,11 @@ fn succeed_route() {
 
     assert_eq!(response.messages, vec![
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TERRASWAP_ROUTER.to_string(),
+            contract_addr: VALKYRIE_PROXY.to_string(),
             funds: vec![coin(10000, "uluna")],
             msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
                 operations: vec![
-                    SwapOperation::TerraSwap {
+                    SwapOperation::Swap {
                         offer_asset_info: AssetInfo::NativeToken {
                             denom: "uluna".to_string(),
                         },
@@ -167,6 +169,7 @@ fn succeed_route() {
                 ],
                 minimum_receive: None,
                 to: None,
+                max_spread: None,
             }).unwrap(),
         })),
     ]);
@@ -209,7 +212,7 @@ fn failed_overflow() {
         coin(10000u128, "ukrw"),
     ]);
     deps.querier.with_token_balances(&[(
-        "Token1",
+        "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n",
         &[(CAMPAIGN_MANAGER, &Uint128::new(10000))],
     )]);
 
@@ -229,7 +232,7 @@ fn failed_overflow() {
         &mut deps,
         campaign_manager_env(),
         default_sender(),
-        Denom::Token("Token1".to_string()),
+        Denom::Token("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string()),
         Some(Uint128::new(10001)),
         None,
     );

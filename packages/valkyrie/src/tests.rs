@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, StdError, Uint128};
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use crate::mock_querier::custom_deps;
 
@@ -30,4 +30,22 @@ fn compress_address() {
 
     assert_eq!(compressed_address.len(), 32);
     assert_eq!(address, decompressed_address);
+}
+
+#[test]
+fn compress_contract_address() {
+    let address = "terra1466nf3zuxpya8q9emxukd7vftaf6h4psr0a07srl5zw74zh84yjqxl5qul";
+    let compressed_address = super::utils::compress_addr(&address.to_string()).unwrap();
+    let decompressed_address = super::utils::decompress_addr(&compressed_address).unwrap();
+
+    assert_eq!(compressed_address.len(), 76);
+    assert_eq!(address, decompressed_address);
+}
+
+#[test]
+fn invalid_compressed_address() {
+    let compressed_address = "awgeilwuhfelwiefj";
+    let decompressed_address = super::utils::decompress_addr(&compressed_address).unwrap_err();
+
+    assert_eq!(decompressed_address, StdError::generic_err("Invalid compressed addr."));
 }

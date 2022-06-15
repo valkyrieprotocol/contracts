@@ -1,17 +1,21 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
-use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery, from_binary, BankQuery, AllBalanceResponse, Addr};
+use cosmwasm_std::{Api, Binary, CanonicalAddr, Coin, ContractResult, Decimal, from_slice, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, to_binary, Uint128, WasmQuery, from_binary, BankQuery, AllBalanceResponse, Addr, CustomQuery};
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use cw20::{TokenInfoResponse, Cw20QueryMsg};
-use terra_cosmwasm::{TerraQueryWrapper};
 use crate::governance::query_msgs::{QueryMsg as GovQueryMsg, VotingPowerResponse, ContractConfigResponse as GovContractConfigResponse, StakerStateResponse};
 use crate::campaign::query_msgs::{CampaignStateResponse, QueryMsg};
 use crate::campaign_manager::query_msgs::{QueryMsg as CampaignManagerQueryMsg, ConfigResponse, ReferralRewardLimitOptionResponse};
+use crate::proxy::execute_msgs::SwapOperation;
 
-use terraswap::router::{QueryMsg as TerraswapRouterQueryMsg, SwapOperation, SimulateSwapOperationsResponse};
+use crate::proxy::query_msgs::SimulateSwapOperationsResponse;
+use crate::proxy::query_msgs::QueryMsg::SimulateSwapOperations;
 use crate::test_constants::campaign_manager::CAMPAIGN_MANAGER;
 use crate::test_constants::governance::GOVERNANCE;
-use crate::test_constants::TERRASWAP_ROUTER;
+use crate::test_constants::VALKYRIE_PROXY;
 
 pub type CustomDeps = OwnedDeps<MockStorage, MockApi, WasmMockQuerier>;
 
@@ -26,18 +30,26 @@ pub fn custom_deps() -> CustomDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: custom_querier,
+        custom_query_type: PhantomData
     }
 }
 
 pub struct WasmMockQuerier {
-    base: MockQuerier<TerraQueryWrapper>,
+    base: MockQuerier<QueryWrapper>,
     token_querier: TokenQuerier,
     voting_powers_querier: VotingPowerQuerier,
     campaign_manager_config_querier: CampaignManagerConfigQuerier,
     governance_querier: GovConfigQuerier,
     campaign_state_querier: CampaignStateQuerier,
-    terraswap_router_querier: TerraswapRouterQuerier,
+    astroport_router_querier: AstroportRouterQuerier,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct QueryWrapper {}
+
+// implement custom query
+impl CustomQuery for QueryWrapper {}
 
 #[derive(Clone, Default)]
 pub struct VotingPowerQuerier {
@@ -110,13 +122,13 @@ impl CampaignStateQuerier {
 }
 
 #[derive(Clone, Default)]
-pub struct TerraswapRouterQuerier {
+pub struct AstroportRouterQuerier {
     prices: HashMap<(String, String), f64>,
 }
 
-impl TerraswapRouterQuerier {
+impl AstroportRouterQuerier {
     pub fn new() -> Self {
-        TerraswapRouterQuerier {
+        AstroportRouterQuerier {
             prices: HashMap::new(),
         }
     }
@@ -154,7 +166,7 @@ pub(crate) fn balances_to_map(
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<TerraQueryWrapper> = match from_slice(bin_request) {
+        let request: QueryRequest<QueryWrapper> = match from_slice(bin_request) {
             Ok(v) => v,
             Err(_) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -168,7 +180,7 @@ impl Querier for WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn handle_query(&self, request: &QueryRequest<QueryWrapper>) -> QuerierResult {
         match &request {
             QueryRequest::Wasm(
                 WasmQuery::Raw { contract_addr, key }
@@ -210,7 +222,7 @@ impl WasmMockQuerier {
         }
 
         if result.is_none() {
-            result = self.handle_wasm_smart_terraswap_router(contract_addr, msg);
+            result = self.handle_wasm_smart_astroport_router(contract_addr, msg);
         }
 
         if result.is_none() {
@@ -310,17 +322,17 @@ impl WasmMockQuerier {
         }
     }
 
-    fn handle_wasm_smart_terraswap_router(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
-        if contract_addr != TERRASWAP_ROUTER {
+    fn handle_wasm_smart_astroport_router(&self, contract_addr: &String, msg: &Binary) -> Option<QuerierResult> {
+        if contract_addr != VALKYRIE_PROXY {
             return None;
         }
 
         match from_binary(msg) {
-            Ok(TerraswapRouterQueryMsg::SimulateSwapOperations { offer_amount, operations }) => {
+            Ok(SimulateSwapOperations { offer_amount, operations }) => {
                 let mut amount = offer_amount.u128();
                 for operation in operations.iter() {
-                    let price = self.terraswap_router_querier.prices
-                        .get(&terraswap_operation_to_string(operation))
+                    let price = self.astroport_router_querier.prices
+                        .get(&swap_operation_to_string(operation))
                         .unwrap();
 
                     amount = (amount as f64 * *price) as u128;
@@ -333,7 +345,7 @@ impl WasmMockQuerier {
                 ))))
             }
             Ok(_) => Some(QuerierResult::Err(SystemError::UnsupportedRequest {
-                kind: "handle_wasm_smart:terraswap_router".to_string(),
+                kind: "handle_wasm_smart:valkyrie_proxy".to_string(),
             })),
             Err(_) => None,
         }
@@ -439,7 +451,7 @@ impl WasmMockQuerier {
 const ZERO: Uint128 = Uint128::zero();
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
+    pub fn new(base: MockQuerier<QueryWrapper>) -> Self {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
@@ -447,7 +459,7 @@ impl WasmMockQuerier {
             voting_powers_querier: VotingPowerQuerier::default(),
             governance_querier: GovConfigQuerier::default(),
             campaign_state_querier: CampaignStateQuerier::default(),
-            terraswap_router_querier: TerraswapRouterQuerier::default(),
+            astroport_router_querier: AstroportRouterQuerier::default(),
         }
     }
 
@@ -582,8 +594,8 @@ impl WasmMockQuerier {
         }
     }
 
-    pub fn with_terraswap_price(&mut self, offer: String, ask: String, price: f64) {
-        self.terraswap_router_querier.prices.insert((offer, ask), price);
+    pub fn with_astroport_price(&mut self, offer: String, ask: String, price: f64) {
+        self.astroport_router_querier.prices.insert((offer, ask), price);
     }
 }
 
@@ -604,12 +616,9 @@ fn encode_length(namespace: &[u8]) -> [u8; 2] {
     [length_bytes[2], length_bytes[3]]
 }
 
-fn terraswap_operation_to_string(operation: &SwapOperation) -> (String, String) {
+fn swap_operation_to_string(operation: &SwapOperation) -> (String, String) {
     match operation {
-        SwapOperation::NativeSwap { offer_denom, ask_denom } => {
-            (offer_denom.to_string(), ask_denom.to_string())
-        }
-        SwapOperation::TerraSwap { offer_asset_info, ask_asset_info } => {
+        SwapOperation::Swap { offer_asset_info, ask_asset_info } => {
             (offer_asset_info.to_string(), ask_asset_info.to_string())
         }
     }

@@ -10,10 +10,10 @@ use crate::staking::executions::stake_governance_token_hook;
 use crate::staking::states::{StakerState, StakingState};
 use crate::tests::init_default;
 
-pub const STAKER1: &str = "Staker1";
+pub const STAKER1: &str = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
 pub const STAKER1_STAKE_AMOUNT: Uint128 = Uint128::new(10u128);
 
-pub const STAKER2: &str = "Staker2";
+pub const STAKER2: &str = "terra1333veey879eeqcff8j3gfcgwt8cfrg9mq20v6f";
 pub const STAKER2_STAKE_AMOUNT: Uint128 = Uint128::new(10u128);
 
 pub fn exec(deps: &mut CustomDeps, env: Env, info: MessageInfo, sender: Addr, amount: Uint128) -> ContractResult<Response> {
@@ -81,7 +81,7 @@ fn failed_wrong_token() {
     let result = exec(
         &mut deps,
         governance_env(),
-        mock_info("Another Token", &[]),
+        mock_info("terra17q4lzg70un58uefr2fwu7uxtgvftspr7d0a6p3", &[]),
         Addr::unchecked(STAKER1),
         STAKER1_STAKE_AMOUNT,
     );

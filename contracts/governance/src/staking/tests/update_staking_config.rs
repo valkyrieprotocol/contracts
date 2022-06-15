@@ -48,7 +48,7 @@ fn succeed() {
 
     init_default(deps.as_mut());
 
-    let distributor = "NewDistributor";
+    let distributor = "terra17q4lzg70un58uefr2fwu7uxtgvftspr7d0a6p3";
 
     will_success(&mut deps, Some(distributor.to_string()));
 

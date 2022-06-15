@@ -11,7 +11,7 @@ pub fn get_config(deps: Deps, _env: Env) -> ContractResult<ConfigResponse> {
     Ok(ConfigResponse {
         governance: config.governance.to_string(),
         valkyrie_token: config.valkyrie_token.to_string(),
-        terraswap_router: config.terraswap_router.to_string(),
+        valkyrie_proxy: config.valkyrie_proxy.to_string(),
         code_id: config.code_id,
         add_pool_fee_rate: config.add_pool_fee_rate,
         add_pool_min_referral_reward_rate: config.add_pool_min_referral_reward_rate,

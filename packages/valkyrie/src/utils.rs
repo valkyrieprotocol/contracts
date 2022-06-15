@@ -1,5 +1,5 @@
-use cosmwasm_std::{Uint128, Decimal, Binary, Response, StdResult, StdError};
-use bigint::U256;
+use cosmwasm_std::{Uint128, Decimal, Binary, Response, StdResult, StdError, Addr};
+use bigint::{U256, U512};
 use std::num::ParseIntError;
 
 pub fn make_response(action: &str) -> Response {
@@ -39,7 +39,12 @@ pub fn to_ratio_uint128(values: &Vec<Uint128>) -> Vec<Decimal> {
 }
 
 pub fn parse_uint128(value: &str) -> Result<Uint128, ParseIntError> {
-    value.parse::<u128>().map(|v| Uint128::from(v))
+    let r = value.parse::<u128>().map(|v| Uint128::from(v));
+    return if r.is_ok() {
+        Ok(r.unwrap())
+    } else {
+        Err(r.unwrap_err() as ParseIntError)
+    }
 }
 
 pub fn find_mut_or_push<T, P: Fn(&T) -> bool, N: Fn() -> T, F: Fn(&mut T)>(
@@ -144,35 +149,80 @@ pub fn put_query_parameter(url: &str, key: &str, value: &str) -> String {
 const TERRA_ADDRESS_HRP: &str = "terra1";
 const TERRA_ADDRESS_HRP_LENGTH: usize = 6;
 const TERRA_ADDRESS_LENGTH: usize = 44;
+const TERRA_CONTRACT_ADDRESS_LENGTH: usize = 64;
+const COMPRESSED_TERRA_ADDRESS_LENGTH: usize = 32;
+const COMPRESSED_TERRA_CONTRACT_ADDRESS_LENGTH: usize = 76;
 const BECH32_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+
+pub fn is_contract(address: &Addr) -> bool {
+    address.to_string().len() > TERRA_ADDRESS_LENGTH
+}
+
 pub fn compress_addr(address: &str) -> StdResult<String> {
-    let mut result = U256::zero();
-    for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
-        let index = BECH32_CHARSET.find(c)
-            .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?;
-        result = (result << 5) | U256::from(index);
+    if address.len() == TERRA_ADDRESS_LENGTH {
+        let mut result = U256::zero();
+        for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
+            let index = BECH32_CHARSET.find(c)
+                .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?;
+            result = (result << 5) | U256::from(index);
+        }
+
+        let mut bytes = [0u8; 32];
+        result.to_big_endian(&mut bytes);
+        Ok(Binary::from(&bytes[8..]).to_base64())
+    } else {
+        let mut result = U512::zero();
+        for c in address[TERRA_ADDRESS_HRP_LENGTH..].chars() {
+            let index = BECH32_CHARSET.find(c)
+                .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?;
+            result = (result << 5) | U512::from(index);
+        }
+
+        let mut bytes = [0u8; 64];
+        result.to_big_endian(&mut bytes);
+        Ok(Binary::from(&bytes[8..]).to_base64())
     }
 
-    let mut bytes = [0u8; 32];
-    result.to_big_endian(&mut bytes);
-
-    Ok(Binary::from(&bytes[8..]).to_base64())
 }
 
 pub fn decompress_addr(text: &str) -> StdResult<String> {
+    let is_contract = if text.len() == COMPRESSED_TERRA_ADDRESS_LENGTH {
+        false
+    } else if text.len() == COMPRESSED_TERRA_CONTRACT_ADDRESS_LENGTH {
+        true
+    } else {
+        return Err(StdError::generic_err("Invalid compressed addr."));
+    };
+
+
     let decoded = Binary::from_base64(text).unwrap();
-    let mut bytes = [0u8; 32];
-    bytes[8..].clone_from_slice(decoded.as_slice());
-
-    let mut data = U256::from_big_endian(&bytes);
     let mut result = String::new();
+    if !is_contract {
+        let mut bytes = [0u8; 32];
+        bytes[8..].clone_from_slice(decoded.as_slice());
 
-    for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_ADDRESS_LENGTH {
-        let index = (data & U256::from(0x1F)).as_u32() as usize;
-        result = BECH32_CHARSET.chars().nth(index)
-            .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?
-            .to_string() + &result;
-        data = data >> 5;
+        let mut data = U256::from_big_endian(&bytes);
+
+        for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_ADDRESS_LENGTH {
+            let index = (data & U256::from(0x1F)).as_u32() as usize;
+            result = BECH32_CHARSET.chars().nth(index)
+                .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?
+                .to_string() + &result;
+            data = data >> 5;
+        }
+    } else {
+        let mut bytes = [0u8; 64];
+        bytes[8..].clone_from_slice(decoded.as_slice());
+
+        let mut data = U512::from_big_endian(&bytes);
+
+        for _ in TERRA_ADDRESS_HRP_LENGTH..TERRA_CONTRACT_ADDRESS_LENGTH {
+            let index = (data & U512::from(0x1F)).as_u32() as usize;
+            result = BECH32_CHARSET.chars().nth(index)
+                .ok_or(StdError::generic_err("Does not contain BECH32_CHARSET"))?
+                .to_string() + &result;
+            data = data >> 5;
+        }
     }
 
     Ok(TERRA_ADDRESS_HRP.to_string() + &result)

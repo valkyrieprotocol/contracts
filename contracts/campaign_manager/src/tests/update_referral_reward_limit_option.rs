@@ -55,7 +55,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let overflow_amount_recipient = "ChangedRecipient";
+    let overflow_amount_recipient = "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n";
     let base_count = 1u8;
     let percent_for_governance_staking = 10u16;
 

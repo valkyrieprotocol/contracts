@@ -1,4 +1,4 @@
-use cosmwasm_std::{ContractResult as CwContractResult, Env, Reply, Response, SubMsgExecutionResponse, Uint128};
+use cosmwasm_std::{Env, Reply, Response, SubMsgResponse, SubMsgResult, Uint128};
 
 use valkyrie::common::ContractResult;
 use valkyrie::governance::enumerations::{PollStatus, VoteOption};
@@ -14,7 +14,7 @@ use crate::tests::init_default;
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
-    result: CwContractResult<SubMsgExecutionResponse>,
+    result: SubMsgResult,
 ) -> ContractResult<Response> {
     reply_execution(deps.as_mut(), env, Reply {
         id: REPLY_EXECUTION,
@@ -53,7 +53,7 @@ fn succeed_success_reply() {
     let (env, _, _) = super::execute_poll::will_success(&mut deps, poll_id);
     let context = PollExecutionContext::load(&deps.storage).unwrap();
 
-    exec(&mut deps, env.clone(), CwContractResult::Ok(mock_subcall_response())).unwrap();
+    exec(&mut deps, env.clone(), SubMsgResult::Ok(mock_subcall_response())).unwrap();
 
     assert!(PollExecutionContext::may_load(&deps.storage).unwrap().is_none());
 
@@ -92,7 +92,7 @@ fn succeed_failed_reply() {
     let (env, _, _) = super::execute_poll::will_success(&mut deps, poll_id);
     let context = PollExecutionContext::load(&deps.storage).unwrap();
 
-    exec(&mut deps, env.clone(), CwContractResult::Err("Mock err".to_string())).unwrap();
+    exec(&mut deps, env.clone(), SubMsgResult::Err("Mock err".to_string())).unwrap();
 
     assert!(PollExecutionContext::may_load(&deps.storage).unwrap().is_none());
 
@@ -100,8 +100,8 @@ fn succeed_failed_reply() {
     assert_eq!(poll.status, PollStatus::Failed);
 }
 
-pub fn mock_subcall_response() -> SubMsgExecutionResponse {
-    SubMsgExecutionResponse {
+pub fn mock_subcall_response() -> SubMsgResponse {
+    SubMsgResponse {
         events: vec![],
         data: None,
     }

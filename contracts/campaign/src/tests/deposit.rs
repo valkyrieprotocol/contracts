@@ -4,7 +4,7 @@ use crate::states::Deposit;
 use valkyrie::mock_querier::{CustomDeps, custom_deps};
 use crate::executions::deposit;
 use valkyrie::common::ContractResult;
-use valkyrie::test_constants::campaign::{campaign_env, DEPOSIT_DENOM_NATIVE};
+use valkyrie::test_constants::campaign::{campaign_env, DEPOSIT_DENOM_NATIVE, PARTICIPATOR1};
 use cosmwasm_std::testing::mock_info;
 use valkyrie::errors::ContractError;
 use cw20::Denom;
@@ -50,7 +50,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let actor = Addr::unchecked("Actor");
+    let actor = Addr::unchecked(PARTICIPATOR1);
 
     let deposit = Deposit::load_or_new(&deps.storage, &actor).unwrap();
     assert_eq!(deposit, Deposit {
@@ -87,8 +87,8 @@ fn failed_invalid_funds() {
     let result = exec(
         &mut deps,
         campaign_env(),
-        mock_info("Actor", &[]),
-        "Actor",
+        mock_info(PARTICIPATOR1, &[]),
+        PARTICIPATOR1,
         vec![],
     );
     assert_eq!(result.unwrap_err(), ContractError::Std(StdError::generic_err("Missing deposit denom")));
@@ -96,8 +96,8 @@ fn failed_invalid_funds() {
     let result = exec(
         &mut deps,
         campaign_env(),
-        mock_info("Actor", &[]),
-        "Actor",
+        mock_info(PARTICIPATOR1, &[]),
+        PARTICIPATOR1,
         vec![
             (Denom::Native("ukrw".to_string()), Uint128::new(100)),
         ],
@@ -107,8 +107,8 @@ fn failed_invalid_funds() {
     let result = exec(
         &mut deps,
         campaign_env(),
-        mock_info("Actor", &[]),
-        "Actor",
+        mock_info(PARTICIPATOR1, &[]),
+        PARTICIPATOR1,
         vec![
             (Denom::Native(DEPOSIT_DENOM_NATIVE.to_string()), Uint128::zero()),
         ],

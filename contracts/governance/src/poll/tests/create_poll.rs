@@ -13,7 +13,7 @@ use crate::poll::executions::create_poll;
 use crate::poll::states::Poll;
 use crate::tests::init_default;
 
-pub const PROPOSER1: &str = "Proposer1";
+pub const PROPOSER1: &str = "terra14mtctaszgzm4gcedlfslds802fmklnp4up72da";
 
 pub const POLL_TITLE: &str = "PollTitle";
 pub const POLL_DESCRIPTION: &str = "PollDescription";
@@ -375,9 +375,18 @@ fn failed_create_poll_transfer() {
 }
 
 pub fn mock_exec_msg(order: u64) -> ExecutionMsg {
+
+    let contracts = vec![
+        "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n",
+        "terra1333veey879eeqcff8j3gfcgwt8cfrg9mq20v6f",
+        "terra17q4lzg70un58uefr2fwu7uxtgvftspr7d0a6p3",
+        "terra1vwy8s2jqc25x9u0e94459wn22lx0j3x466k4jj",
+        "terra14mtctaszgzm4gcedlfslds802fmklnp4up72da",
+    ];
+
     ExecutionMsg {
         order,
-        contract: format!("Contract{}", order),
+        contract: contracts[order as usize].to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Burn {
             amount: Uint128::new(1),
         }).unwrap(),

@@ -4,7 +4,7 @@ use valkyrie::campaign_manager::execute_msgs::{InstantiateMsg, ReferralRewardLim
 use valkyrie::common::{ContractResult, Denom};
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::campaign_manager::*;
-use valkyrie::test_constants::{default_sender, TERRASWAP_ROUTER, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
+use valkyrie::test_constants::{default_sender, VALKYRIE_PROXY, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 use valkyrie::test_constants::governance::GOVERNANCE;
 
 use crate::executions::instantiate;
@@ -16,7 +16,7 @@ pub fn exec(
     info: MessageInfo,
     governance: String,
     valkyrie_token: String,
-    terraswap_router: String,
+    valkyrie_proxy: String,
     code_id: u64,
     add_pool_fee_rate: Decimal,
     add_pool_min_referral_reward_rate: Decimal,
@@ -34,7 +34,7 @@ pub fn exec(
     let msg = InstantiateMsg {
         governance,
         valkyrie_token,
-        terraswap_router,
+        valkyrie_proxy,
         code_id,
         add_pool_fee_rate,
         add_pool_min_referral_reward_rate,
@@ -70,7 +70,7 @@ pub fn default(deps: &mut CustomDeps) -> (Env, MessageInfo, Response) {
         info.clone(),
         GOVERNANCE.to_string(),
         VALKYRIE_TOKEN.to_string(),
-        TERRASWAP_ROUTER.to_string(),
+        VALKYRIE_PROXY.to_string(),
         CAMPAIGN_CODE_ID,
         Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
         Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),
@@ -99,7 +99,7 @@ fn succeed() {
     assert_eq!(config, Config {
         governance: Addr::unchecked(GOVERNANCE),
         valkyrie_token: Addr::unchecked(VALKYRIE_TOKEN),
-        terraswap_router: Addr::unchecked(TERRASWAP_ROUTER),
+        valkyrie_proxy: Addr::unchecked(VALKYRIE_PROXY),
         code_id: CAMPAIGN_CODE_ID,
         add_pool_fee_rate: Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
         add_pool_min_referral_reward_rate: Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),

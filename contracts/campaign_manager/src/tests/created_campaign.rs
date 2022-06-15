@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, ContractResult as CwContractResult, Env, Event, Reply, Response, SubMsgExecutionResponse};
+use cosmwasm_std::{Addr, Env, Event, Reply, Response, SubMsgResponse, SubMsgResult};
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
@@ -10,7 +10,7 @@ use crate::states::{Campaign, CreateCampaignContext};
 pub fn exec(
     deps: &mut CustomDeps,
     env: Env,
-    result: CwContractResult<SubMsgExecutionResponse>,
+    result: SubMsgResult,
 ) -> ContractResult<Response> {
     created_campaign(deps.as_mut(), env, Reply {
         id: REPLY_CREATE_CAMPAIGN,
@@ -27,13 +27,13 @@ fn succeed_success_reply() {
 
     let context = CreateCampaignContext::load(&deps.storage).unwrap();
 
-    let campaign_address = Addr::unchecked("CampaignContractAddress");
+    let campaign_address = Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n");
 
     let env = campaign_manager_env();
     let result = exec(
         &mut deps,
         env.clone(),
-        CwContractResult::Ok(SubMsgExecutionResponse {
+        SubMsgResult::Ok(SubMsgResponse {
             events: vec![
                 Event::new("instantiate_contract")
                     .add_attribute("contract_address", campaign_address.to_string()),

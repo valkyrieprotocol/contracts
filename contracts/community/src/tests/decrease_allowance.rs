@@ -53,7 +53,7 @@ fn succeed() {
         &[(COMMUNITY, &Uint128::new(10000))],
     )]);
 
-    let address = Addr::unchecked("Address");
+    let address = Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n");
 
     super::instantiate::default(&mut deps);
     super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128::new(1000));
@@ -89,7 +89,7 @@ fn failed_invalid_permission() {
         &mut deps,
         community_env(),
         default_sender(),
-        "Address".to_string(),
+        "terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n".to_string(),
         None,
     );
     expect_unauthorized_err(&result);
@@ -103,7 +103,7 @@ fn failed_insufficient_remain_amount() {
         &[(COMMUNITY, &Uint128::new(10000))],
     )]);
 
-    let address = Addr::unchecked("Address");
+    let address = Addr::unchecked("terra1fmcjjt6yc9wqup2r06urnrd928jhrde6gcld6n");
 
     super::instantiate::default(&mut deps);
     super::increase_allowance::will_success(&mut deps, address.to_string(), Uint128::new(1000));

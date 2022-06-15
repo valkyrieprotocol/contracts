@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::executions::distribute;
 use valkyrie::test_utils::set_height;
 use crate::states::{Distribution, ContractState};
-use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
+use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR, RECIPIENT, RECIPIENT2};
 use valkyrie::test_constants::governance::governance_sender;
 use cw20::Cw20ExecuteMsg;
 use valkyrie::lp_staking::execute_msgs::Cw20HookMsg;
@@ -56,7 +56,7 @@ fn succeed() {
         &mut deps,
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         None,
     );
@@ -64,7 +64,7 @@ fn succeed() {
         &mut deps,
         20000,
         30000,
-        "Recipient2".to_string(),
+        RECIPIENT2.to_string(),
         Uint128::new(5000),
         Some(to_binary(&Cw20HookMsg::Bond {}).unwrap()),
     );
@@ -75,7 +75,7 @@ fn succeed() {
             contract_addr: MANAGING_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "Recipient".to_string(),
+                recipient: RECIPIENT.to_string(),
                 amount: Uint128::new(1),
             }).unwrap(),
         })),
@@ -87,7 +87,7 @@ fn succeed() {
             contract_addr: MANAGING_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "Recipient".to_string(),
+                recipient: RECIPIENT.to_string(),
                 amount: Uint128::new(1),
             }).unwrap(),
         })),
@@ -95,7 +95,7 @@ fn succeed() {
             contract_addr: MANAGING_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: "Recipient2".to_string(),
+                contract: RECIPIENT2.to_string(),
                 amount: Uint128::new(1),
                 msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
             }).unwrap(),
@@ -127,7 +127,7 @@ fn validate_released_amount() {
         &mut deps,
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         None,
     );
@@ -135,7 +135,7 @@ fn validate_released_amount() {
         &mut deps,
         20000,
         30000,
-        "Recipient2".to_string(),
+        RECIPIENT2.to_string(),
         Uint128::new(5000),
         None,
     );

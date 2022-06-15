@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, attr, Attribute, QuerierWrapper, StdResult, Uint128};
-use cw20::{Denom, Cw20QueryMsg};
+use cosmwasm_std::{Addr, attr, Attribute, QuerierWrapper, QueryRequest, StdResult, to_binary, Uint128, WasmQuery};
+use cw20::{Denom, Cw20QueryMsg, TokenInfoResponse};
 
 pub fn query_balance(
     querier: &QuerierWrapper,
@@ -37,4 +37,16 @@ pub fn create_send_attr(recipient: &Addr, amount: Uint128, action: &str) -> Vec<
         attr("recipient", recipient.as_str()),
         attr("amount", amount.to_string()),
     ]
+}
+
+pub fn query_token_info(
+    querier: &QuerierWrapper,
+    contract_addr: String,
+) -> StdResult<TokenInfoResponse> {
+    let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr,
+        msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
+    }))?;
+
+    Ok(token_info)
 }

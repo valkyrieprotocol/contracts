@@ -6,9 +6,9 @@ pub mod community;
 pub mod campaign_manager;
 pub mod lp_staking;
 pub mod distributor;
+pub mod proxy;
 
 pub mod cw20;
-pub mod terra;
 pub mod utils;
 pub mod pagination;
 pub mod message_factories;

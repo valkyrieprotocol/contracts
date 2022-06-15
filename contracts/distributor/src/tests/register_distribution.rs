@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::executions::register_distribution;
 use valkyrie::test_utils::{expect_unauthorized_err, expect_overflow_err};
 use crate::states::{Distribution, ContractState};
-use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR};
+use valkyrie::test_constants::distributor::{distributor_env, MANAGING_TOKEN, DISTRIBUTOR, RECIPIENT};
 use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_constants::default_sender;
 use valkyrie::governance::execute_msgs::Cw20HookMsg;
@@ -70,7 +70,7 @@ fn succeed() {
         &mut deps,
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         Some(to_binary(&Cw20HookMsg::StakeGovernanceToken {}).unwrap()),
     );
@@ -84,7 +84,7 @@ fn succeed() {
         id: 1,
         start_height: 20000,
         end_height: 30000,
-        recipient: Addr::unchecked("Recipient"),
+        recipient: Addr::unchecked(RECIPIENT),
         amount: Uint128::new(10000),
         distributed_amount: Uint128::zero(),
         message: Some(to_binary(&Cw20HookMsg::StakeGovernanceToken {}).unwrap()),
@@ -103,7 +103,7 @@ fn failed_invalid_permission() {
         default_sender(),
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         None,
     );
@@ -126,7 +126,7 @@ fn failed_overflow() {
         governance_sender(),
         20000,
         30000,
-        "Recipient".to_string(),
+        RECIPIENT.to_string(),
         Uint128::new(10000),
         None,
     );

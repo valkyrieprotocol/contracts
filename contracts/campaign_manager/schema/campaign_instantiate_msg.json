@@ -10,7 +10,9 @@
     "deposit_amount",
     "deposit_lock_period",
     "governance",
-    "referral_reward_token"
+    "referral_reward_token",
+    "vp_burn_amount",
+    "vp_token"
   ],
   "properties": {
     "admin": {
@@ -60,6 +62,12 @@
     },
     "referral_reward_token": {
       "type": "string"
+    },
+    "vp_burn_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "vp_token": {
+      "type": "string"
     }
   },
   "definitions": {
@@ -68,7 +76,7 @@
       "type": "string"
     },
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

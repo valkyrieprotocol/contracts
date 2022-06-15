@@ -13,7 +13,9 @@
     "governance",
     "parameter_key",
     "title",
-    "url"
+    "url",
+    "vp_burn_amount",
+    "vp_token"
   ],
   "properties": {
     "admin": {
@@ -72,11 +74,17 @@
     },
     "url": {
       "type": "string"
+    },
+    "vp_burn_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "vp_token": {
+      "type": "string"
     }
   },
   "definitions": {
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

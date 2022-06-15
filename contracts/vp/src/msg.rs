@@ -1,6 +1,5 @@
 use cosmwasm_std::{Decimal, Uint128, Binary};
-use cw0::Expiration;
-use cw20::{Cw20ReceiveMsg, Logo};
+use cw20::{Cw20ReceiveMsg, Logo, Expiration};
 use cw20_base::msg::InstantiateMarketingInfo;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

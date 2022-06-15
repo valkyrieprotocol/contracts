@@ -6,7 +6,7 @@ use valkyrie::common::{ContractResult, Denom};
 use valkyrie::message_matchers;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
 use valkyrie::test_constants::{default_sender, VALKYRIE_TOKEN};
-use valkyrie::test_constants::campaign::{CAMPAIGN, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, REFERRAL_REWARD_AMOUNTS};
+use valkyrie::test_constants::campaign::{CAMPAIGN, CAMPAIGN_ADMIN, campaign_admin_sender, campaign_env, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATOR1, PARTICIPATOR2, REFERRAL_REWARD_AMOUNTS};
 use valkyrie::test_constants::campaign_manager::CAMPAIGN_MANAGER;
 use valkyrie::test_utils::{expect_generic_err, expect_unauthorized_err};
 use valkyrie::utils::calc_ratio_amount;
@@ -207,11 +207,11 @@ fn succeed_free_balance() {
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 7000, 10000);
-    super::participate::will_success(&mut deps, "Participator1", None);
+    super::participate::will_success(&mut deps, PARTICIPATOR1, None);
     super::participate::will_success(
         &mut deps,
-        "Participator2",
-        Some(Referrer::Address("Participator1".to_string())),
+        PARTICIPATOR2,
+        Some(Referrer::Address(PARTICIPATOR1.to_string())),
     );
 
     will_success(
@@ -274,11 +274,11 @@ fn failed_overflow() {
 
     super::update_activation::will_success(&mut deps, true);
 
-    super::participate::will_success(&mut deps, "Participator1", None);
+    super::participate::will_success(&mut deps, PARTICIPATOR1, None);
     super::participate::will_success(
         &mut deps,
-        "Participator2",
-        Some(Referrer::Address("Participator1".to_string())),
+        PARTICIPATOR2,
+        Some(Referrer::Address(PARTICIPATOR1.to_string())),
     );
 
     let result = exec(

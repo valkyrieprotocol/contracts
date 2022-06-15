@@ -7,7 +7,7 @@ use valkyrie::campaign_manager::query_msgs::QueryMsg;
 use valkyrie::common::ContractResult;
 use valkyrie::errors::ContractError;
 
-use crate::{executions, queries, migrations};
+use crate::{executions, queries};
 
 const CONTRACT_NAME: &str = "valkyrie-campaign-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -38,7 +38,7 @@ pub fn execute(
             governance,
             valkyrie_token,
             vp_token,
-            terraswap_router,
+            valkyrie_proxy,
             code_id,
             add_pool_fee_rate,
             add_pool_min_referral_reward_rate,
@@ -55,7 +55,7 @@ pub fn execute(
             governance,
             valkyrie_token,
             vp_token,
-            terraswap_router,
+            valkyrie_proxy,
             code_id,
             add_pool_fee_rate,
             add_pool_min_referral_reward_rate,
@@ -120,28 +120,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
 
     if cw2::get_contract_version(deps.storage).is_err() {
         cw2::set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.0".to_string())?;
-    }
-
-    //mig to v1.0.6 to v1.0.8-beta.0
-    let info = cw2::get_contract_version(deps.storage)?;
-    if info.version == "v1.0.6".to_string() {
-        let contract_admin = &deps.api.addr_validate(msg.contract_admin.as_str())?;
-        migrations::v106::migrate(deps.storage, &env, contract_admin)?;
-
-        set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.0")?;
-    }
-
-    //mig to v1.0.8-beta.0 to v1.0.8-beta.1
-    let info = cw2::get_contract_version(deps.storage)?;
-    if info.version == "1.0.8-beta.0".to_string() {
-        let vp_token = &deps.api.addr_validate(msg.vp_token.as_str())?;
-        migrations::v108_beta0::migrate(deps.storage, &env, vp_token)?;
-
-        set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.1")?;
     }
 
     //mig to v1.0.8-beta.1 to ??????

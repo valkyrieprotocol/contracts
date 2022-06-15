@@ -1,9 +1,9 @@
-use cosmwasm_std::{Addr, BankMsg, coin, CosmosMsg, Decimal, Env, MessageInfo, Response, SubMsg, Uint128};
+use cosmwasm_std::{Addr, BankMsg, coin, CosmosMsg, Env, MessageInfo, Response, SubMsg, Uint128};
 use cosmwasm_std::testing::mock_info;
 
 use valkyrie::common::ContractResult;
 use valkyrie::mock_querier::{custom_deps, CustomDeps};
-use valkyrie::test_constants::campaign::{campaign_env_height, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
+use valkyrie::test_constants::campaign::{campaign_env_height, PARTICIPATION_REWARD_AMOUNT, PARTICIPATION_REWARD_DENOM_NATIVE, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3, PARTICIPATOR1};
 use valkyrie::test_utils::expect_generic_err;
 
 use crate::executions::claim_participation_reward;
@@ -30,7 +30,7 @@ fn succeed() {
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 3995, 3000);
 
-    let participator = Addr::unchecked("Participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
     let (env, _, _) = super::participate::will_success(
         &mut deps,
         participator.as_str(),
@@ -76,7 +76,7 @@ fn failed_no_reward() {
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, PARTICIPATION_REWARD_AMOUNT.u128(), 2000);
 
-    let participator = Addr::unchecked("Participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
     let (env, _, _) = super::participate::will_success(
         &mut deps,
         &participator.as_str(),
