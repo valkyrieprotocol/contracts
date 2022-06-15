@@ -1,10 +1,10 @@
 use std::collections::{HashSet};
-use cosmwasm_std::{Addr, Api, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary, Uint128, WasmMsg};
 use valkyrie::proxy::execute_msgs::{DexInfo, DexType, ExecuteMsg, SwapOperation};
 
 use valkyrie::common::{ContractResult};
 use valkyrie::errors::ContractError;
-use valkyrie::proxy::asset::{addr_opt_validate, AssetInfo};
+use valkyrie::proxy::asset::{AssetInfo};
 use valkyrie::proxy::execute_msgs::InstantiateMsg;
 use valkyrie::utils::{make_response};
 
@@ -96,9 +96,10 @@ pub fn execute_swap_operations(
     }
 
     // Assert the operations are properly set
-    assert_operations(deps.api, &operations)?;
+    assert_operations(&operations)?;
 
-    let to = addr_opt_validate(deps.api, &to)?.unwrap_or(sender);
+
+    let to = to.unwrap_or(sender.to_string());
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
     let mut messages = operations
@@ -123,7 +124,7 @@ pub fn execute_swap_operations(
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
-        let receiver_balance = query_pool(deps.as_ref(), target_asset_info.clone(), to.clone())?;
+        let receiver_balance = query_pool(deps.as_ref(), target_asset_info.clone(), deps.api.addr_validate(to.as_str())?)?;
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
@@ -139,7 +140,7 @@ pub fn execute_swap_operations(
     Ok(Response::new().add_messages(messages))
 }
 
-fn assert_operations(api: &dyn Api, operations: &[SwapOperation]) -> StdResult<()> {
+fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
     let mut ask_asset_map: HashSet<String> = HashSet::new();
     for operation in operations {
         let (offer_asset, ask_asset) = match operation {
@@ -148,8 +149,6 @@ fn assert_operations(api: &dyn Api, operations: &[SwapOperation]) -> StdResult<(
                 ask_asset_info,
             } => (offer_asset_info.clone(), ask_asset_info.clone()),
         };
-        offer_asset.check(api)?;
-        ask_asset.check(api)?;
 
         ask_asset_map.remove(&offer_asset.to_string());
         ask_asset_map.insert(ask_asset.to_string());
@@ -198,7 +197,6 @@ pub fn assert_minimum_receive(
     minimum_receive: Uint128,
     receiver: Addr,
 ) -> ContractResult<Response> {
-    asset_info.check(deps.api)?;
     let receiver_balance = query_pool(deps, asset_info, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 

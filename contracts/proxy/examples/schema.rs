@@ -15,7 +15,6 @@ fn main() {
 
     export_schema(&schema_for!(Asset), &out_dir);
     export_schema(&schema_for!(AssetInfo), &out_dir);
-    export_schema(&schema_for!(PairInfo), &out_dir);
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(SwapOperation), &out_dir);

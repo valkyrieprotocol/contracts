@@ -217,11 +217,9 @@ pub mod liquidity {
 }
 
 pub mod proxy {
-    use cosmwasm_std::{Env, MessageInfo, Uint128};
+    use cosmwasm_std::{Env, MessageInfo};
     use cosmwasm_std::testing::mock_info;
 
-    use crate::test_constants::VALKYRIE_TOKEN;
-    use crate::test_constants::VALKYRIE_TICKET_TOKEN;
     use crate::test_utils::{mock_env_contract, mock_env_contract_height};
     pub const PROXY: &str = "terra190fxpjfkp6cygr2k9unzjurq42dyehqd579h5j";
     pub const ASTRO_FACTORY: &str = "terra16t7dpwwgx9n3lq6l6te3753lsjqwhxwpday9zx";

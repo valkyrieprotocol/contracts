@@ -31,7 +31,7 @@ pub fn simulate_swap_operations(
         return Err(ContractError::Std(StdError::generic_err("swap limit exceed")));
     }
 
-    assert_operations(deps, &operations)?;
+    assert_operations(&operations)?;
 
     let mut offer_amount = offer_amount;
     for operation in operations.into_iter() {
@@ -111,7 +111,6 @@ pub fn query_pool(
 }
 
 fn assert_operations(
-    deps:Deps,
     operations: &[SwapOperation]
 ) -> Result<(), StdError> {
     let mut ask_asset_map: HashSet<String> = HashSet::new();
@@ -125,8 +124,6 @@ fn assert_operations(
                 ask_asset_info,
             ),
         };
-        offer_asset.check(deps.api)?;
-        ask_asset.check(deps.api)?;
 
         ask_asset_map.remove(&offer_asset.to_string());
         ask_asset_map.insert(ask_asset.to_string());

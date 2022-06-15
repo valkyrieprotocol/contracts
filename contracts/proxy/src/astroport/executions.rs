@@ -5,7 +5,7 @@ use valkyrie::proxy::execute_msgs::{SwapOperation};
 use valkyrie::cw20::query_balance;
 use valkyrie::errors::ContractError;
 use valkyrie::proxy::asset::{Asset, AssetInfo};
-use crate::astroport::msgs::PairExecuteMsg;
+use crate::astroport::msgs::AstroportPairExecuteMsg;
 
 use crate::astroport::queries::{query_pair_info};
 
@@ -18,7 +18,6 @@ pub fn execute_swap_operation(
     to: Option<String>,
     max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
-
     let message = match operation {
         SwapOperation::Swap {
             offer_asset_info,
@@ -38,6 +37,7 @@ pub fn execute_swap_operation(
                     query_balance(&deps.querier, Denom::Cw20(deps.api.addr_validate(contract_addr.as_str())?), env.contract.address)?
                 }
             };
+
             let offer_asset = Asset {
                 info: offer_asset_info,
                 amount,
@@ -68,7 +68,7 @@ fn asset_into_swap_msg(
                 denom,
                 amount: offer_asset.amount,
             }],
-            msg: to_binary(&PairExecuteMsg::Swap {
+            msg: to_binary(&AstroportPairExecuteMsg::Swap {
                 offer_asset,
                 belief_price: None,
                 max_spread,
@@ -81,7 +81,7 @@ fn asset_into_swap_msg(
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract,
                 amount: offer_asset.amount,
-                msg: to_binary(&PairExecuteMsg::Swap {
+                msg: to_binary(&AstroportPairExecuteMsg::Swap {
                     offer_asset,
                     belief_price: None,
                     max_spread,

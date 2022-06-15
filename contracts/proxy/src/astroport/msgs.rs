@@ -5,20 +5,15 @@ use valkyrie::proxy::asset::{Asset, AssetInfo};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum FactoryQueryMsg {
-    Config {},
+pub enum AstroportFactoryQueryMsg {
     Pair {
         asset_infos: [AssetInfo; 2],
-    },
-    Pairs {
-        start_after: Option<[AssetInfo; 2]>,
-        limit: Option<u32>,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum PairExecuteMsg {
+pub enum AstroportPairExecuteMsg {
     Swap {
         offer_asset: Asset,
         belief_price: Option<Decimal>,
@@ -29,23 +24,23 @@ pub enum PairExecuteMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum PairQueryMsg {
+pub enum AstroportPairQueryMsg {
     Pair {},
-    Pool {},
     Simulation { offer_asset: Asset },
-    ReverseSimulation { ask_asset: Asset },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SimulationResponse {
+#[serde(rename_all = "snake_case")]
+pub struct AstroportSimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
     pub commission_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ReverseSimulationResponse {
-    pub offer_amount: Uint128,
-    pub spread_amount: Uint128,
-    pub commission_amount: Uint128,
+#[serde(rename_all = "snake_case")]
+pub struct AstroportPairInfo {
+    pub asset_infos: [AssetInfo; 2],
+    pub contract_addr: String,
+    pub liquidity_token: String,
 }

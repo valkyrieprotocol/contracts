@@ -2,8 +2,8 @@ use cosmwasm_std::{Addr, Deps, StdError, StdResult, Uint128};
 use cw20::{Denom};
 
 use valkyrie::cw20::query_balance;
-use valkyrie::proxy::asset::{Asset, AssetInfo, PairInfo};
-use crate::astroport::msgs::{FactoryQueryMsg, PairQueryMsg, SimulationResponse};
+use valkyrie::proxy::asset::{Asset, AssetInfo};
+use crate::astroport::msgs::{AstroportPairInfo, AstroportSimulationResponse, AstroportFactoryQueryMsg, AstroportPairQueryMsg};
 
 pub fn simulate_swap_operation(
     deps: Deps,
@@ -18,9 +18,9 @@ pub fn simulate_swap_operation(
         &[offer_asset_info.clone(), ask_asset_info.clone()],
     )?;
 
-    let res: SimulationResponse = deps.querier.query_wasm_smart(
+    let res: AstroportSimulationResponse = deps.querier.query_wasm_smart(
         pair_info.contract_addr,
-            &PairQueryMsg::Simulation {
+            &AstroportPairQueryMsg::Simulation {
                 offer_asset: Asset {
                     info: offer_asset_info.clone(),
                     amount: offer_amount,
@@ -37,10 +37,10 @@ pub fn query_pair_info(
     deps: Deps,
     factory_contract: &Addr,
     asset_infos: &[AssetInfo; 2],
-) -> StdResult<PairInfo> {
+) -> StdResult<AstroportPairInfo> {
     deps.querier.query_wasm_smart(
         factory_contract.to_string(),
-        &FactoryQueryMsg::Pair {
+        &AstroportFactoryQueryMsg::Pair {
             asset_infos: asset_infos.clone(),
         },
     )

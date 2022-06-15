@@ -1,9 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-
-use cosmwasm_std::{to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, MessageInfo, StdError, StdResult, SubMsg, Uint128, WasmMsg, };
-use cw20::Cw20ExecuteMsg;
+use cosmwasm_std::{Uint128};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
@@ -33,49 +31,4 @@ impl fmt::Display for AssetInfo {
             AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
         }
     }
-}
-
-impl AssetInfo {
-    pub fn check(&self, api: &dyn Api) -> StdResult<()> {
-        match self {
-            AssetInfo::Token { contract_addr } => {
-                addr_validate_to_lower(api, contract_addr.as_str())?;
-            }
-            AssetInfo::NativeToken { denom } => {
-                if !denom.starts_with("ibc/") && denom != &denom.to_lowercase() {
-                    return Err(StdError::generic_err(format!(
-                        "Non-IBC token denom {} should be lowercase",
-                        denom
-                    )));
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct PairInfo {
-    pub asset_infos: [AssetInfo; 2],
-    pub contract_addr: String,
-    pub liquidity_token: String,
-    pub asset_decimals: [u8; 2],
-}
-
-pub fn addr_opt_validate(api: &dyn Api, addr: &Option<String>) -> StdResult<Option<Addr>> {
-    addr.as_ref()
-        .map(|addr| addr_validate_to_lower(api, addr))
-        .transpose()
-}
-
-pub fn addr_validate_to_lower(api: &dyn Api, addr: impl Into<String>) -> StdResult<Addr> {
-    let addr = addr.into();
-    if addr.to_lowercase() != addr {
-        return Err(StdError::generic_err(format!(
-            "Address {} should be lowercase",
-            addr
-        )));
-    }
-    api.addr_validate(&addr)
 }
