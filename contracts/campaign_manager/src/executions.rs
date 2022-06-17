@@ -360,12 +360,12 @@ pub fn created_campaign(
     }
 
     let events = msg.result.unwrap().events;
-    let event = find(&events, |e| e.ty == "instantiate_contract");
+    let event = find(&events, |e| e.ty == "instantiate");
     if event.is_none() {
         return Err(ContractError::Std(StdError::generic_err("Failed to parse data")));
     }
 
-    let contract_address = find(&event.unwrap().attributes, |a| a.key == "contract_address");
+    let contract_address = find(&event.unwrap().attributes, |a| a.key == "_contract_address");
     if contract_address.is_none() {
         return Err(ContractError::Std(StdError::generic_err("Failed to parse data")));
     }

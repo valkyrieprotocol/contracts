@@ -37,7 +37,7 @@ pub fn wasm_instantiate(code_id: u64, admin: Option<Addr>, msg: Binary) -> Cosmo
         code_id,
         msg,
         funds: vec![],
-        label: String::new(),
+        label: "campaign".to_string(),
     })
 }
 
