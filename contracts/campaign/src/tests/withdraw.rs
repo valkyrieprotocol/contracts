@@ -45,7 +45,7 @@ fn succeed() {
     let (_, _, response) = will_success(&mut deps, "Actor", withdraw_amount);
     assert_eq!(response.messages, vec![SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
         to_address: "Actor".to_string(),
-        amount: vec![coin(withdraw_amount.u128(), "uusd")],
+        amount: vec![coin(withdraw_amount.u128(), "uluna")],
     }))]);
 }
 

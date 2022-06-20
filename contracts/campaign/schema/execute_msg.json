@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ExecuteMsg",
-  "anyOf": [
+  "oneOf": [
     {
       "type": "object",
       "required": [
@@ -82,6 +82,16 @@
                 "string",
                 "null"
               ]
+            },
+            "vp_burn_amount": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         }
@@ -109,23 +119,31 @@
         "update_reward_config": {
           "type": "object",
           "properties": {
-            "participation_reward_amount": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Uint128"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "participation_reward_lock_period": {
+            "participation_reward_distribution_schedule": {
               "type": [
-                "integer",
+                "array",
                 "null"
               ],
-              "format": "uint64",
-              "minimum": 0.0
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  },
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  },
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                ],
+                "maxItems": 3,
+                "minItems": 3
+              }
             },
             "referral_reward_amounts": {
               "type": [
@@ -348,7 +366,7 @@
       }
     },
     "Denom": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [
@@ -376,7 +394,7 @@
       ]
     },
     "Referrer": {
-      "anyOf": [
+      "oneOf": [
         {
           "type": "object",
           "required": [

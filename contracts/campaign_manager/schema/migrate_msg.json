@@ -3,10 +3,14 @@
   "title": "MigrateMsg",
   "type": "object",
   "required": [
-    "contract_admin"
+    "contract_admin",
+    "vp_token"
   ],
   "properties": {
     "contract_admin": {
+      "type": "string"
+    },
+    "vp_token": {
       "type": "string"
     }
   }

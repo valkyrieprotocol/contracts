@@ -30,12 +30,12 @@ fn update_ticket_config_test() {
         deps.as_mut(),
         env.clone(),
         info.clone(),
-        Some(Addr::unchecked("DDDD").to_string()),
+        Some(Addr::unchecked("terra1f68wt2ch3cx2g62dxtc8v68mkdh5wchdgdjwz7").to_string()),
         Some(vec![TICKET_DIST_SCHEDULE, (100, 200, Uint128::new(1234u128))])
     );
 
     let config = TicketConfig::load(&deps.storage).unwrap();
-    assert_eq!(config.ticket_token, "DDDD".to_string());
+    assert_eq!(config.ticket_token, "terra1f68wt2ch3cx2g62dxtc8v68mkdh5wchdgdjwz7".to_string());
     assert_eq!(config.distribution_schedule, vec![TICKET_DIST_SCHEDULE, (100, 200, Uint128::new(1234u128))]);
 
 }

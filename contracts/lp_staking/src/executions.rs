@@ -20,7 +20,7 @@ pub fn bond(
 
     let config: Config = Config::load(deps.storage)?;
 
-    if !config.is_authorized(&deps.as_ref(), &sender_addr_raw)? {
+    if !config.is_authorized(&sender_addr_raw)? {
         return Err(ContractError::Std(StdError::generic_err(
             "Can only called by wallet",
         )));

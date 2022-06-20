@@ -31,6 +31,7 @@ pub fn instantiate(
     Config {
         admin: info.sender,
         token: deps.api.addr_validate(&msg.token.as_str())?,
+        usdc_token: deps.api.addr_validate(&msg.token.as_str())?,
         pair: deps.api.addr_validate(&msg.pair.as_str())?,
         lp_token: deps.api.addr_validate(&msg.lp_token.as_str())?,
         whitelisted_contracts: msg.whitelisted_contracts.iter()

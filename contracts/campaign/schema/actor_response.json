@@ -4,19 +4,31 @@
   "type": "object",
   "required": [
     "address",
+    "claimed_participation_reward_amount",
+    "claimed_referral_reward_amount",
     "cumulative_participation_reward_amount",
     "cumulative_referral_reward_amount",
     "last_participated_at",
     "participation_count",
     "participation_reward_amount",
     "participation_reward_amounts",
+    "participation_reward_last_distributed",
     "referral_count",
     "referral_reward_amount",
-    "referral_reward_amounts"
+    "referral_reward_amounts",
+    "referral_reward_last_distributed",
+    "unlocked_participation_reward_amount",
+    "unlocked_referral_reward_amount"
   ],
   "properties": {
     "address": {
       "type": "string"
+    },
+    "claimed_participation_reward_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "claimed_referral_reward_amount": {
+      "$ref": "#/definitions/Uint128"
     },
     "cumulative_participation_reward_amount": {
       "$ref": "#/definitions/Uint128"
@@ -41,17 +53,27 @@
         "type": "array",
         "items": [
           {
-            "$ref": "#/definitions/Uint128"
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
           },
           {
             "type": "integer",
             "format": "uint64",
             "minimum": 0.0
+          },
+          {
+            "$ref": "#/definitions/Uint128"
           }
         ],
-        "maxItems": 2,
-        "minItems": 2
+        "maxItems": 3,
+        "minItems": 3
       }
+    },
+    "participation_reward_last_distributed": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     },
     "referral_count": {
       "type": "integer",
@@ -79,11 +101,22 @@
         "minItems": 2
       }
     },
+    "referral_reward_last_distributed": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
     "referrer_address": {
       "type": [
         "string",
         "null"
       ]
+    },
+    "unlocked_participation_reward_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "unlocked_referral_reward_amount": {
+      "$ref": "#/definitions/Uint128"
     }
   },
   "definitions": {

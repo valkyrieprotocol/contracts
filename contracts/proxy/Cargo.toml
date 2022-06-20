@@ -1,0 +1,47 @@
+[package]
+name = "valkyrie-proxy"
+version = "1.0.8-beta.1"
+authors = ["Valkyrie Protocol"]
+edition = "2018"
+description = ""
+license = "Apache-2.0"
+repository = "https://github.com/valkyrieprotocol/contracts.git"
+homepage = "https://valkyrieprotocol.com"
+documentation = "https://docs.valkyrieprotocol.com"
+
+exclude = [
+    "contract.wasm",
+    "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[dependencies]
+serde = { version = "1.0.126", default-features = false, features = ["derive"] }
+schemars = { version = "0.8.10" }
+cosmwasm-std = { version = "1.0.0" }
+cw-storage-plus = { version = "0.11.0", features = ["iterator"] }
+cw20 = { version = "0.11.0" }
+valkyrie = { path = "../../packages/valkyrie", default-features = false, version = "1.0.8-beta.1" }
+valkyrie-qualifier = { path = "../../packages/valkyrie_qualifier", default-features = false, version = "1.0.8-beta.1" }
+protobuf = { version = "2", features = ["with-bytes"] }
+
+[dev-dependencies]
+cosmwasm-schema = { version = "1.0.0" }

@@ -34,16 +34,14 @@ incremental = false
 overflow-checks = true
 
 [dependencies]
-cw0 = { version = "0.8.1" }
-cw2 = { version = "0.8.1" }
-cw20 = { version = "0.8.1" }
-cw20-base = { version = "0.8.1", features = ["library"]}
-cw-storage-plus = { version = "0.8.1" }
-cosmwasm-std = { version = "0.16.0" }
-schemars = "0.8.1"
+cw2 = { version = "0.11.0" }
+cw20 = { version = "0.11.0" }
+cw20-base = { version = "0.11.0", features = ["library"]}
+cw-storage-plus = { version = "0.11.0", features = ["iterator"] }
+cosmwasm-std = { version = "1.0.0" }
+schemars = { version = "0.8.10" }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
-astroport = "1.0.1"
 
 [dev-dependencies]
-cosmwasm-schema = { version = "0.16.0" }
+cosmwasm-schema = { version = "1.0.0" }

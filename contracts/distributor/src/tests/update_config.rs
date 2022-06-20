@@ -4,7 +4,7 @@ use valkyrie::common::ContractResult;
 use crate::executions::update_config;
 use valkyrie::test_utils::expect_unauthorized_err;
 use crate::states::ContractConfig;
-use valkyrie::test_constants::distributor::distributor_env;
+use valkyrie::test_constants::distributor::{ADMIN1, distributor_env};
 use valkyrie::test_constants::governance::governance_sender;
 use valkyrie::test_constants::default_sender;
 
@@ -45,7 +45,7 @@ fn succeed() {
 
     super::instantiate::default(&mut deps);
 
-    let admin = "Admin1".to_string();
+    let admin = ADMIN1.to_string();
 
     will_success(
         &mut deps,

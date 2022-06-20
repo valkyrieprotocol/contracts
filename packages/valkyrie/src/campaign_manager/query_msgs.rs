@@ -28,7 +28,7 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub governance: String,
     pub valkyrie_token: String,
-    pub terraswap_router: String,
+    pub valkyrie_proxy: String,
     pub code_id: u64,
     pub add_pool_fee_rate: Decimal,
     pub add_pool_min_referral_reward_rate: Decimal,
@@ -47,7 +47,7 @@ impl Default for ConfigResponse {
         ConfigResponse {
             governance: governance::GOVERNANCE.to_string(),
             valkyrie_token: VALKYRIE_TOKEN.to_string(),
-            terraswap_router: TERRASWAP_ROUTER.to_string(),
+            valkyrie_proxy: VALKYRIE_PROXY.to_string(),
             code_id: CAMPAIGN_CODE_ID,
             add_pool_fee_rate: Decimal::percent(ADD_POOL_FEE_RATE_PERCENT),
             add_pool_min_referral_reward_rate: Decimal::percent(ADD_POOL_MIN_REFERRAL_REWARD_RATE_PERCENT),

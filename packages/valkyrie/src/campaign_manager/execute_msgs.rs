@@ -7,7 +7,7 @@ use crate::common::Denom;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub governance: String,
-    pub terraswap_router: String,
+    pub valkyrie_proxy: String,
     pub code_id: u64,
     pub add_pool_fee_rate: Decimal,
     pub add_pool_min_referral_reward_rate: Decimal,
@@ -36,7 +36,7 @@ pub enum ExecuteMsg {
         governance: Option<String>,
         valkyrie_token: Option<String>,
         vp_token: Option<String>,
-        terraswap_router: Option<String>,
+        valkyrie_proxy: Option<String>,
         code_id: Option<u64>,
         add_pool_fee_rate: Option<Decimal>,
         add_pool_min_referral_reward_rate: Option<Decimal>,

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, to_binary, from_binary, Addr};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, to_binary, from_binary, Addr, StdError};
 use cosmwasm_std::entry_point;
 
 use valkyrie::campaign::execute_msgs::{ExecuteMsg, MigrateMsg, Cw20HookMsg};

@@ -3,9 +3,6 @@ This mono repository contains the source code for the smart contracts implementi
 
 You can find information about the architecture, usage, and function of the smart contracts on the official Valkyrie Protocol documentation [site](https://docs.valkyrieprotocol.com).
 
-### Dependencies
-Valkyrie Protocol depends on Terraswap and uses its implementation of the CW20 token specification.
-
 ## Contracts
 | Contract                                            | Reference                                              | Description                                                                                                                        |
 | --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |

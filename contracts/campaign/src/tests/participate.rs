@@ -1,6 +1,5 @@
-use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, to_binary, Reply, SubMsgExecutionResponse, Binary, from_binary};
+use cosmwasm_std::{Addr, Env, MessageInfo, Response, Uint128, SubMsg, CosmosMsg, WasmMsg, to_binary, Reply, Binary, from_binary, SubMsgResult, SubMsgResponse};
 use cosmwasm_std::testing::mock_info;
-use cosmwasm_std::ContractResult as ReplyResult;
 
 use valkyrie::campaign::enumerations::Referrer;
 use valkyrie::common::ContractResult;
@@ -10,7 +9,7 @@ use valkyrie::test_utils::{expect_generic_err};
 
 use crate::executions::{participate, participate_qualify_result, REPLY_QUALIFY_PARTICIPATION};
 use crate::states::{CampaignState, Actor, CampaignConfig};
-use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, REFERRAL_REWARD_LOCK_PERIOD, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3};
+use valkyrie::test_constants::campaign::{campaign_env, PARTICIPATION_REWARD_AMOUNT, REFERRAL_REWARD_AMOUNTS, PARTICIPATION_REWARD_DENOM_NATIVE, DEPOSIT_AMOUNT, REFERRAL_REWARD_LOCK_PERIOD, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE1, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE2, PARTICIPATION_REWARD_DISTRIBUTION_SCHEDULE3, PARTICIPATOR2, REFERRER, PARTICIPATOR1, RECIPIENT, INVALID_REFERRER};
 use valkyrie::test_constants::{default_sender, DEFAULT_SENDER, VALKYRIE_TICKET_TOKEN, VALKYRIE_TOKEN};
 use valkyrie::campaign_manager::query_msgs::ReferralRewardLimitOptionResponse;
 use cw20::{Denom, Cw20ExecuteMsg};
@@ -46,7 +45,7 @@ pub fn exec(
 
         let qualify_response = participate_qualify_result(deps.as_mut(), env, Reply {
             id: REPLY_QUALIFY_PARTICIPATION,
-            result: ReplyResult::Ok(SubMsgExecutionResponse {
+            result: SubMsgResult::Ok(SubMsgResponse {
                 events: vec![],
                 data: Some(Binary::from(msg.write_to_bytes().unwrap())),
             })
@@ -121,7 +120,7 @@ fn succeed_without_referrer() {
         1000,
     );
 
-    let participator = Addr::unchecked("Participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
 
     let (env, _, _) = will_success(&mut deps, participator.as_str(), None);
 
@@ -182,13 +181,13 @@ fn succeed_with_referrer() {
         2000,
     );
 
-    let participator = Addr::unchecked("Participator");
-    let referrer = Addr::unchecked("Referrer");
+    let participator = Addr::unchecked(PARTICIPATOR1);
+    let referrer = Addr::unchecked(REFERRER);
 
-    let (referrer_env, _, _) = will_success(
+    let (_, _, _) = will_success(
         &mut deps,
         referrer.as_str(),
-        Some(Referrer::Address("InvalidReferrer".to_string())),
+        Some(Referrer::Address(INVALID_REFERRER.to_string())),
     );
 
     let (env, _, _) = will_success(
@@ -289,15 +288,14 @@ fn succeed_twice() {
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 6000, 10000000000000);
 
-    let participator = Addr::unchecked("participator");
 
-    will_success(&mut deps, participator.as_str(), None);
-    let (env, _, _) = will_success(&mut deps, participator.as_str(), None);
+    will_success(&mut deps, PARTICIPATOR1, None);
+    let (env, _, _) = will_success(&mut deps, PARTICIPATOR1, None);
 
-    let participation = get_actor(deps.as_ref(), env.clone(), participator.to_string()).unwrap();
+    let participation = get_actor(deps.as_ref(), env.clone(), PARTICIPATOR1.to_string()).unwrap();
 
     assert_eq!(participation, ActorResponse {
-        address: participator.to_string(),
+        address: PARTICIPATOR1.to_string(),
         referrer_address: None,
 
         unlocked_participation_reward_amount: Uint128::zero(),
@@ -369,7 +367,7 @@ fn succeed_with_burn_vp() {
 
 
     let config = CampaignConfig::load(deps.as_ref().storage).unwrap();
-    let participator = Addr::unchecked("participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
 
     deps.querier.plus_token_balances(&[(config.vp_token.as_str(), &[(&participator.as_str(), &vp_amount)])]);
 
@@ -441,15 +439,15 @@ fn failed_insufficient_balance() {
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, PARTICIPATION_REWARD_AMOUNT.u128(), 10000000000000);
 
-    will_success(&mut deps, "Participator1", None);
+    will_success(&mut deps, "terra12u7hcmpltazmmnq0fvyl225usn3fy6qqlp05w0", None);
 
-    super::deposit::will_success(&mut deps, "Participator2", DEPOSIT_AMOUNT);
+    super::deposit::will_success(&mut deps, "terra1zgrx9jjqrfye8swykfgmd6hpde60j0nszzupp9", DEPOSIT_AMOUNT);
 
     let result = exec(
         &mut deps,
         campaign_env(),
-        mock_info("Participator2", &[]),
-        "Participator2".to_string(),
+        mock_info("terra1zgrx9jjqrfye8swykfgmd6hpde60j0nszzupp9", &[]),
+        "terra1zgrx9jjqrfye8swykfgmd6hpde60j0nszzupp9".to_string(),
         None,
     );
     expect_generic_err(&result, "Insufficient balance");
@@ -470,7 +468,7 @@ fn overflow_referral_reward() {
     });
 
     deps.querier.with_gov_staker_state(
-        "Referrer",
+        REFERRER,
         StakerStateResponse {
             balance: Uint128::new(20),
             share: Uint128::new(20),
@@ -478,14 +476,14 @@ fn overflow_referral_reward() {
         }
     );
 
-    will_success(&mut deps, "Referrer", None);
+    will_success(&mut deps, REFERRER, None);
 
-    let (referrer_env, _, _) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
-    will_success(&mut deps, "Participator2", Some(Referrer::Address("Participator".to_string())));
-    will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    let (referrer_env, _, _) = will_success(&mut deps, PARTICIPATOR1, Some(Referrer::Address(REFERRER.to_string())));
+    will_success(&mut deps, PARTICIPATOR2, Some(Referrer::Address(PARTICIPATOR1.to_string())));
+    will_success(&mut deps, PARTICIPATOR1, Some(Referrer::Address(REFERRER.to_string())));
 
     //reward limit : 902
-    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked(REFERRER)).unwrap();
     assert_eq!(referrer.referral_reward_amounts, vec![
         (Uint128::new(400), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
         (Uint128::new(300), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
@@ -498,7 +496,7 @@ fn overflow_referral_reward() {
 
 
     deps.querier.with_gov_staker_state(
-        "Referrer",
+        REFERRER,
         StakerStateResponse {
             balance: Uint128::new(40),
             share: Uint128::new(40),
@@ -506,10 +504,10 @@ fn overflow_referral_reward() {
         }
     );
 
-    let (referrer_env, _, _) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    let (referrer_env, _, _) = will_success(&mut deps, PARTICIPATOR1, Some(Referrer::Address(REFERRER.to_string())));
 
     //reward limit : 904
-    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked(REFERRER)).unwrap();
     assert_eq!(referrer.referral_reward_amounts, vec![
         (Uint128::new(400), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
         (Uint128::new(300), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD),
@@ -522,7 +520,7 @@ fn overflow_referral_reward() {
 
 
     deps.querier.with_gov_staker_state(
-        "Referrer",
+        REFERRER,
         StakerStateResponse {
             balance: Uint128::new(60),
             share: Uint128::new(60),
@@ -531,7 +529,7 @@ fn overflow_referral_reward() {
     );
     //reward limit : 906
     deps.querier.with_referral_reward_limit_option(ReferralRewardLimitOptionResponse {
-        overflow_amount_recipient: Some("Recipient".to_string()),
+        overflow_amount_recipient: Some(RECIPIENT.to_string()),
         base_count: 1,
         percent_for_governance_staking: 10,
     });
@@ -539,23 +537,23 @@ fn overflow_referral_reward() {
     crate::tests::claim_referral_reward::will_success(
         &mut deps,
         referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD,
-        "Referrer",
+        REFERRER,
     );
 
-    let (referrer_env, _, response) = will_success(&mut deps, "Participator", Some(Referrer::Address("Referrer".to_string())));
+    let (referrer_env, _, response) = will_success(&mut deps, PARTICIPATOR1, Some(Referrer::Address(REFERRER.to_string())));
 
     assert_eq!(response.messages[0],
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: VALKYRIE_TOKEN.to_string(),
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "Recipient".to_string(),
+                recipient: RECIPIENT.to_string(),
                 amount: Uint128::new(398),
             }).unwrap(),
         })),
     );
 
-    let referrer = Actor::load(&deps.storage, &Addr::unchecked("Referrer")).unwrap();
+    let referrer = Actor::load(&deps.storage, &Addr::unchecked(REFERRER)).unwrap();
     assert_eq!(referrer.referral_reward_amounts, vec![(Uint128::new(2), referrer_env.block.height + REFERRAL_REWARD_LOCK_PERIOD)]); //reach limit. overflow amount = 3
 
     let state = CampaignState::load(&deps.storage).unwrap();

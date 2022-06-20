@@ -12,9 +12,9 @@ use crate::poll::states::{Poll, VoteInfo};
 use crate::staking::states::StakerState;
 use crate::tests::init_default;
 
-pub const VOTER1: &str = "Voter1";
-pub const VOTER2: &str = "Voter2";
-pub const VOTER3: &str = "Voter3";
+pub const VOTER1: &str = "terra17q4lzg70un58uefr2fwu7uxtgvftspr7d0a6p3";
+pub const VOTER2: &str = "terra1vwy8s2jqc25x9u0e94459wn22lx0j3x466k4jj";
+pub const VOTER3: &str = "terra1q74qzdrycn0p884ex4pyvwhvp4apjawntu054a";
 
 pub fn exec(
     deps: &mut CustomDeps,

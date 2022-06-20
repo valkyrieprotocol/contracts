@@ -1,6 +1,5 @@
 use cosmwasm_std::{Decimal, Uint128, Binary};
-use cw0::Expiration;
-use cw20::{Cw20ReceiveMsg, Logo};
+use cw20::{Cw20ReceiveMsg, Logo, Expiration};
 use cw20_base::msg::InstantiateMarketingInfo;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -67,8 +66,6 @@ pub enum ExecuteMsg {
     /// Only with the "mintable" extension. If authorized, creates amount new tokens
     /// and adds to the recipient balance.
     Mint { recipient: String, amount: Uint128 },
-    MintFromUusd {},
-    MintFromUusdHook { burner: String, exist_balance: Uint128 },
     UpdateMarketing {
         /// A URL pointing to the project behind this token.
         project: Option<String>,

@@ -8,7 +8,6 @@ use crate::queries::{query_config, query_state, query_swap_state};
 use crate::state::{Config};
 use cw20_base::ContractError;
 use cw2::set_contract_version;
-use crate::executions::{mint_from_uusd, mint_from_uusd_hook};
 use crate::migrations;
 
 const CONTRACT_NAME: &str = "valkyrian-pass-cw20-token";
@@ -123,8 +122,6 @@ pub fn execute(
 
             cw20_base::contract::execute_mint(deps, env, info, recipient, amount)
         },
-        ExecuteMsg::MintFromUusd {} => mint_from_uusd(deps, env, info),
-        ExecuteMsg::MintFromUusdHook { burner, exist_balance } => mint_from_uusd_hook(deps, env, info, burner, exist_balance),
         ExecuteMsg::UpdateMarketing {
             project,
             description,

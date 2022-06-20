@@ -36,7 +36,7 @@ fn succeed() {
         CAMPAIGN_DESCRIPTION.to_string(),
         CAMPAIGN_URL.to_string(),
         CAMPAIGN_PARAMETER_KEY.to_string(),
-        Some("Qualifier".to_string()),
+        Some(QUALIFIER.to_string()),
         None,
         Denom::Native(PARTICIPATION_REWARD_DENOM_NATIVE.to_string()),
         vec![
@@ -50,7 +50,7 @@ fn succeed() {
     );
 
     let config = CampaignConfig::load(&deps.storage).unwrap();
-    assert_eq!(config.qualifier, Some(Addr::unchecked("Qualifier")));
+    assert_eq!(config.qualifier, Some(Addr::unchecked(QUALIFIER)));
 
     will_success(&mut deps);
 

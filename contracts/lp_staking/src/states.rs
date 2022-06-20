@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
-use valkyrie::terra::is_contract;
+use valkyrie::utils::is_contract;
 
 const CONFIG: Item<Config> = Item::new("config_v3");
 const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
@@ -12,6 +12,7 @@ const ADMIN_NOMINEE: Item<Addr> = Item::new("admin_nominee");
 pub struct Config {
     pub admin: Addr,
     pub token: Addr,
+    pub usdc_token: Addr,
     pub lp_token: Addr,
     pub pair: Addr,
     pub whitelisted_contracts: Vec<Addr>,
@@ -32,8 +33,8 @@ impl Config {
         self.whitelisted_contracts.contains(&address)
     }
 
-    pub fn is_authorized(&self, deps: &Deps, address: &Addr) -> StdResult<bool> {
-        if is_contract(&deps.querier, &address)? && !self.is_whitelisted_contract(&address) {
+    pub fn is_authorized(&self, address: &Addr) -> StdResult<bool> {
+        if is_contract(&address) && !self.is_whitelisted_contract(&address) {
             return Ok(false);
         }
 

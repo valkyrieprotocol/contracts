@@ -20,7 +20,7 @@ pub fn exec(
     participation_reward_amount: Uint128,
     referral_reward_amount: Uint128,
 ) -> ContractResult<Response> {
-    deps.querier.with_terraswap_price(
+    deps.querier.with_astroport_price(
         VALKYRIE_TOKEN.to_string(),
         KEY_DENOM_NATIVE.to_string(),
         1f64,

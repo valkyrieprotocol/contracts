@@ -16,7 +16,7 @@ pub struct Config {
     pub governance: Addr,
     pub valkyrie_token: Addr,
     pub vp_token: Addr,
-    pub terraswap_router: Addr,
+    pub valkyrie_proxy: Addr,
     pub code_id: u64,
     pub add_pool_fee_rate: Decimal,
     pub add_pool_min_referral_reward_rate: Decimal,

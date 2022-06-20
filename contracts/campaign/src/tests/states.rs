@@ -1,20 +1,19 @@
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 
 use valkyrie::mock_querier::{custom_deps};
-use valkyrie::test_constants::campaign::{DEPOSIT_AMOUNT};
+use valkyrie::test_constants::campaign::{DEPOSIT_AMOUNT, PARTICIPATOR1};
 
 use crate::queries::{get_actor};
 
 #[test]
 fn calc_unlocked_reward() {
     let mut deps = custom_deps();
-    deps.querier.with_tax(Decimal::percent(10), &[("uusd", &Uint128::new(100))]);
 
     super::instantiate::default(&mut deps);
     super::update_activation::will_success(&mut deps, true);
     super::add_reward_pool::will_success(&mut deps, 100000, 100000);
 
-    let participator = Addr::unchecked("Participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
     let (mut env, info, _) = super::participate::will_success(
         &mut deps,
         participator.as_str(),
@@ -51,7 +50,7 @@ fn calc_unlocked_reward() {
     // 15 blocks passed, participated at 12360
     // progressing participate #1 linear vesting distribution.
     env.block.height = 12345 + 15;
-    let participator = Addr::unchecked("Participator");
+    let participator = Addr::unchecked(PARTICIPATOR1);
     super::deposit::will_success(&mut deps, participator.as_str(), DEPOSIT_AMOUNT);
 
     super::participate::exec(
