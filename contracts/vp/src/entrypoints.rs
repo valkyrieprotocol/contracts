@@ -8,7 +8,6 @@ use crate::queries::{query_config, query_state, query_swap_state};
 use crate::state::{Config};
 use cw20_base::ContractError;
 use cw2::set_contract_version;
-use crate::migrations;
 
 const CONTRACT_NAME: &str = "valkyrian-pass-cw20-token";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -33,7 +32,6 @@ pub fn instantiate(
         offer_token: deps.api.addr_validate(msg.offer_token.as_str())?,
         base_swap_ratio: msg.base_swap_ratio,
         custom_swap_ratio: msg.custom_swap_ratio,
-        router: deps.api.addr_validate(msg.router.as_str())?,
     }.save(deps.storage)?;
 
     cw20_base::contract::instantiate(
@@ -138,14 +136,13 @@ pub fn execute(
             offer_token,
             base_swap_ratio,
             custom_swap_ratio,
-            router,
         } => {
             let config = Config::load(deps.storage)?;
             if !config.is_admin(&info.sender) {
                 return Err(ContractError::Unauthorized {});
             }
 
-            crate::executions::update_config(deps, env, info, admin, whitelist, offer_token, base_swap_ratio, custom_swap_ratio, router)
+            crate::executions::update_config(deps, env, info, admin, whitelist, offer_token, base_swap_ratio, custom_swap_ratio)
         },
         ExecuteMsg::ApproveAdminNominee {} => crate::executions::approve_admin_nominee(deps, env, info),
     }
@@ -198,19 +195,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     if cw2::get_contract_version(deps.storage).is_err() {
         cw2::set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.0".to_string())?;
     }
 
     //mig to v1.0.8-beta.0 to v1.0.8-beta.1
-    let info = cw2::get_contract_version(deps.storage)?;
-    if info.version == "v1.0.8-beta.0".to_string() {
-        let router = &deps.api.addr_validate(msg.router.as_str())?;
-        migrations::v108_beta0::migrate(deps.storage, &env, router)?;
-
-        set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.1")?;
-    }
+    // let info = cw2::get_contract_version(deps.storage)?;
+    // if info.version == "v1.0.8-beta.0".to_string() {
+    //     let router = &deps.api.addr_validate(msg.router.as_str())?;
+    //     migrations::v108_beta0::migrate(deps.storage, &env, router)?;
+    //
+    //     set_contract_version(deps.storage, CONTRACT_NAME, "1.0.8-beta.1")?;
+    // }
 
     Ok(Response::default())
 }

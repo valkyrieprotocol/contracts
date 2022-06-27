@@ -16,7 +16,6 @@ pub struct InstantiateMsg {
     pub offer_token: String,
     pub base_swap_ratio: Decimal,
     pub custom_swap_ratio: Vec<SwapRatio>,
-    pub router: String,
     pub initial_balances: Vec<Cw20Coin>,
 }
 
@@ -83,7 +82,6 @@ pub enum ExecuteMsg {
         offer_token: Option<String>,
         base_swap_ratio: Option<Decimal>,
         custom_swap_ratio: Option<Vec<SwapRatio>>,
-        router: Option<String>,
     },
     ApproveAdminNominee {},
 }
@@ -145,6 +143,4 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct MigrateMsg {
-    pub router: String,
-}
+pub struct MigrateMsg {}

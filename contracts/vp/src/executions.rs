@@ -12,7 +12,6 @@ pub fn update_config(
     offer_token: Option<String>,
     base_swap_ratio: Option<Decimal>,
     custom_swap_ratio: Option<Vec<SwapRatio>>,
-    router: Option<String>,
 ) -> Result<Response, ContractError> {
     let mut response = Response::new();
     response = response.add_attribute("action", "update_config");
@@ -44,11 +43,6 @@ pub fn update_config(
     if let Some(custom_swap_ratio) = custom_swap_ratio {
         config.custom_swap_ratio = custom_swap_ratio;
         response = response.add_attribute("is_updated_custom_swap_ratio", "true");
-    }
-
-    if let Some(router) = router {
-        config.router = deps.api.addr_validate(router.as_str())?;
-        response = response.add_attribute("is_updated_router", "true");
     }
 
     config.save(deps.storage)?;
