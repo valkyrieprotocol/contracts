@@ -1,5 +1,5 @@
 use cosmwasm_std::{Decimal, Uint128, Binary};
-use cw20::{Cw20ReceiveMsg, Logo, Expiration};
+use cw20::{Cw20ReceiveMsg, Logo, Expiration, Cw20Coin};
 use cw20_base::msg::InstantiateMarketingInfo;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     pub base_swap_ratio: Decimal,
     pub custom_swap_ratio: Vec<SwapRatio>,
     pub router: String,
+    pub initial_balances: Vec<Cw20Coin>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

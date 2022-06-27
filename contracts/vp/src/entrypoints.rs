@@ -44,7 +44,7 @@ pub fn instantiate(
             name: msg.name,
             symbol: msg.symbol,
             decimals: msg.decimals,
-            initial_balances: vec![],
+            initial_balances: msg.initial_balances,
             marketing: msg.marketing,
             mint: Some(MinterResponse {
                 minter: env.contract.address.to_string(),
